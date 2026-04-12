@@ -189,6 +189,32 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   };
 
   const [resendingNotification, setResendingNotification] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+
+  const handleVerifyPayment = async () => {
+    if (!order?.order_number) return;
+    try {
+      setVerifyingPayment(true);
+      setVerifyMessage(null);
+      const res = await fetch('/api/payment/moolre/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderNumber: order.order_number })
+      });
+      const data = await res.json();
+      if (data.success && data.payment_status === 'paid') {
+        setVerifyMessage('Payment verified. Order updated.');
+        await fetchOrderDetails();
+      } else {
+        setVerifyMessage(data.message || 'Could not verify payment. Customer may not have completed payment yet.');
+      }
+    } catch (err: any) {
+      setVerifyMessage(err?.message || 'Verification request failed.');
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
 
   const handleResendNotification = async () => {
     if (!order) return;
@@ -284,7 +310,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 border-gray-800 pb-4 mb-4">
             <div>
-              <h1 className="text-2xl font-bold">TIWAA PERFUME STYLE HOUSE</h1>
+              <h1 className="text-2xl font-bold">Store</h1>
               <p className="text-sm text-gray-600">Order Packing Slip</p>
             </div>
             <div className="text-right">
@@ -345,8 +371,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
           {/* Footer */}
           <div className="border-t-2 border-gray-800 pt-4 text-center text-sm text-gray-600">
-            <p>Thank you for shopping with TIWAA PERFUME STYLE HOUSE!</p>
-            <p>Questions? Call 054 501 0949 or WhatsApp 055 416 9992 · tiwaperfumestyle@gmail.com</p>
+            <p>Thank you for shopping with us!</p>
+            <p>Questions? See the Contact page for support details.</p>
           </div>
         </div>
       </div>
@@ -556,7 +582,9 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status</span>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold whitespace-nowrap capitalize">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap capitalize ${
+                    order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
                     {order.payment_status}
                   </span>
                 </div>
@@ -567,6 +595,36 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     {order.metadata?.moolre_reference || order.payment_transaction_id || 'N/A'}
                   </span>
                 </div>
+                {order.payment_method === 'moolre' && order.payment_status !== 'paid' && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-sm text-gray-600 mb-2">
+                      If the customer already paid, check with Moolre and then verify here.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleVerifyPayment}
+                      disabled={verifyingPayment}
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center"
+                    >
+                      {verifyingPayment ? (
+                        <>
+                          <i className="ri-loader-4-line animate-spin mr-2"></i>
+                          Checking with Moolre...
+                        </>
+                      ) : (
+                        <>
+                          <i className="ri-refresh-line mr-2"></i>
+                          Verify payment with Moolre
+                        </>
+                      )}
+                    </button>
+                    {verifyMessage && (
+                      <p className={`text-sm mt-2 ${verifyMessage.includes('verified') ? 'text-green-700' : 'text-amber-700'}`}>
+                        {verifyMessage}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

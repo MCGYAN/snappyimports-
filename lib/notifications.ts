@@ -3,15 +3,15 @@ import { supabase } from '@/lib/supabase';
 import { escapeHtml } from '@/lib/sanitize';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'tiwaperfumestyle@gmail.com';
-const EMAIL_FROM = process.env.EMAIL_FROM || 'TIWAA PERFUME STYLE HOUSE <tiwaperfumestyle@gmail.com>';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
+const EMAIL_FROM = process.env.EMAIL_FROM || process.env.ADMIN_EMAIL || 'Store <admin@example.com>';
 const BRAND = {
-    name: 'TIWAA PERFUME STYLE HOUSE',
+    name: process.env.NEXT_PUBLIC_SITE_NAME || 'Store',
     color: '#2563eb',
     colorLight: '#eff6ff',
     colorDark: '#064e3b',
     url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, ''),
-    phone: '+233545010949',
+    phone: process.env.NEXT_PUBLIC_CONTACT_PHONE || '',
 };
 
 // Reusable branded email layout
@@ -30,7 +30,7 @@ ${preheader ? `<span style="display:none;max-height:0;overflow:hidden;">${prehea
 <!-- Header -->
 <tr><td style="background:linear-gradient(135deg,${BRAND.color},${BRAND.colorDark});padding:32px 40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">${BRAND.name}</h1>
-<p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;">Perfumes · Wholesale & Retail</p>
+<p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;">Online Store</p>
 </td></tr>
 
 <!-- Body -->
@@ -87,9 +87,9 @@ function maskPhone(phone: string): string {
 }
 
 export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-    if (!process.env.RESEND_API_KEY) {
+    if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'missing_api_key') {
         console.warn('[Email] RESEND_API_KEY not configured');
-        return null;
+        throw new Error('Email is not configured. Please set RESEND_API_KEY.');
     }
     try {
         const data = await resend.emails.send({
@@ -98,11 +98,17 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
             subject,
             html,
         });
+        if (data.error) {
+            const errMsg = (data.error as { message?: string }).message || String(data.error);
+            console.error('[Email] Resend error:', data.error);
+            throw new Error(errMsg);
+        }
         console.log('[Email] Sent successfully to:', to.split('@')[0] + '@***');
         return data;
-    } catch (error: any) {
-        console.error('[Email] Failed:', error.message);
-        return null;
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to send email';
+        console.error('[Email] Failed:', msg);
+        throw err instanceof Error ? err : new Error(msg);
     }
 }
 
@@ -154,7 +160,7 @@ export async function sendSMS({ to, message }: { to: string; message: string }) 
             },
             body: JSON.stringify({
                 type: 1,
-                senderid: 'TIWAA',
+                senderid: process.env.MOOLRE_SENDER_ID || process.env.SMS_SENDER_ID || 'Store',
                 messages: [
                     {
                         recipient: recipient,
@@ -296,7 +302,7 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
     if (phone) {
         const smsMessage = trackingNumber
             ? `Hi ${name}, your order #${order_number || id} is confirmed! Tracking: ${trackingNumber}. Track here: ${trackingUrl}${shippingNotesSms}`
-            : `Hi ${name}, your order #${order_number || id} at TIWAA PERFUME STYLE HOUSE is confirmed! Track here: ${trackingUrl}${shippingNotesSms}`;
+            : `Hi ${name}, your order #${order_number || id} is confirmed! Track here: ${trackingUrl}${shippingNotesSms}`;
 
         await sendSMS({
             to: phone,
@@ -406,7 +412,7 @@ export async function sendWelcomeMessage(user: { email: string, firstName: strin
   <p style="margin:0;color:#6b7280;font-size:15px;">We're so glad you're here.</p>
 </div>
 
-<p style="color:#374151;font-size:14px;line-height:1.7;margin:16px 0;">Thank you for joining the ${BRAND.name} family. We offer premium quality perfumes at competitive prices &mdash; for resellers and individual customers.</p>
+<p style="color:#374151;font-size:14px;line-height:1.7;margin:16px 0;">Thank you for joining ${BRAND.name}. We're glad to have you.</p>
 
 <div style="background-color:#f9fafb;border-radius:12px;padding:20px;margin:20px 0;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -438,7 +444,7 @@ ${emailButton('Start Shopping', `${BRAND.url}/shop`)}
     if (phone) {
         await sendSMS({
             to: phone,
-            message: `Welcome ${firstName}! Thanks for joining TIWAA PERFUME STYLE HOUSE.`
+            message: `Welcome ${firstName}! Thanks for joining ${BRAND.name}.`
         });
     }
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -52,9 +53,9 @@ export default function AdminLayout({
         return;
       }
 
-      // Only allow admin and staff roles
-      if (profile.role !== 'admin' && profile.role !== 'staff') {
-        console.warn('User does not have admin/staff role');
+      // Only allow admin role (no staff)
+      if (profile.role !== 'admin') {
+        console.warn('User does not have admin role');
         document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure';
         await supabase.auth.signOut();
         router.push('/admin/login?error=unauthorized');
@@ -259,10 +260,13 @@ export default function AdminLayout({
           lg:translate-x-0
         `}
       >
-        <div className="h-full px-4 py-6 overflow-y-auto">
-          <Link href="/admin" className="flex items-center mb-8 px-2 cursor-pointer">
-            <img src="/logo.png" alt="The Perfume Empire" className="h-12 w-auto max-w-[220px] object-contain" />
-            <span className="ml-3 text-sm font-semibold text-gray-500">ADMIN</span>
+        <div className="h-full px-4 py-6 overflow-y-auto flex flex-col">
+          {/* Official logo: dark blue pill + shield + SAMBA TEK + taglines (no gold-only shield) */}
+          <Link href="/admin" className="flex items-center gap-3 mb-8 px-2 cursor-pointer min-h-0 shrink-0">
+            <span className="flex-1 min-w-0 rounded-lg overflow-hidden">
+              <Image src="/logo.png?v=official" alt="Sambatek - Security Doors & Accessories" width={320} height={108} className="h-20 w-auto max-w-[280px] object-contain object-left" unoptimized />
+            </span>
+            <span className="text-sm font-semibold text-gray-500 shrink-0">ADMIN</span>
           </Link>
 
           <nav className="space-y-1">
@@ -309,15 +313,20 @@ export default function AdminLayout({
       {/* Main Content */}
       <div className={`transition-all duration-300 ml-0 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="px-4 py-4 lg:px-6 flex items-center justify-between">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-            >
-              <i className={`${isSidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'} text-xl`}></i>
-            </button>
+          <div className="px-4 py-4 lg:px-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="w-10 h-10 flex-shrink-0 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <i className={`${isSidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'} text-xl`}></i>
+              </button>
+              <Link href="/admin" className="hidden sm:block min-w-0">
+                <Image src="/logo.png?v=official" alt="Sambatek - Security Doors & Accessories" width={280} height={88} className="h-14 w-auto max-w-[260px] object-contain" unoptimized />
+              </Link>
+            </div>
 
-            <div className="flex items-center space-x-2 lg:space-x-4">
+            <div className="flex items-center space-x-2 lg:space-x-4 shrink-0">
               <button className="relative w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
                 <i className="ri-notification-3-line text-xl"></i>
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>

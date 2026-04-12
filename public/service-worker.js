@@ -1,5 +1,5 @@
-// TIWAA PERFUME STYLE HOUSE - Service Worker v2.2
-const CACHE_VERSION = 'tiwaa-v2.2';
+// Store - Service Worker
+const CACHE_VERSION = 'store-v2.3';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
@@ -39,7 +39,7 @@ async function trimCache(cacheName, maxItems) {
 
 // Install: pre-cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing TIWAA v2.2...');
+  console.log('[SW] Installing Store v2.3...');
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
@@ -56,7 +56,7 @@ self.addEventListener('install', (event) => {
 
 // Activate: clean old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating TIWAA v2.2...');
+  console.log('[SW] Activating Store v2.2...');
   event.waitUntil(
     caches.keys()
       .then((keys) => {
@@ -228,7 +228,7 @@ self.addEventListener('push', (event) => {
 
   const data = event.data.json();
   const options = {
-    body: data.body || 'New update from TIWAA PERFUME STYLE HOUSE',
+    body: data.body || 'New update from Store',
 icon: '/android-chrome-192x192.png',
       badge: '/android-chrome-192x192.png',
     vibrate: [100, 50, 100],
@@ -244,7 +244,7 @@ icon: '/android-chrome-192x192.png',
 
   event.waitUntil(
     self.registration.showNotification(
-      data.title || 'TIWAA PERFUME STYLE HOUSE',
+      data.title || 'Store',
       options
     )
   );

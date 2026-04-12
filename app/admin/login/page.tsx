@@ -1,19 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { getToken, verifying } = useRecaptcha();
+
+  // Show error from redirect (e.g. unauthorized, session_expired)
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err === 'unauthorized') setError('You do not have admin access.');
+    else if (err === 'session_expired') setError('Session expired. Please sign in again.');
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +65,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <img src="/logo.png" alt="The Perfume Empire" className="h-14 w-auto max-w-[280px] mx-auto object-contain" />
+            <Image src="/logo.png" alt="Sambatek" width={480} height={144} className="h-28 sm:h-32 w-auto max-w-[420px] sm:max-w-[480px] mx-auto object-contain" />
           </Link>
           <h1 className="font-serif text-2xl font-semibold text-gray-900 mt-6 mb-2">Admin</h1>
           <p className="text-gray-500 text-sm font-light">Sign in to access the dashboard</p>

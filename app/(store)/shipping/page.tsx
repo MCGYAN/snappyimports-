@@ -13,40 +13,40 @@ export default function ShippingPage() {
       type: 'Express Delivery',
       time: 'Next Day',
       cost: 'GHS 40',
-      description: 'Available for Accra & Kumasi orders placed before 2pm',
+      description: 'Available for metro orders placed before 2pm',
       icon: 'ri-rocket-line'
     },
     {
       type: 'Store Pickup',
       time: 'Same Day',
       cost: 'FREE',
-      description: 'Collect from our Accra location',
+      description: 'Collect from our store location',
       icon: 'ri-store-2-line'
     }
   ];
 
   const zones = [
     {
-      zone: 'Zone 1 - Accra Metro',
-      areas: 'East Legon, Osu, Labone, Airport, Dzorwulu, Cantonments, Adabraka, Tema',
+      zone: 'Zone 1 - Metro',
+      areas: 'Metro area 1',
       standard: '1-2 days',
       express: 'Next day'
     },
     {
       zone: 'Zone 2 - Greater Accra',
-      areas: 'Madina, Legon, Haatso, Achimota, Dansoman, Spintex, Teshie, Kasoa',
+      areas: 'Metro area 2',
       standard: '2-3 days',
       express: 'Next day'
     },
     {
       zone: 'Zone 3 - Major Cities',
-      areas: 'Kumasi, Takoradi, Cape Coast, Tamale, Sunyani, Ho, Koforidua',
+      areas: 'Major cities',
       standard: '3-4 days',
       express: '1-2 days'
     },
     {
       zone: 'Zone 4 - Other Areas',
-      areas: 'All other locations within Ghana',
+      areas: 'All other locations',
       standard: '4-5 days',
       express: 'Not available'
     }

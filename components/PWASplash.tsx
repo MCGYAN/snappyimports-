@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 export default function PWASplash() {
   const [showSplash, setShowSplash] = useState(false);
@@ -27,15 +28,10 @@ export default function PWASplash() {
 
   return (
     <div className="pwa-splash" aria-hidden="true">
-      <div className="pwa-splash-logo mb-6">
-        <img
-          src="/logo.png"
-          alt="The Perfume Empire"
-          className="w-32 h-32 object-contain brightness-0 invert"
-        />
+      <div className="pwa-splash-logo mb-6 flex items-center justify-center">
+        <Image src="/logo.png" alt="Sambatek" width={360} height={120} className="w-80 h-auto max-h-32 object-contain" />
       </div>
-      <h1 className="text-white text-xl font-bold font-serif mb-2">The Perfume Empire</h1>
-      <p className="text-blue-200 text-sm font-medium mb-8">Quality Products & Supplies</p>
+      <p className="text-blue-200 text-sm font-medium mb-8">Security Doors & Accessories</p>
       <div className="pwa-splash-dots flex gap-1.5">
         <span className="w-2 h-2 bg-white rounded-full" />
         <span className="w-2 h-2 bg-white rounded-full" />

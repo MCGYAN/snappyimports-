@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
-import { escapeHtml } from '@/lib/sanitize';
+import { escapeHtml, isValidEmail } from '@/lib/sanitize';
 import { sendOrderConfirmation, sendOrderStatusUpdate, sendWelcomeMessage, sendContactMessage, sendPaymentLink, sendEmail, sendSMS, emailLayout } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 
@@ -57,11 +57,13 @@ export async function POST(request: Request) {
             }
 
             const orderRef = payload.order_number || payload.id;
-            const { data: order, error: orderError } = await supabaseAdmin
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderRef);
+            const query = supabaseAdmin
                 .from('orders')
-                .select('id, order_number, created_at')
-                .or(`order_number.eq.${orderRef},id.eq.${orderRef}`)
-                .single();
+                .select('id, order_number, created_at');
+            const { data: order, error: orderError } = isUuid
+                ? await query.eq('id', orderRef).single()
+                : await query.eq('order_number', orderRef).single();
 
             if (orderError || !order) {
                 return NextResponse.json({ error: 'Order not found' }, { status: 404 });
@@ -133,8 +135,7 @@ export async function POST(request: Request) {
             if (!name || !email || !subject || !message) {
                 return NextResponse.json({ error: 'All contact fields required' }, { status: 400 });
             }
-            // Basic email format check
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            if (!isValidEmail(email)) {
                 return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
             }
             // Length limits to prevent abuse
@@ -162,8 +163,12 @@ export async function POST(request: Request) {
             if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
                 return NextResponse.json({ error: 'Recipients required' }, { status: 400 });
             }
-            if (!subject || !message) {
-                return NextResponse.json({ error: 'Subject and message required' }, { status: 400 });
+            if (!message) {
+                return NextResponse.json({ error: 'Message content required' }, { status: 400 });
+            }
+            // Subject required only when sending email
+            if (channels?.email && !subject) {
+                return NextResponse.json({ error: 'Email subject required when sending email' }, { status: 400 });
             }
 
             // Deduplicate phone numbers and emails server-side
@@ -225,6 +230,7 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('Notification API Error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        const message = error?.message || 'Internal server error';
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

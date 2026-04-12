@@ -49,16 +49,22 @@ export default function AdminDashboard() {
   const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchDashboardData() {
+      setDashboardError(null);
       try {
         // 1. Fetch ALL Orders for count & customers
         const { data: allOrdersData, error: ordersError } = await supabase
           .from('orders')
           .select('total, status, payment_status, created_at, email');
 
-        if (ordersError) throw ordersError;
+        if (ordersError) {
+          const errMsg = ordersError.message || ordersError.code || 'Failed to load orders';
+          setDashboardError(errMsg);
+          return;
+        }
 
         // Only count PAID orders for revenue & avg order value
         const paidOrders = allOrdersData?.filter(o => o.payment_status === 'paid') || [];
@@ -87,9 +93,13 @@ export default function AdminDashboard() {
         }, {});
 
         paidOrders.forEach(order => {
-          const date = new Date(order.created_at).toISOString().split('T')[0];
-          if (chartMap[date] !== undefined) {
-            chartMap[date] += (order.total || 0);
+          try {
+            const date = new Date(order.created_at).toISOString().split('T')[0];
+            if (chartMap[date] !== undefined) {
+              chartMap[date] += (order.total || 0);
+            }
+          } catch {
+            // skip bad dates
           }
         });
 
@@ -147,7 +157,7 @@ export default function AdminDashboard() {
             const addr = o.shipping_address || {};
             const customerName = (addr.firstName && addr.lastName)
               ? `${addr.firstName.trim()} ${addr.lastName.trim()}`
-              : addr.full_name || addr.firstName || o.email.split('@')[0];
+              : addr.full_name || addr.firstName || (o.email && o.email.split('@')[0]) || 'Customer';
             return {
               id: o.id,
               displayId: o.order_number,
@@ -192,8 +202,14 @@ export default function AdminDashboard() {
           })));
         }
 
-      } catch (error) {
-        console.error('Error loading dashboard:', error);
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'object' && error !== null && 'message' in error
+              ? String((error as { message?: unknown }).message)
+              : 'Failed to load dashboard data.';
+        setDashboardError(message);
       } finally {
         setLoading(false);
       }
@@ -231,6 +247,27 @@ export default function AdminDashboard() {
 
   if (loading) {
     return <div className="p-8 text-center text-gray-500">Loading Dashboard...</div>;
+  }
+
+  if (dashboardError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+            <i className="ri-error-warning-line text-2xl" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Error loading dashboard</h2>
+          <p className="text-gray-600 text-sm mb-4">{dashboardError}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

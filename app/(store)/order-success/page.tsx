@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
@@ -22,21 +21,14 @@ function OrderSuccessContent() {
       }
 
       try {
-        const { data: orderData, error } = await supabase
-          .from('orders')
-          .select(`
-                    *,
-                    order_items (*)
-                `)
-          .eq('order_number', orderNumber)
-          .single();
-
-        if (error) throw error;
-        setOrder(orderData);
-
-        // If redirected from payment and order is still pending, try to verify
-        if (paymentSuccess === 'true' && orderData && orderData.payment_status !== 'paid') {
-          verifyPayment(orderNumber, orderData);
+        const res = await fetch(`/api/order-success?order=${encodeURIComponent(orderNumber)}`);
+        if (res.ok) {
+          const orderData = await res.json();
+          setOrder(orderData);
+        } else if (paymentSuccess === 'true') {
+          // Order not yet marked as paid — trigger verification
+          await verifyPayment(orderNumber);
+          return;
         }
       } catch (err) {
         console.error('Error fetching order:', err);
@@ -47,52 +39,56 @@ function OrderSuccessContent() {
     fetchOrder();
   }, [orderNumber, paymentSuccess]);
 
-  // Payment verification - called when user is redirected from Moolre with payment_success=true
-  const verifyPayment = async (orderNum: string, initialOrder: any) => {
+  const verifyPayment = async (orderNum: string) => {
     setVerifying(true);
-    
-    // Wait 3 seconds to give the callback a chance to process first
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Re-fetch order to check if callback already updated it
-    const { data: refreshed } = await supabase
-      .from('orders')
-      .select('*, order_items (*)')
-      .eq('order_number', orderNum)
-      .single();
-    
-    if (refreshed?.payment_status === 'paid') {
-      setOrder(refreshed);
-      setVerifying(false);
-      return;
+
+    // Retry up to 3 times with increasing delays to give the callback time to process
+    const delays = [3000, 5000, 8000];
+
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+
+      // Check if callback already processed the payment
+      const orderRes = await fetch(`/api/order-success?order=${encodeURIComponent(orderNum)}`);
+      if (orderRes.ok) {
+        const refreshed = await orderRes.json();
+        if (refreshed?.payment_status === 'paid') {
+          setOrder(refreshed);
+          setVerifying(false);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // On last attempt, actively verify via Moolre API
+      if (attempt === delays.length - 1) {
+        try {
+          const res = await fetch('/api/payment/moolre/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderNumber: orderNum })
+          });
+
+          const result = await res.json();
+
+          if (result.success && result.payment_status === 'paid') {
+            const finalRes = await fetch(`/api/order-success?order=${encodeURIComponent(orderNum)}`);
+            if (finalRes.ok) {
+              const updated = await finalRes.json();
+              setOrder(updated);
+              setVerifying(false);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Payment verification failed:', err);
+        }
+      }
     }
 
-    // Callback hasn't fired - verify via our endpoint
-    // Verify payment via Moolre API — we no longer trust the redirect alone
-    try {
-      const res = await fetch('/api/payment/moolre/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderNumber: orderNum })
-      });
-      
-      const result = await res.json();
-      console.log('Payment verification result:', result);
-      
-      if (result.success && result.payment_status === 'paid') {
-        // Re-fetch full order data
-        const { data: updated } = await supabase
-          .from('orders')
-          .select('*, order_items (*)')
-          .eq('order_number', orderNum)
-          .single();
-        if (updated) setOrder(updated);
-      }
-    } catch (err) {
-      console.error('Payment verification failed:', err);
-    } finally {
-      setVerifying(false);
-    }
+    setVerifying(false);
+    setLoading(false);
   };
 
   if (loading) {
@@ -106,17 +102,37 @@ function OrderSuccessContent() {
     );
   }
 
-  // Use a fallback or nice error if order not found
+  if (verifying) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto px-4">
+          <i className="ri-loader-4-line text-5xl text-blue-700 animate-spin mb-6 block"></i>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Verifying Your Payment</h1>
+          <p className="text-gray-600 mb-2">Please wait while we confirm your payment with the provider.</p>
+          <p className="text-sm text-gray-500">This usually takes a few seconds...</p>
+        </div>
+      </main>
+    );
+  }
+
   if (!order) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <i className="ri-error-warning-line text-4xl text-red-500 mb-4 block"></i>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Not Found</h1>
-          <p className="text-gray-600 mb-6">We couldn't locate the order details.</p>
-          <Link href="/shop" className="text-blue-700 font-semibold hover:underline">
-            Return to Shop
-          </Link>
+        <div className="text-center max-w-md mx-auto px-4">
+          <i className="ri-error-warning-line text-4xl text-amber-500 mb-4 block"></i>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Processing</h1>
+          <p className="text-gray-600 mb-6">
+            Your payment is being processed. If you completed the payment, your order will be confirmed shortly.
+            You can check your order status from your account.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/account?tab=orders" className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+              Check Order Status
+            </Link>
+            <Link href="/shop" className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors">
+              Return to Shop
+            </Link>
+          </div>
         </div>
       </main>
     );

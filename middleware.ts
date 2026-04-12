@@ -94,7 +94,8 @@ export async function middleware(request: NextRequest) {
                     .eq('id', user.id)
                     .single();
 
-                if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
+                const role = profile?.role;
+                if (!profile || (role !== 'admin' && role !== 'staff')) {
                     const loginUrl = new URL('/admin/login', request.url);
                     loginUrl.searchParams.set('error', 'unauthorized');
                     return NextResponse.redirect(loginUrl);
@@ -106,8 +107,10 @@ export async function middleware(request: NextRequest) {
 
             } catch (err) {
                 console.error('[Middleware] Auth check error:', err);
-                // On error, still allow through (client-side check is backup)
-                // But log it for monitoring
+                const loginUrl = new URL('/admin/login', request.url);
+                loginUrl.searchParams.set('redirect', pathname);
+                loginUrl.searchParams.set('error', 'session_error');
+                return NextResponse.redirect(loginUrl);
             }
         }
     }

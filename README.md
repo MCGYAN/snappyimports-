@@ -1,34 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Store
+
+A Next.js e-commerce storefront with Supabase backend.
 
 ## Getting Started
 
-First, run the development server:
+1. Copy environment variables and configure:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your Supabase URL, keys, and optional services.
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies and run the dev server:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Features
+
+- Product catalog, cart, wishlist, and checkout
+- Admin dashboard (products, orders, CMS settings)
+- Supabase for auth, database, and storage
+- Optional: Resend email, payment provider, SMS, cron
 
 ## Supabase storage (admin images)
 
-If you see **"Bucket not found"** when uploading category or product images, create a **public** storage bucket named `products` in your Supabase project (Storage → New bucket). See [SUPABASE_STORAGE.md](./SUPABASE_STORAGE.md) for steps.
+If you see **"Bucket not found"** when uploading category or product images, create a **public** storage bucket named `products` in your Supabase project (Storage → New bucket). See `SUPABASE_STORAGE.md` for steps.
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` — development server
+- `npm run build` / `npm run start` — production
+- `npm run supabase:link` — link to your Supabase project (set `YOUR_PROJECT_REF` in package.json or use `supabase link` with your ref)
+- `npm run create-admin` — create an admin user (uses `ADMIN_EMAIL` from .env.local or pass email/password)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Documentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)

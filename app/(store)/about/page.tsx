@@ -4,133 +4,113 @@ import Link from 'next/link';
 import { useCMS } from '@/context/CMSContext';
 import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { ShieldCheck, Cpu, LockKeyhole, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function AboutPage() {
-  usePageTitle('Our Story');
+  usePageTitle('About Us');
   const { getSetting } = useCMS();
-  const siteName = getSetting('site_name') || 'The Perfume Empire';
+  const siteName = getSetting('site_name') || 'Sambatek';
 
   return (
     <div className="min-h-screen bg-white">
       <PageHero
-        title="Our Story"
-        subtitle="East Legon, near America House — where fragrance meets craft."
-        backgroundImage="/Whisk_743db4f33bd7ec08b0f46aec28e929cfdr.jpeg"
+        title="About SaMba TeK"
+        subtitle="Advanced security solutions for homes, offices and businesses across Ghana."
+        backgroundImages={['/hero%201.jpg', '/hero%202.jpg', '/hero%203.jpg', '/hero4.jpg']}
       />
 
       {/* Brand Story */}
       <section className="py-20 md:py-28 bg-white overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-xs font-semibold tracking-[0.2em] text-gray-400 uppercase">Brand Story</span>
-          <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl text-gray-900 mt-3 mb-8 leading-tight">
-            More than a scent — an <span className="italic text-gray-500">emotional connection</span>
+          <span className="text-sm font-bold tracking-[0.2em] text-[#002B5E] uppercase bg-blue-50 px-4 py-2 rounded-full inline-block mb-6">Our Mission</span>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#002B5E] mt-3 mb-8 leading-tight">
+            Security you can trust. <span className="text-amber-500">Built for Ghana.</span>
           </h2>
-          <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-            <strong>{siteName}</strong> began with a simple belief: everyone deserves access to premium fragrances without compromise. Based in East Legon, near America House, we curate authentic perfumes for resellers and individual customers across Ghana — combining quality, value, and a personal touch.
+          <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-3xl mx-auto font-medium">
+            <strong>{siteName}</strong> is a Ghanaian technology company specializing in advanced security solutions for homes, offices and commercial properties.
           </p>
         </div>
       </section>
 
-      {/* Craftsmanship — editorial split */}
-      <section className="py-20 md:py-28 bg-stone-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <span className="text-xs font-semibold tracking-[0.2em] text-gray-400 uppercase">Craftsmanship</span>
-              <h2 className="font-serif text-3xl md:text-4xl text-gray-900 mt-3 mb-6 leading-tight">
-                How we create your fragrance experience
-              </h2>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                Every bottle we offer is selected with care. We work with trusted sources to bring you genuine fragrances — from fresh and clean to deep and sensual. Our process focuses on authenticity, lasting quality, and fair pricing for both wholesale and retail.
-              </p>
-              <p className="text-gray-600 leading-relaxed">
-                We inspect and verify our stock so you can sell or wear with confidence. No shortcuts — just real perfumes that tell a story.
-              </p>
-            </div>
-            <div className="relative">
-              <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
-                <img
-                  src="/Whisk_743db4f33bd7ec08b0f46aec28e929cfdr.jpeg"
-                  alt={`${siteName} — craftsmanship`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Ingredient Philosophy */}
-      <section className="py-20 md:py-28 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-xs font-semibold tracking-[0.2em] text-gray-400 uppercase">Ingredient Philosophy</span>
-          <h2 className="font-serif text-3xl md:text-4xl text-gray-900 mt-3 mb-8 leading-tight">
-            Premium oils & natural ingredients
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed">
-            We prioritise fragrances that use quality ingredients and lasting formulations. From natural essences to refined synthetics, every scent in our collection is chosen for its character, longevity, and wearability — so you get a premium experience at a fair price.
-          </p>
-        </div>
-      </section>
-
-      {/* Founder Vision */}
-      <section className="py-20 md:py-28 bg-stone-50">
+      {/* Expertise & Services */}
+      <section className="py-20 md:py-28 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1 relative">
-              <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
-                <img
-                  src="/logo.png"
-                  alt={siteName}
-                  className="w-full h-full object-contain p-12 bg-white"
-                />
+              <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl bg-[#002B5E] flex items-center justify-center p-8 border-4 border-white">
+                <ShieldCheck className="w-full h-full text-white/10 absolute inset-0 m-auto scale-150" />
+                <div className="relative z-10 text-center text-white">
+                  <Cpu className="w-20 h-20 mx-auto text-amber-500 mb-6" />
+                  <h3 className="text-3xl font-bold mb-4">Safer Spaces, Smarter Living</h3>
+                  <p className="text-blue-100 text-lg">Durable protection and modern control, installed by professionals.</p>
+                </div>
               </div>
             </div>
             <div className="order-1 lg:order-2">
-              <span className="text-xs font-semibold tracking-[0.2em] text-gray-400 uppercase">Founder Vision</span>
-              <h2 className="font-serif text-3xl md:text-4xl text-gray-900 mt-3 mb-6 leading-tight">
-                Built on trust and quality
+              <span className="text-sm font-bold tracking-[0.2em] text-[#002B5E] uppercase">Our Expertise</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#002B5E] mb-6 mt-2 leading-tight">
+                Advanced security for homes, offices and commercial properties
               </h2>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                {siteName} was founded to bridge the gap between premium fragrances and everyday customers and resellers. We believe that great perfume should be accessible — whether you&apos;re building a business or treating yourself.
+              <p className="text-gray-500 leading-relaxed mb-6 text-lg">
+                We focus on delivering durable security doors, modern surveillance systems, smart locks and access control technology to improve safety and convenience.
               </p>
-              <p className="text-gray-600 leading-relaxed">
-                Our vision is simple: offer authentic, lasting fragrances with transparent pricing and reliable service from East Legon to all of Ghana.
-              </p>
+              <ul className="space-y-4 text-gray-700">
+                <li className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                  <ShieldCheck className="w-6 h-6 text-amber-500 flex-shrink-0" />
+                  <span className="font-semibold">Security Doors & Strong Installations</span>
+                </li>
+                <li className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                  <Cpu className="w-6 h-6 text-[#002B5E] flex-shrink-0" />
+                  <span className="font-semibold">CCTV & Modern Surveillance Systems</span>
+                </li>
+                <li className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                  <LockKeyhole className="w-6 h-6 text-amber-500 flex-shrink-0" />
+                  <span className="font-semibold">Smart Locks & Access Control Systems</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Signature Experience */}
-      <section className="py-20 md:py-28 bg-gray-900 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-xs font-semibold tracking-[0.2em] text-white/50 uppercase">Signature Experience</span>
-          <h2 className="font-serif text-3xl md:text-4xl mt-3 mb-8 leading-tight">
-            What makes us different
+      {/* Core Values */}
+      <section className="py-20 md:py-28 bg-[#002B5E] text-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <span className="text-sm font-bold tracking-[0.2em] text-white/50 uppercase">Why Choose Us</span>
+          <h2 className="text-3xl md:text-4xl font-extrabold mt-3 mb-16 leading-tight text-white">
+            Why customers choose {siteName}
           </h2>
-          <p className="text-lg text-white/80 leading-relaxed mb-12">
-            Personal service, verified quality, and a curated range that fits every taste and budget. We&apos;re not just selling bottles — we&apos;re helping you find (or resell) the scent that defines a moment.
-          </p>
-          <div className="flex flex-wrap justify-center gap-8 text-sm">
-            <span className="flex items-center gap-2"><i className="ri-check-line text-white/70" /> Authentic products</span>
-            <span className="flex items-center gap-2"><i className="ri-check-line text-white/70" /> Wholesale & retail</span>
-            <span className="flex items-center gap-2"><i className="ri-check-line text-white/70" /> East Legon, Accra</span>
-            <span className="flex items-center gap-2"><i className="ri-check-line text-white/70" /> Nationwide delivery</span>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:border-amber-500/50 transition-colors">
+              <ShieldCheck className="w-12 h-12 text-amber-500 mx-auto mb-6" />
+              <h3 className="text-xl font-bold mb-4">Durable Solutions</h3>
+              <p className="text-blue-200">We recommend and install security products designed to last and perform reliably.</p>
+            </div>
+            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:border-amber-500/50 transition-colors">
+              <CheckCircle2 className="w-12 h-12 text-amber-500 mx-auto mb-6" />
+              <h3 className="text-xl font-bold mb-4">Professional Installation</h3>
+              <p className="text-blue-200">Our team installs and configures systems properly for safety, performance and peace of mind.</p>
+            </div>
+            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:border-amber-500/50 transition-colors">
+              <LockKeyhole className="w-12 h-12 text-amber-500 mx-auto mb-6" />
+              <h3 className="text-xl font-bold mb-4">Local Coverage</h3>
+              <p className="text-blue-200">Our goal is to provide reliable security solutions for customers in Accra, Tarkwa and across Ghana.</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-white border-t border-gray-100">
+      <section className="py-24 bg-gradient-to-br from-gray-50 to-white border-t border-gray-200">
         <div className="max-w-2xl mx-auto px-4 text-center">
-          <h2 className="font-serif text-2xl md:text-3xl text-gray-900 mb-4">Ready to find your scent?</h2>
-          <p className="text-gray-600 mb-8">Browse our collection or get in touch. Call <a href="tel:0553967658" className="font-medium text-gray-900 hover:underline">055 396 7658</a>.</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[#002B5E] mb-6">Upgrade Your Security Today</h2>
+          <p className="text-gray-500 text-lg mb-10">Browse our security products or contact our team for professional installation and support.</p>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 bg-gray-900 text-white px-8 py-4 rounded-full font-medium hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center gap-3 bg-[#002B5E] hover:bg-amber-500 hover:text-[#002B5E] text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg text-lg group"
           >
-            Shop now <i className="ri-arrow-right-line" />
+            Explore Solutions <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </section>

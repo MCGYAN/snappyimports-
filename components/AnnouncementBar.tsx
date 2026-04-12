@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { X } from 'lucide-react';
 
 interface Banner {
     id: string;
@@ -72,12 +73,7 @@ export default function AnnouncementBar() {
     const visibleBanners = banners.filter(b => !dismissed.has(b.id));
 
     if (visibleBanners.length === 0) {
-        // Show default banner if no custom banners
-        return (
-            <div className="bg-blue-800 text-white py-2 text-center text-sm">
-                <p>Free Store Pickup Available | Order Online, Pick Up Today</p>
-            </div>
-        );
+        return null;
     }
 
     const currentBanner = visibleBanners[currentIndex % visibleBanners.length];
@@ -119,7 +115,7 @@ export default function AnnouncementBar() {
                 style={{ color: currentBanner.text_color }}
                 aria-label="Dismiss banner"
             >
-                <i className="ri-close-line"></i>
+                <X className="w-4 h-4" />
             </button>
 
             {/* Dots indicator for multiple banners */}

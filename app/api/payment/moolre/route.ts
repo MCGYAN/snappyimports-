@@ -36,14 +36,16 @@ export async function POST(req: Request) {
 
         // SECURITY: Fetch the order from the database and use its total.
         // NEVER trust the amount from the client.
-        const { data: order, error: orderError } = await supabaseAdmin
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId.trim());
+        const query = supabaseAdmin
             .from('orders')
-            .select('id, order_number, total, email, payment_status')
-            .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-            .single();
+            .select('id, order_number, total, email, payment_status, metadata');
+        const { data: order, error: orderError } = isUuid
+            ? await query.eq('id', orderId.trim()).single()
+            : await query.eq('order_number', orderId.trim()).single();
 
         if (orderError || !order) {
-            console.error('[Payment] Order not found:', orderId);
+            console.error('[Payment] Order not found:', orderId, orderError?.message ?? '');
             return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
         }
 
@@ -62,6 +64,9 @@ export async function POST(req: Request) {
 
         const requestUrl = new URL(req.url);
         const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin).replace(/\/+$/, '');
+        if (baseUrl.includes('localhost')) {
+            console.warn('[Payment] baseUrl is localhost — callback will not work from Moolre. Set NEXT_PUBLIC_APP_URL to https://www.sambatekgh.com in production.');
+        }
 
         // Generate a unique external reference for Moolre
         const uniqueRef = `${orderRef}-R${Date.now()}`;
@@ -84,6 +89,18 @@ export async function POST(req: Request) {
         };
 
         console.log('[Payment] Initiating for order:', orderRef, '| Amount from DB:', amount, '| Callback:', payload.callback);
+
+        // Store the unique external reference so the verify endpoint can look it up
+        await supabaseAdmin
+            .from('orders')
+            .update({
+                metadata: {
+                    ...(order as any).metadata,
+                    moolre_external_ref: uniqueRef,
+                    payment_initiated_at: new Date().toISOString()
+                }
+            })
+            .eq('id', order.id);
 
         const response = await fetch('https://api.moolre.com/embed/link', {
             method: 'POST',

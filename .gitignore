@@ -31,3 +31,5 @@ yarn-error.log*
 # Vercel
 .vercel
 .vercel-cli-config
+
+.vercel

@@ -56,11 +56,12 @@ export async function verifyAuth(
                 return { authenticated: false, error: 'Could not verify user role' };
             }
 
-            if (profile.role !== 'admin' && profile.role !== 'staff') {
-                return { authenticated: false, error: 'Admin access required' };
+            const role = profile.role;
+            if (role !== 'admin' && role !== 'staff') {
+                return { authenticated: false, error: 'Admin or staff access required' };
             }
 
-            return { authenticated: true, user, role: profile.role };
+            return { authenticated: true, user, role };
         }
 
         return { authenticated: true, user };
@@ -95,11 +96,12 @@ export async function verifyAdminToken(token: string): Promise<AuthResult> {
             return { authenticated: false, error: 'Could not verify role' };
         }
 
-        if (profile.role !== 'admin' && profile.role !== 'staff') {
-            return { authenticated: false, error: 'Admin access required' };
+        const role = profile.role;
+        if (role !== 'admin' && role !== 'staff') {
+            return { authenticated: false, error: 'Admin or staff access required' };
         }
 
-        return { authenticated: true, user, role: profile.role };
+        return { authenticated: true, user, role };
     } catch (err: any) {
         return { authenticated: false, error: err.message || 'Auth failed' };
     }

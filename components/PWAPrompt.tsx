@@ -53,16 +53,12 @@ export default function PWAPrompt() {
           <div className="px-6 pb-8">
             {/* App icon and info */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-blue-50 flex items-center justify-center">
-                <img
-                  src="/logo.png"
-                  alt="The Perfume Empire"
-                  className="w-[72px] h-[72px] object-contain"
-                />
+              <div className="w-40 h-40 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-white flex items-center justify-center p-2">
+                <img src="/logo.png" alt="Sambatek" className="w-full h-full object-contain" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900 text-lg truncate">The Perfume Empire</h3>
-                <p className="text-sm text-gray-500">East Legon · 055 396 7658</p>
+                <h3 className="font-bold text-gray-900 text-lg truncate">Sambatek</h3>
+                <p className="text-sm text-gray-500">Shop online</p>
                 <div className="flex items-center gap-1 mt-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <i key={star} className="ri-star-fill text-amber-400 text-xs" />

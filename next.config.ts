@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Favicon and icons served from public/ (copied from favicon/)
   images: {
     minimumCacheTTL: 2592000, // Cache optimized images for 30 days
     formats: ['image/avif', 'image/webp'],
@@ -102,6 +103,13 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/:path*.webp',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
+        ]
+      },
+      // Favicon and PWA icons (from favicon/ in public/)
+      {
+        source: '/favicon.ico',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
         ]

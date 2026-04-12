@@ -50,8 +50,9 @@ export function useRecaptcha() {
             }
 
             return true;
-        } catch (err: any) {
-            console.error('[reCAPTCHA] Hook error:', err);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Verification error';
+            if (err instanceof Error) console.warn('[reCAPTCHA]', msg);
             setError('Verification error. Please try again.');
             return false;
         } finally {

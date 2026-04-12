@@ -9,6 +9,7 @@ import { getColorHex } from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery } from '@/lib/query-cache';
 import PageHero from '@/components/PageHero';
+import { Filter, X, Star, Inbox, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function ShopContent() {
   usePageTitle('Shop All Products');
@@ -201,8 +202,8 @@ function ShopContent() {
     <main className="min-h-screen bg-white">
       <PageHero
         title="Shop All Products"
-        subtitle="Browse our range of perfumes and fragrances"
-        backgroundImage="/Whisk_6ec7df94ec3ca85b49644810b7fab2ecdr.jpeg"
+        subtitle="Browse our range of products"
+        backgroundImage="/hero4.jpg"
       />
 
       {/* Mobile Filter Toggle */}
@@ -210,9 +211,9 @@ function ShopContent() {
         <div className="flex justify-between items-center">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="flex items-center space-x-2 text-gray-900 font-medium"
+            className="flex items-center space-x-2 text-[#002B5E] font-medium"
           >
-            <i className="ri-filter-3-line text-xl"></i>
+            <Filter className="w-5 h-5" />
             <span>Filters & Sort</span>
           </button>
           <span className="text-sm text-gray-500">{totalProducts} Products</span>
@@ -226,12 +227,12 @@ function ShopContent() {
               <div className="lg:sticky lg:top-24">
                 <div className="bg-white lg:bg-transparent p-6 lg:p-0">
                   <div className="flex items-center justify-between mb-6 lg:hidden">
-                    <h2 className="text-xl font-bold text-gray-900">Filters</h2>
+                    <h2 className="text-xl font-bold text-[#002B5E]">Filters</h2>
                     <button
                       onClick={() => setIsFilterOpen(false)}
                       className="w-10 h-10 flex items-center justify-center text-gray-700"
                     >
-                      <i className="ri-close-line text-2xl"></i>
+                      <X className="w-6 h-6" />
                     </button>
                   </div>
 
@@ -247,7 +248,7 @@ function ShopContent() {
                             setIsFilterOpen(false);
                           }}
                           className={`w-full text-left px-4 py-2.5 rounded-xl transition-colors ${selectedCategory === 'all'
-                            ? 'bg-gray-900 text-white font-medium'
+                            ? 'bg-[#002B5E] text-white font-medium shadow-md'
                             : 'text-gray-700 hover:bg-gray-50'
                             }`}
                         >
@@ -270,7 +271,7 @@ function ShopContent() {
                                   // Don't close filter immediately if exploring hierarchy
                                 }}
                                 className={`w-full text-left px-4 py-2.5 rounded-xl transition-colors flex justify-between items-center ${isSelected
-                                  ? 'bg-gray-900 text-white font-medium'
+                                  ? 'bg-[#002B5E] text-white font-medium shadow-md'
                                   : 'text-gray-700 hover:bg-gray-50'
                                   }`}
                               >
@@ -345,10 +346,10 @@ function ShopContent() {
                           >
                             <div className="flex items-center space-x-2">
                               {[1, 2, 3, 4, 5].map(star => (
-                                <i
+                                <Star
                                   key={star}
-                                  className={`${star <= rating ? 'ri-star-fill text-amber-400' : 'ri-star-line text-gray-300'} text-sm`}
-                                ></i>
+                                  className={`w-4 h-4 ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
+                                />
                               ))}
                               <span className="text-sm">& Up</span>
                             </div>
@@ -362,7 +363,7 @@ function ShopContent() {
                         // Re-fetch handled by effect dependencies
                         setIsFilterOpen(false);
                       }}
-                      className="w-full bg-gray-900 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
+                      className="w-full bg-[#002B5E] hover:bg-amber-500 hover:text-[#002B5E] text-white py-3 rounded-xl font-bold transition-all shadow-md whitespace-nowrap"
                     >
                       Show Results
                     </button>
@@ -397,14 +398,14 @@ function ShopContent() {
               </div>
 
               {loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-x-4 gap-y-8 md:gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                   {[...Array(6)].map((_, i) => (
                     <ProductCardSkeleton key={i} />
                   ))}
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" data-product-shop>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 lg:gap-8" data-product-shop>
                     {products.map(product => (
                       <ProductCard key={product.id} {...product} />
                     ))}
@@ -412,11 +413,11 @@ function ShopContent() {
 
                   {products.length === 0 && (
                     <div className="text-center py-20">
-                      <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 bg-gray-100 rounded-full">
-                        <i className="ri-inbox-line text-4xl text-gray-400"></i>
+                      <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 bg-red-50 text-red-500 border border-red-100 rounded-full">
+                        <Inbox className="w-10 h-10" />
                       </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">No Products Found</h3>
-                      <p className="text-gray-600 mb-8">Try adjusting your filters to find what you're looking for</p>
+                      <h3 className="text-2xl font-bold text-[#002B5E] mb-2">No Products Found</h3>
+                      <p className="text-gray-500 mb-8 font-medium">Try adjusting your filters to find what you're looking for</p>
                       <button
                         onClick={() => {
                           setSelectedCategory('all');
@@ -424,7 +425,7 @@ function ShopContent() {
                           setSelectedRating(0);
                           setPage(1);
                         }}
-                        className="inline-flex items-center bg-gray-900 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
+                        className="inline-flex items-center bg-[#002B5E] hover:bg-amber-500 hover:text-[#002B5E] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-md whitespace-nowrap"
                       >
                         Clear All Filters
                       </button>
@@ -440,9 +441,9 @@ function ShopContent() {
                     <button
                       onClick={() => setPage(p => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-[#002B5E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-700"
                     >
-                      <i className="ri-arrow-left-s-line text-xl text-gray-700"></i>
+                      <ChevronLeft className="w-5 h-5" />
                     </button>
 
                     {/* Simple page numbers - condensed for brevity */}
@@ -453,9 +454,9 @@ function ShopContent() {
                     <button
                       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
-                      className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-[#002B5E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-700"
                     >
-                      <i className="ri-arrow-right-s-line text-xl text-gray-700"></i>
+                      <ChevronRight className="w-5 h-5" />
                     </button>
                   </div>
                 </div>

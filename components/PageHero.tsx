@@ -1,26 +1,44 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 interface PageHeroProps {
     title: string;
     subtitle?: string;
     backgroundImage?: string;
+    backgroundImages?: string[];
 }
 
-export default function PageHero({ title, subtitle, backgroundImage }: PageHeroProps) {
+export default function PageHero({ title, subtitle, backgroundImage, backgroundImages }: PageHeroProps) {
+    const images = backgroundImages?.length ? backgroundImages : (backgroundImage ? [backgroundImage] : []);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        if (images.length > 1) {
+            const interval = setInterval(() => {
+                setCurrentIndex((prev) => (prev + 1) % images.length);
+            }, 2000);
+            return () => clearInterval(interval);
+        }
+    }, [images.length]);
+
     return (
-        <div className={`relative overflow-hidden flex items-center justify-center min-h-[60vh] ${!backgroundImage ? 'bg-blue-900' : ''}`}>
-            {backgroundImage ? (
+        <div className={`relative overflow-hidden flex items-center justify-center min-h-[60vh] ${images.length === 0 ? 'bg-blue-900' : ''}`}>
+            {images.length > 0 ? (
                 <>
-                    <Image
-                        src={backgroundImage}
-                        alt={title}
-                        fill
-                        className="object-cover"
-                        priority
-                        sizes="100vw"
-                        quality={80}
-                    />
+                    {images.map((src, index) => (
+                        <Image
+                            key={src}
+                            src={src}
+                            alt={`${title} - image ${index + 1}`}
+                            fill
+                            className={`object-cover transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                            priority={index === 0}
+                            sizes="100vw"
+                            quality={80}
+                        />
+                    ))}
                     <div className="absolute inset-0 bg-black/50"></div>
                 </>
             ) : (
@@ -30,13 +48,6 @@ export default function PageHero({ title, subtitle, backgroundImage }: PageHeroP
             )}
 
             <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center z-10 flex flex-col items-center">
-                {/* Optional Tag - adding structure for future use or decorative line */}
-                <div className="mb-6 overflow-hidden">
-                    <span className="inline-block py-1 px-4 text-white/90 text-sm md:text-base tracking-[0.3em] uppercase font-semibold border border-white/20 rounded-full backdrop-blur-md bg-white/5 animate-in slide-in-from-bottom-3 duration-700">
-                        {title.split(' ')[0]} Collection
-                    </span>
-                </div>
-
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif italic font-medium text-white mb-8 leading-[1.1] drop-shadow-2xl animate-in slide-in-from-bottom-4 duration-700 delay-100">
                     {title}
                 </h1>

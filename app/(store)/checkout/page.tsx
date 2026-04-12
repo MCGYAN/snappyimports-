@@ -8,7 +8,7 @@ import OrderSummary from '@/components/OrderSummary';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { executeRecaptcha } from '@/lib/recaptcha';
 
 export default function CheckoutPage() {
   usePageTitle('Checkout');
@@ -21,7 +21,6 @@ export default function CheckoutPage() {
   const [saveAddress, setSaveAddress] = useState(false);
   const [savePayment, setSavePayment] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const { getToken, verifying } = useRecaptcha();
 
   const [shippingData, setShippingData] = useState({
     firstName: '',
@@ -129,124 +128,49 @@ export default function CheckoutPage() {
 
     setIsLoading(true);
 
-    // reCAPTCHA verification
-    const isHuman = await getToken('checkout');
-    if (!isHuman) {
-      alert('Security verification failed. Please try again.');
-      setIsLoading(false);
-      return;
+    // reCAPTCHA: attempt to get token but don't block checkout on failure
+    let recaptchaToken = '';
+    const hasRecaptcha = typeof process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY === 'string' && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.length > 0;
+    if (hasRecaptcha) {
+      const token = await executeRecaptcha('checkout');
+      recaptchaToken = token || '';
     }
 
     try {
-      const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      // Generate tracking number: SLI-XXXXXX (6-char alphanumeric)
-      const trackingId = Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
-      const trackingNumber = `SLI-${trackingId}`;
-
-      // 1. Create Order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          order_number: orderNumber,
-          user_id: user?.id || null, // Capture user_id if logged in
-          email: shippingData.email,
-          phone: shippingData.phone,
-          status: 'pending',
-          payment_status: 'pending',
-          currency: 'GHS',
-          subtotal: subtotal,
-          tax_total: tax,
-          shipping_total: shippingCost,
-          discount_total: 0,
-          total: total,
-          shipping_method: deliveryMethod,
-          payment_method: paymentMethod,
-          shipping_address: shippingData,
-          billing_address: shippingData, // Using same for now
-          metadata: {
-            guest_checkout: !user,
-            first_name: shippingData.firstName,
-            last_name: shippingData.lastName,
-            tracking_number: trackingNumber
-          }
-        }])
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // 2. Create Order Items (with UUID validation)
-      // Helper to check if string is a valid UUID
-      const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-      
-      // Build order items, resolving slugs to UUIDs if needed
-      const orderItems = [];
-      
-      // Batch-fetch product metadata (for preorder_shipping etc.)
-      const productIds = cart.map(item => item.id).filter(id => isValidUUID(id));
-      const { data: productsData } = productIds.length > 0
-        ? await supabase.from('products').select('id, metadata').in('id', productIds)
-        : { data: [] };
-      const productMetaMap = new Map((productsData || []).map((p: any) => [p.id, p.metadata]));
-      
-      for (const item of cart) {
-        let productId = item.id;
-        
-        // If id is not a valid UUID, it might be a slug - try to resolve it
-        if (!isValidUUID(productId)) {
-          const { data: product } = await supabase
-            .from('products')
-            .select('id, metadata')
-            .or(`slug.eq.${productId},id.eq.${productId}`)
-            .single();
-          
-          if (product) {
-            productId = product.id;
-            productMetaMap.set(product.id, product.metadata);
-          } else {
-            throw new Error(`Product not found: ${item.name}. Please remove it from your cart and try again.`);
-          }
-        }
-        
-        const prodMeta = productMetaMap.get(productId);
-        
-        orderItems.push({
-          order_id: order.id,
-          product_id: productId,
-          product_name: item.name,
-          variant_name: item.variant,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.price * item.quantity,
-          metadata: {
+      // Place order via API (uses service role so RLS does not block guest checkout)
+      const placeRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recaptchaToken: recaptchaToken || '',
+          shippingData,
+          deliveryMethod,
+          paymentMethod,
+          cart: cart.map((item: { id: string; name: string; variant?: string; quantity: number; price: number; image?: string; slug?: string }) => ({
+            id: item.id,
+            name: item.name,
+            variant: item.variant,
+            quantity: item.quantity,
+            price: item.price,
             image: item.image,
-            slug: item.slug,
-            preorder_shipping: prodMeta?.preorder_shipping || null
-          }
-        });
-      }
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Note: Stock reduction happens in mark_order_paid when payment is confirmed
-
-      // 3. Upsert Customer Record (for both guest and registered users)
-      const fullName = `${shippingData.firstName} ${shippingData.lastName}`.trim();
-      await supabase.rpc('upsert_customer_from_order', {
-        p_email: shippingData.email,
-        p_phone: shippingData.phone,
-        p_full_name: fullName,
-        p_first_name: shippingData.firstName,
-        p_last_name: shippingData.lastName,
-        p_user_id: user?.id || null,
-        p_address: shippingData
+            slug: item.slug
+          })),
+          userId: user?.id ?? null
+        })
       });
 
-      // 4. Handle Payment Redirects or Completion
+      const placeData = await placeRes.json();
+      if (!placeRes.ok) {
+        throw new Error(placeData.error || 'Failed to place order');
+      }
+      if (!placeData.success || !placeData.order || !placeData.orderNumber) {
+        throw new Error('Invalid response from server');
+      }
+
+      const order = placeData.order;
+      const orderNumber = placeData.orderNumber;
+
+      // Handle Payment Redirects or Completion
       if (paymentMethod === 'moolre') {
         try {
           // Payment link reminder will be sent automatically after 15 mins if unpaid (via cron)

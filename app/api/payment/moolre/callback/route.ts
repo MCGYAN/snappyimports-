@@ -28,7 +28,10 @@ import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-lim
  */
 
 export async function POST(req: Request) {
-    console.log('[Callback] POST received at', new Date().toISOString());
+    console.log('[Callback] POST received at', new Date().toISOString(), '| App URL:', process.env.NEXT_PUBLIC_APP_URL || '(not set, using request origin)');
+    if (process.env.NEXT_PUBLIC_APP_URL?.includes('localhost')) {
+        console.warn('[Callback] WARNING: NEXT_PUBLIC_APP_URL contains localhost — Moolre cannot reach this. Set it to your production domain (e.g. https://www.sambatekgh.com) in Vercel.');
+    }
 
     try {
         // Rate limiting
@@ -71,18 +74,42 @@ export async function POST(req: Request) {
         console.log('[Callback] Data keys:', body.data ? Object.keys(body.data).join(', ') : 'no data object');
 
         // ============================================================
-        // SECURITY: Verify callback secret FIRST (mandatory)
+        // SECURITY: Callback secret — must match MOOLRE_CALLBACK_SECRET if set.
+        // Check common field names (Moolre may use body.secret or another key)
         // ============================================================
-        const expectedSecret = process.env.MOOLRE_CALLBACK_SECRET;
-        if (expectedSecret) {
-            // If we have a configured secret, the callback MUST match it
-            if (!body.secret || body.secret !== expectedSecret) {
-                console.error('[Callback] Secret mismatch or missing! Rejecting callback.');
+        const dataForSecret = body.data || {};
+        const possibleSecretFields = [
+            body.secret,
+            dataForSecret.secret,
+            body.callback_secret,
+            dataForSecret.callback_secret,
+            body.webhook_secret,
+            body.signature,
+            body.token
+        ];
+        const receivedSecret = (possibleSecretFields.find(Boolean) ?? '').toString().trim();
+        const expectedSecret = process.env.MOOLRE_CALLBACK_SECRET?.trim();
+        const skipSecretCheck = process.env.MOOLRE_SKIP_CALLBACK_SECRET === 'true' || process.env.MOOLRE_SKIP_CALLBACK_SECRET === '1';
+        const debugSecret = process.env.MOOLRE_CALLBACK_DEBUG === 'true' || process.env.MOOLRE_CALLBACK_DEBUG === '1';
+
+        if (debugSecret) {
+            console.log('[Callback] DEBUG: Received secret length=', receivedSecret.length, '| Full value to copy into Vercel MOOLRE_CALLBACK_SECRET:', JSON.stringify(receivedSecret));
+        }
+
+        if (skipSecretCheck) {
+            console.warn('[Callback] MOOLRE_SKIP_CALLBACK_SECRET is set — accepting callback without secret verification. Remove this in production once secret is configured.');
+        } else if (expectedSecret) {
+            if (!receivedSecret || receivedSecret !== expectedSecret) {
+                const recvPreview = receivedSecret ? `${receivedSecret.substring(0, 8)}... (len ${receivedSecret.length})` : '(empty)';
+                console.error('[Callback] Secret mismatch! Expected starts with:', expectedSecret.substring(0, 8), '| Received:', recvPreview);
+                if (!debugSecret) {
+                    console.error('[Callback] Set MOOLRE_CALLBACK_DEBUG=true in Vercel, redeploy, then trigger a payment to log the exact secret Moolre sends. Copy that value into MOOLRE_CALLBACK_SECRET.');
+                }
                 return NextResponse.json({ success: false, message: 'Invalid callback signature' }, { status: 403 });
             }
+            console.log('[Callback] Secret verified OK');
         } else {
-            // Log a warning if no secret is configured — this should be fixed
-            console.warn('[Callback] WARNING: MOOLRE_CALLBACK_SECRET not configured. Callback origin cannot be verified.');
+            console.warn('[Callback] MOOLRE_CALLBACK_SECRET not set — callback origin cannot be verified.');
         }
 
         // ============================================================
@@ -100,7 +127,7 @@ export async function POST(req: Request) {
             body.external_reference;
 
         // Strip retry suffix (e.g., "ORD-123-R1770000000" -> "ORD-123")
-        const merchantOrderRef = rawExternalRef
+        let merchantOrderRef = rawExternalRef
             ? rawExternalRef.replace(/-R\d+$/, '')
             : (data.metadata?.original_order_number || body.metadata?.original_order_number);
 
@@ -111,17 +138,30 @@ export async function POST(req: Request) {
             body.reference ||
             'callback';
 
-        // Payment status: body.status === 1 means API call succeeded,
-        // body.data.txtstatus === 1 means transaction was successful
         const apiStatus = body.status;
         const txStatus = data.txtstatus;
         const messageStr = String(body.message || '').toLowerCase();
 
         console.log('[Callback] Order ref:', merchantOrderRef,
+            '| Raw ref:', rawExternalRef,
             '| API status:', apiStatus,
             '| TX status:', txStatus,
             '| Message:', body.message,
             '| Moolre ref:', moolreReference);
+
+        // If we couldn't extract the order ref, try looking it up by the stored external ref
+        if (!merchantOrderRef && rawExternalRef) {
+            const { data: orderByRef } = await supabaseAdmin
+                .from('orders')
+                .select('order_number')
+                .contains('metadata', { moolre_external_ref: rawExternalRef })
+                .single();
+
+            if (orderByRef) {
+                merchantOrderRef = orderByRef.order_number;
+                console.log('[Callback] Found order via metadata lookup:', merchantOrderRef);
+            }
+        }
 
         if (!merchantOrderRef) {
             console.error('[Callback] Missing order reference. Body:', JSON.stringify(body).substring(0, 500));
@@ -224,13 +264,22 @@ export async function POST(req: Request) {
             // Payment failed
             console.log(`[Callback] Payment FAILED for ${merchantOrderRef} | Status: ${apiStatus} | TX: ${txStatus}`);
 
+            // Merge failure info into existing metadata (don't overwrite)
+            const { data: failedOrder } = await supabaseAdmin
+                .from('orders')
+                .select('metadata')
+                .eq('order_number', merchantOrderRef)
+                .single();
+
             await supabaseAdmin
                 .from('orders')
                 .update({
                     payment_status: 'failed',
                     metadata: {
+                        ...(failedOrder?.metadata || {}),
                         moolre_reference: moolreReference,
-                        failure_reason: body.message || 'Payment failed'
+                        failure_reason: body.message || 'Payment failed',
+                        failed_at: new Date().toISOString()
                     }
                 })
                 .eq('order_number', merchantOrderRef);
@@ -245,5 +294,60 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+    // Some payment providers send callbacks via GET with query parameters
+    const url = new URL(req.url);
+    const params = Object.fromEntries(url.searchParams.entries());
+
+    if (params.externalref || params.status || params.transactionid) {
+        console.log('[Callback] GET received with params:', JSON.stringify(params));
+
+        const rawExternalRef = params.externalref || params.external_reference || params.orderRef;
+        const merchantOrderRef = rawExternalRef ? rawExternalRef.replace(/-R\d+$/, '') : null;
+        const status = params.status;
+        const txtstatus = params.txtstatus;
+
+        if (merchantOrderRef && (status === '1' || txtstatus === '1')) {
+            try {
+                const moolreReference = params.transactionid || params.thirdpartyref || 'callback-get';
+
+                const { data: existingOrder } = await supabaseAdmin
+                    .from('orders')
+                    .select('id, order_number, payment_status, total')
+                    .eq('order_number', merchantOrderRef)
+                    .single();
+
+                if (existingOrder && existingOrder.payment_status !== 'paid') {
+                    const { data: orderJson, error: updateError } = await supabaseAdmin
+                        .rpc('mark_order_paid', {
+                            order_ref: merchantOrderRef,
+                            moolre_ref: String(moolreReference)
+                        });
+
+                    if (!updateError && orderJson) {
+                        console.log('[Callback GET] Order marked paid:', merchantOrderRef);
+
+                        try {
+                            if (orderJson.email) {
+                                await supabaseAdmin.rpc('update_customer_stats', {
+                                    p_customer_email: orderJson.email,
+                                    p_order_total: orderJson.total
+                                });
+                            }
+                            await sendOrderConfirmation(orderJson);
+                        } catch (e: any) {
+                            console.error('[Callback GET] Post-payment tasks failed:', e.message);
+                        }
+                    }
+                }
+            } catch (e: any) {
+                console.error('[Callback GET] Error processing:', e.message);
+            }
+        }
+
+        // Redirect to order success page
+        const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin).replace(/\/+$/, '');
+        return Response.redirect(`${baseUrl}/order-success?order=${merchantOrderRef}&payment_success=true`, 302);
+    }
+
     return NextResponse.json({ message: 'Moolre callback endpoint ready', timestamp: new Date().toISOString() });
 }

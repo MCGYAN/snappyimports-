@@ -31,7 +31,7 @@ export async function executeRecaptcha(action: string): Promise<string | null> {
                 w.grecaptcha
                     .execute(RECAPTCHA_SITE_KEY, { action })
                     .then(resolve)
-                    .catch(reject);
+                    .catch((err: unknown) => reject(err instanceof Error ? err : new Error('reCAPTCHA failed')));
             });
         });
     } catch (error) {

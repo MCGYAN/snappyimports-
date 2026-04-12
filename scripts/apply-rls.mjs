@@ -7,23 +7,22 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://bskojprmfxugvkycvetc.supabase.co';
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const fs = await import('fs');
+const envPath = '.env.local';
+const envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
+const getEnv = (key) => process.env[key] || (envContent.match(new RegExp(key + '=(.+)'))?.[1]?.trim().replace(/^["']|["']$/g, ''));
+const SUPABASE_URL = getEnv('NEXT_PUBLIC_SUPABASE_URL') || '';
+const SERVICE_ROLE_KEY = getEnv('SUPABASE_SERVICE_ROLE_KEY');
 
-if (!SERVICE_ROLE_KEY) {
-    // Read from .env.local
-    const fs = await import('fs');
-    const envContent = fs.readFileSync('.env.local', 'utf-8');
-    const match = envContent.match(/SUPABASE_SERVICE_ROLE_KEY=(.+)/);
-    if (match) {
-        var serviceKey = match[1].trim();
-    } else {
-        console.error('ERROR: Could not find SUPABASE_SERVICE_ROLE_KEY');
-        process.exit(1);
-    }
-} else {
-    var serviceKey = SERVICE_ROLE_KEY;
+if (!SUPABASE_URL) {
+    console.error('ERROR: NEXT_PUBLIC_SUPABASE_URL not found. Set it in .env.local');
+    process.exit(1);
 }
+if (!SERVICE_ROLE_KEY) {
+    console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not found. Set it in .env.local');
+    process.exit(1);
+}
+const serviceKey = SERVICE_ROLE_KEY;
 
 const supabase = createClient(SUPABASE_URL, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false }
@@ -236,7 +235,7 @@ const SQL_STATEMENTS = [
 ];
 
 console.log('=== Applying RLS Policies to Supabase ===\n');
-console.log(`Project: bskojprmfxugvkycvetc`);
+console.log('Applying RLS policies...');
 console.log(`Total SQL statements: ${SQL_STATEMENTS.length}\n`);
 
 let succeeded = 0;
@@ -279,6 +278,6 @@ console.log(`Skipped: ${skipped}`);
 if (failed > 0) {
     console.log(`\nNOTE: If all statements failed with "function exec_sql does not exist",`);
     console.log(`you need to run these SQL statements directly in the Supabase SQL Editor.`);
-    console.log(`Go to: https://supabase.com/dashboard/project/bskojprmfxugvkycvetc/sql/new`);
+    console.log('Go to: Supabase Dashboard → SQL Editor to run SQL manually if needed.');
     console.log(`\nCopy the SQL from SECURITY_RLS_SETUP.md and run it there.`);
 }

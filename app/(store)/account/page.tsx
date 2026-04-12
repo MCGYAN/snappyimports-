@@ -177,9 +177,8 @@ function AccountContent() {
             </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:text-red-600 hover:border-red-200 transition-all font-medium shadow-sm w-full md:w-auto justify-center md:justify-start"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:text-red-600 hover:border-red-200 transition-all font-bold shadow-sm w-full md:w-auto justify-center md:justify-start"
             >
-              <i className="ri-logout-box-r-line"></i>
               Sign Out
             </button>
           </div>
@@ -198,12 +197,11 @@ function AccountContent() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-left group ${activeTab === tab.id
-                        ? 'bg-blue-50 text-blue-700 shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-left group ${activeTab === tab.id
+                        ? 'bg-[#002B5E] text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-[#002B5E]'
                         }`}
                     >
-                      <i className={`${tab.icon} text-xl transition-colors ${activeTab === tab.id ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-600'}`}></i>
                       <span>{tab.label}</span>
                     </button>
                   ))}
@@ -223,12 +221,11 @@ function AccountContent() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition-all border shadow-sm ${activeTab === tab.id
-                      ? 'bg-blue-700 text-white border-blue-700 ring-2 ring-blue-100'
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold whitespace-nowrap transition-all border shadow-sm ${activeTab === tab.id
+                      ? 'bg-[#002B5E] text-white border-[#002B5E]'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                       }`}
                   >
-                    <i className={tab.icon}></i>
                     <span>{tab.label}</span>
                   </button>
                 ))}
@@ -304,7 +301,7 @@ function AccountContent() {
                         <button
                           type="submit"
                           disabled={profileLoading}
-                          className="px-8 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-700/20 active:scale-95 disabled:opacity-50 disabled:shadow-none"
+                          className="px-8 py-3 bg-[#002B5E] hover:bg-amber-500 hover:text-[#002B5E] text-white rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:shadow-none"
                         >
                           {profileLoading ? 'Saving Info...' : 'Save Profile Information'}
                         </button>

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 function OrderTrackingContent() {
   const searchParams = useSearchParams();
@@ -20,9 +19,7 @@ function OrderTrackingContent() {
   const urlEmail = searchParams.get('email') || '';
 
   const fetchOrder = useCallback(async (orderNum: string, verifyEmail?: string) => {
-    const emailToVerify = verifyEmail || email;
-    
-    // SECURITY: Email is required for order tracking to prevent unauthorized access
+    const emailToVerify = (verifyEmail || email).trim();
     if (!emailToVerify) {
       setError('Please enter your email address to verify your identity.');
       return;
@@ -32,47 +29,16 @@ function OrderTrackingContent() {
     setError('');
 
     try {
-      // Only select the fields we need — avoid exposing unnecessary data
-      const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          status,
-          payment_status,
-          total,
-          email,
-          created_at,
-          shipping_address,
-          metadata,
-          order_items (
-            id,
-            product_name,
-            variant_name,
-            quantity,
-            unit_price,
-            metadata,
-            products (
-              product_images (url)
-            )
-          )
-        `)
-        .eq('order_number', orderNum)
-        .single();
-
-      if (fetchError || !data) {
-        setError('Order not found. Please check your order number and try again.');
+      const res = await fetch(
+        `/api/order-tracking?order=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailToVerify)}`
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || 'Order not found. Please check your order number and email.');
         setIsTracking(false);
         return;
       }
-
-      // SECURITY: Always verify email matches — this is mandatory
-      if (data.email?.toLowerCase() !== emailToVerify.toLowerCase()) {
-        setError('The email address does not match this order. Please use the email you placed the order with.');
-        setIsTracking(false);
-        return;
-      }
-
+      const data = await res.json();
       setOrder(data);
       setIsTracking(true);
     } catch (err) {
@@ -208,7 +174,7 @@ function OrderTrackingContent() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Email Address <span className="text-red-500 font-normal">*</span>
+                  Email Address <span className="text-red-500 font-normal">(Required)</span>
                 </label>
                 <input
                   type="email"

@@ -43,7 +43,7 @@ BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = auth.uid()
-    AND role IN ('admin', 'staff')
+    AND (role)::text IN ('admin', 'staff')
   );
 END;
 $$;
@@ -264,8 +264,8 @@ $$;
 -- 4. TABLES
 -- ============================================================================
 
--- Profiles (extends auth.users)
-CREATE TABLE public.profiles (
+-- Profiles (extends auth.users) - IF NOT EXISTS when profiles already exists (e.g. from create_profiles_for_admin_auth)
+CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id),
   email text UNIQUE,
   role user_role DEFAULT 'customer'::user_role,
@@ -278,6 +278,11 @@ CREATE TABLE public.profiles (
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS date_of_birth date;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS gender gender_type;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferences jsonb DEFAULT '{}'::jsonb;
 
 -- Addresses
 CREATE TABLE public.addresses (
@@ -854,6 +859,7 @@ CREATE INDEX idx_customers_secondary_phone ON public.customers USING btree (seco
 -- ============================================================================
 
 -- updated_at triggers
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_addresses_updated_at BEFORE UPDATE ON public.addresses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON public.categories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -873,6 +879,7 @@ CREATE TRIGGER update_pages_updated_at BEFORE UPDATE ON public.pages FOR EACH RO
 CREATE TRIGGER tr_update_product_rating AFTER INSERT OR DELETE OR UPDATE ON public.reviews FOR EACH ROW EXECUTE FUNCTION update_product_rating_stats();
 
 -- Auth trigger: auto-create profile on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================================================
@@ -949,9 +956,9 @@ CREATE POLICY "Staff manage variants" ON public.product_variants FOR ALL USING (
 -- Coupons
 CREATE POLICY "Allow anon read access to coupons" ON public.coupons FOR SELECT TO anon USING (true);
 CREATE POLICY "Allow authenticated read access to coupons" ON public.coupons FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow admin insert on coupons" ON public.coupons FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'staff')));
-CREATE POLICY "Allow admin update on coupons" ON public.coupons FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'staff')));
-CREATE POLICY "Allow admin delete on coupons" ON public.coupons FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'staff')));
+CREATE POLICY "Allow admin insert on coupons" ON public.coupons FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text IN ('admin', 'staff')));
+CREATE POLICY "Allow admin update on coupons" ON public.coupons FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text IN ('admin', 'staff')));
+CREATE POLICY "Allow admin delete on coupons" ON public.coupons FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text IN ('admin', 'staff')));
 
 -- Orders
 CREATE POLICY "Enable insert for all users" ON public.orders FOR INSERT WITH CHECK (((auth.uid() IS NOT NULL) AND (auth.uid() = user_id)) OR ((auth.uid() IS NULL) AND (user_id IS NULL)));
@@ -1013,46 +1020,42 @@ CREATE POLICY "Users manage own notifications" ON public.notifications FOR ALL U
 
 -- Pages
 CREATE POLICY "Public can view pages" ON public.pages FOR SELECT USING (true);
-CREATE POLICY "Staff can manage pages" ON public.pages FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'staff')));
+CREATE POLICY "Staff can manage pages" ON public.pages FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text IN ('admin', 'staff')));
 
 -- Site Settings
 CREATE POLICY "Allow public read on site_settings" ON public.site_settings FOR SELECT USING (true);
-CREATE POLICY "Allow admin write on site_settings" ON public.site_settings FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'::user_role));
+CREATE POLICY "Allow admin write on site_settings" ON public.site_settings FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text = 'admin'));
 
 -- CMS Content
 CREATE POLICY "Allow public read on cms_content" ON public.cms_content FOR SELECT USING (is_active = true);
-CREATE POLICY "Allow admin all on cms_content" ON public.cms_content FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'::user_role));
+CREATE POLICY "Allow admin all on cms_content" ON public.cms_content FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text = 'admin'));
 
 -- Banners
 CREATE POLICY "Allow public read on banners" ON public.banners FOR SELECT USING (is_active = true);
-CREATE POLICY "Allow admin all on banners" ON public.banners FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'::user_role));
+CREATE POLICY "Allow admin all on banners" ON public.banners FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text = 'admin'));
 
 -- Navigation Menus
 CREATE POLICY "Allow public read on navigation_menus" ON public.navigation_menus FOR SELECT USING (true);
-CREATE POLICY "Allow admin all on navigation_menus" ON public.navigation_menus FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'::user_role));
+CREATE POLICY "Allow admin all on navigation_menus" ON public.navigation_menus FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text = 'admin'));
 
 -- Navigation Items
 CREATE POLICY "Allow public read on navigation_items" ON public.navigation_items FOR SELECT USING (is_active = true);
-CREATE POLICY "Allow admin all on navigation_items" ON public.navigation_items FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'::user_role));
+CREATE POLICY "Allow admin all on navigation_items" ON public.navigation_items FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text = 'admin'));
 
 -- Store Modules
 CREATE POLICY "Allow public read access" ON public.store_modules FOR SELECT USING (true);
-CREATE POLICY "Allow admin insert on store_modules" ON public.store_modules FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'staff')));
+CREATE POLICY "Allow admin insert on store_modules" ON public.store_modules FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text IN ('admin', 'staff')));
 CREATE POLICY "Allow authenticated update" ON public.store_modules FOR UPDATE USING (auth.role() = 'authenticated' OR auth.role() = 'anon');
 
 -- Customers
-CREATE POLICY "Staff can view all customers" ON public.customers FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'staff')));
-CREATE POLICY "Staff can manage customers" ON public.customers FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'staff')));
+CREATE POLICY "Staff can view all customers" ON public.customers FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text IN ('admin', 'staff')));
+CREATE POLICY "Staff can manage customers" ON public.customers FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role)::text IN ('admin', 'staff')));
 CREATE POLICY "Service role full access to customers" ON public.customers FOR ALL USING (auth.role() = 'service_role');
 
 -- ============================================================================
 -- 9. STORAGE BUCKETS
 -- ============================================================================
-INSERT INTO storage.buckets (id, name, public) VALUES ('products', 'products', true);
-INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
-INSERT INTO storage.buckets (id, name, public) VALUES ('blog', 'blog', true);
-INSERT INTO storage.buckets (id, name, public) VALUES ('media', 'media', true);
-INSERT INTO storage.buckets (id, name, public) VALUES ('reviews', 'reviews', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('products', 'products', true), ('avatars', 'avatars', true), ('blog', 'blog', true), ('media', 'media', true), ('reviews', 'reviews', true) ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 10. STORAGE POLICIES

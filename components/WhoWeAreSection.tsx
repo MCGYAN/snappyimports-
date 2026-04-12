@@ -17,10 +17,10 @@ export default function WhoWeAreSection() {
             </h2>
             <div className="space-y-4 text-lg text-gray-600 leading-relaxed">
               <p>
-                <strong>TIWAA PERFUME STYLE HOUSE</strong> is your premier destination for perfumes, both wholesale and retail. Based in Satellite, Accra, we offer a curated range of fragrances at competitive prices for resellers and individual customers.
+                <strong>Store</strong> is your destination for quality products. We offer a curated range at competitive prices.
               </p>
               <p>
-                We focus on quality and value. Whether you're stocking up for your business or shopping for yourself, we handpick our perfumes to deliver genuine products and great prices.
+                We focus on quality and value. Whether you're stocking up for your business or shopping for yourself, we handpick our products to deliver genuine items and great prices.
               </p>
               <div className="pt-4">
                 <Link 
@@ -38,8 +38,8 @@ export default function WhoWeAreSection() {
           <AnimatedSection className="order-1 lg:order-2 relative" delay={200}>
             <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative group">
               <Image
-                src="/Whisk_743db4f33bd7ec08b0f46aec28e929cfdr.jpeg"
-                alt="TIWAA PERFUME STYLE HOUSE — Premium perfumes"
+                src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800"
+                alt="Store — Quality products"
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                 sizes="(max-width: 768px) 100vw, 50vw"
@@ -56,7 +56,7 @@ export default function WhoWeAreSection() {
                 </div>
                 <div>
                   <p className="font-bold text-gray-900">Premium Quality</p>
-                  <p className="text-sm text-gray-500">Authentic Fragrances</p>
+                  <p className="text-sm text-gray-500">Authentic Products</p>
                 </div>
               </div>
             </div>

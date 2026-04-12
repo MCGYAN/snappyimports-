@@ -1,62 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import ProductCard, { type ColorVariant, getColorHex } from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
-import AnimatedSection, { AnimatedGrid } from '@/components/AnimatedSection';
-import NewsletterSection from '@/components/NewsletterSection';
+import AnimatedSection from '@/components/AnimatedSection';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { ShieldCheck, Video, Lock, Wrench, ArrowRight, Shield, Phone, PhoneCall, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 export default function Home() {
-  usePageTitle('');
+  usePageTitle('Sambatek | Security Solutions');
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
-
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [promoIndex, setPromoIndex] = useState(0);
 
-  // Config State - Managed in Code
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const heroImages = ['/hero%201.jpg', '/hero%202.jpg', '/hero%203.jpg', '/hero4.jpg'];
+  const promoImages = ['/hero4.jpg', '/hero%201.jpg', '/hero%203.jpg', '/hero%202.jpg'];
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 3);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const config: {
-    hero: {
-      headline: string;
-      subheadline: string;
-      primaryButtonText: string;
-      primaryButtonLink: string;
-      secondaryButtonText: string;
-      secondaryButtonLink: string;
-      backgroundImage?: string;
-    };
-    banners?: Array<{ text: string; active: boolean }>;
-  } = {
-    hero: {
-      headline: 'The Perfume Empire — Premium Fragrances',
-      subheadline: 'Curated fragrances at East Legon, near America House. Wholesale & retail for resellers and customers across Ghana.',
-      primaryButtonText: 'Shop Collections',
-      primaryButtonLink: '/shop',
-      secondaryButtonText: 'Our Story',
-      secondaryButtonLink: '/about',
-    },
-    banners: [
-      { text: '🚚 Free delivery on orders over GH₵ 500 within Accra!', active: false },
-      { text: '✨ New stock arriving this weekend - Pre-order now!', active: false },
-      { text: '💳 Secure payments via Mobile Money & Card', active: false }
-    ]
-  };
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const categorySliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch featured products directly from Supabase
         const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select('*, product_variants(*), product_images(*)')
@@ -65,18 +35,16 @@ export default function Home() {
           .order('created_at', { ascending: false })
           .limit(8);
 
+        const { data: categoriesData } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('status', 'active');
+
         if (productsError) throw productsError;
         setFeaturedProducts(productsData || []);
-
+        setCategories(categoriesData || []);
       } catch (error: unknown) {
-        const err = error as { message?: string; code?: string };
-        const msg = err?.message ?? (error instanceof Error ? error.message : String(error));
-        const code = err?.code ?? '';
-        if (code === 'PGRST205') {
-          console.warn('Products table not found. Run Supabase migrations to create the schema.');
-        } else {
-          console.error('Error fetching data:', msg, code ? `(${code})` : '');
-        }
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
@@ -85,320 +53,191 @@ export default function Home() {
     fetchData();
   }, []);
 
-
-  const getHeroImage = () => {
-    if (config.hero.backgroundImage) return config.hero.backgroundImage;
-    return "/logo.png";
+  const scrollSlider = (direction: 'left' | 'right') => {
+    if (sliderRef.current) {
+      const scrollAmount = 350;
+      sliderRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
   };
 
-  const renderBanners = () => {
-    const activeBanners = config.banners?.filter(b => b.active) || [];
-    if (activeBanners.length === 0) return null;
-
-    return (
-      <div className="bg-blue-900 text-white py-2 overflow-hidden relative">
-        <div className="flex animate-marquee whitespace-nowrap">
-          {activeBanners.concat(activeBanners).map((banner, index) => (
-            <span key={index} className="mx-8 text-sm font-medium tracking-wide flex items-center">
-              {banner.text}
-            </span>
-          ))}
-        </div>
-      </div>
-    );
+  const scrollCategorySlider = (direction: 'left' | 'right') => {
+    if (categorySliderRef.current) {
+      const scrollAmount = 400;
+      categorySliderRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
+
+  useEffect(() => {
+    const promoInterval = setInterval(() => {
+      setPromoIndex((prev) => (prev + 1) % promoImages.length);
+    }, 2000);
+    return () => clearInterval(promoInterval);
+  }, [promoImages.length]);
 
   return (
-    <main className="flex-col items-center justify-between min-h-screen">
-      {renderBanners()}
+    <main className="flex-col items-center justify-between min-h-screen bg-white">
 
-      {/* Hero Section - God Level Design */}
-      <section className="relative w-full h-[85vh] md:h-[95vh] overflow-hidden bg-black">
-
-        {/* Progress Bar */}
-        <div className="absolute top-0 left-0 right-0 z-30 h-1 bg-white/10">
-          <div
-            key={currentSlide}
-            className="h-full bg-white/80 animate-progress origin-left"
-            style={{ animationDuration: '3000ms' }}
-          ></div>
-        </div>
-
-        {/* Background Slider + Per-Slide Content */}
-        {[
-          {
-            image: '/Whisk_4e28dc6bf0d6be98458435c0c2950e3ddr.jpeg',
-            tag: 'New Arrivals',
-            heading: <>Premium <br /><span className="italic font-light text-blue-200">Quality Collection</span></>,
-            subtext: 'Discover our latest arrivals imported directly for you. Unmatched quality at unbeatable prices.',
-            cta: { text: 'Shop Now', href: '/shop' },
-            cta2: { text: 'View Catalog', href: '/categories' },
-            position: 'object-center'
-          },
-          {
-            image: '/Whisk_50c2f050b440b4b95064c372c1ec7ee1dr.jpeg',
-            tag: 'Fashion & Style',
-            heading: <>Elegance <br /><span className="italic font-light text-rose-200">Redefined</span></>,
-            subtext: 'Step into the season with our exclusive fashion edits. Curated for the modern trendsetter.',
-            cta: { text: 'Shop Fashion', href: '/shop?category=fashion' },
-            cta2: { text: 'Learn More', href: '/about' },
-            position: 'object-top'
-          },
-          {
-            image: '/Whisk_64e2698834d1476801a4b505b30c324bdr.jpeg',
-            tag: 'Exclusive Deals',
-            heading: <>Limited <br /><span className="italic font-light text-amber-200">Time Offers</span></>,
-            subtext: 'Don\'t miss out on our seasonal sale. Great discounts on your favorite items.',
-            cta: { text: 'View Offers', href: '/shop?on_sale=true' },
-            cta2: { text: 'Contact Us', href: '/contact' },
-            position: 'object-center'
-          },
-        ].map((slide, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-          >
-            {/* Background Image with Ken Burns Effect */}
-            <div className={`absolute inset-0 ${index === currentSlide ? 'animate-ken-burns' : ''}`}>
+      {/* 1. HERO SECTION */}
+      <section className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden bg-[#001733]">
+        <div className="absolute inset-0 z-0">
+          {heroImages.map((src, idx) => (
+            <div
+              key={src}
+              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${idx === heroIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+            >
               <Image
-                src={slide.image}
-                alt={`Hero Banner ${index + 1}`}
+                src={src}
+                alt={`Secure Home ${idx + 1}`}
                 fill
-                className={`object-cover ${slide.position}`}
-                priority={index === 0}
-                quality={82}
-                sizes="100vw"
+                className="object-cover object-center"
+                priority={idx === 0}
               />
             </div>
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#002B5E] via-[#002B5E]/80 to-black/30"></div>
+        </div>
 
-            {/* Premium Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+        <div className="relative z-10 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col justify-center">
+          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 font-semibold text-xs sm:text-sm tracking-widest uppercase mb-4 sm:mb-6 border border-amber-500/30 shadow-sm">
+              <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Trusted Security Experts
+            </span>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 leading-[1.15] tracking-tight">
+              Advanced Security Doors <br />
+              <span className="text-amber-400 drop-shadow-sm">
+                Smart Protection Systems
+              </span>
+              <br />
+              <span className="text-white/95">in Ghana</span>
+            </h1>
+            <p className="text-base sm:text-lg lg:text-xl text-blue-50 mb-8 sm:mb-10 font-medium max-w-2xl leading-relaxed opacity-95">
+              Protect your home, office and business with high quality security Doors, CCTV cameras, smart locks and access control system installed by professionals.
+            </p>
 
-            {/* Slide Content */}
-            <div className="absolute inset-0 flex flex-col justify-center items-center text-center px-6 md:px-16 max-w-7xl mx-auto h-full mt-[-20px]">
-              <div className="max-w-4xl flex flex-col items-center">
-                <div
-                  className={`overflow-hidden transition-all duration-700 delay-100 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                >
-                  <span className="inline-block py-1 px-4 mb-6 text-white/90 text-sm md:text-base tracking-[0.3em] uppercase font-semibold border border-white/20 rounded-full backdrop-blur-md bg-white/5">
-                    {slide.tag}
-                  </span>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12 sm:mb-16 w-full sm:w-auto">
+              <Link
+                href="/shop"
+                className="group flex items-center justify-center gap-2 bg-amber-500 text-[#002B5E] px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-amber-400 transition-all shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 w-full sm:w-auto"
+              >
+                Start Shopping <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="/contact"
+                className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white border-2 border-white/20 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-white/20 hover:border-white/40 transition-all w-full sm:w-auto"
+              >
+                Contact Us
+              </Link>
+            </div>
+
+            {/* Trust Badges */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-white/10">
+              {[
+                { icon: <ShieldCheck />, text: "Secure Products" },
+                { icon: <Wrench />, text: "Professional Installation" },
+                { icon: <PhoneCall />, text: "Reliable Support" }
+              ].map((badge, idx) => (
+                <div key={idx} className="flex items-center gap-3 text-white/90">
+                  <div className="text-amber-400 bg-white/5 p-2 rounded-lg backdrop-blur-sm border border-white/10">
+                    {badge.icon}
+                  </div>
+                  <span className="font-semibold">{badge.text}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-                <div className={`transition-all duration-700 delay-200 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-                  <h1 className="text-5xl sm:text-6xl md:text-8xl font-serif text-white mb-6 leading-[1.1] drop-shadow-2xl">
-                    {slide.heading}
-                  </h1>
-                </div>
-
-                <div className={`transition-all duration-700 delay-300 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-                  <p className="text-lg md:text-2xl text-gray-200 max-w-2xl mx-auto mb-10 font-light leading-relaxed">
-                    {slide.subtext}
-                  </p>
-                </div>
-
-                <div className={`flex flex-col sm:flex-row items-center justify-center gap-6 transition-all duration-700 delay-400 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-                  <Link
-                    href={slide.cta.href}
-                    className="group relative px-10 py-4 bg-white text-gray-950 rounded-full font-medium text-lg overflow-hidden transition-all hover:shadow-[0_0_20px_rgba(255,255,255,0.5)] hover:bg-gray-100 hover:scale-105"
-                  >
-                    <span className="relative z-10 flex items-center gap-2">
-                      {slide.cta.text} <i className="ri-arrow-right-line transition-transform group-hover:translate-x-1"></i>
-                    </span>
-                  </Link>
-                  <Link
-                    href={slide.cta2.href}
-                    className="group px-10 py-4 bg-white/10 border border-white/30 text-white rounded-full font-medium text-lg backdrop-blur-md hover:bg-white/20 hover:border-white/50 transition-all hover:scale-105"
-                  >
-                    {slide.cta2.text}
-                  </Link>
-                </div>
+      {/* 2. CATEGORY SHOWCASE */}
+      <section className="py-16 md:py-24 bg-gray-50">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#002B5E] mb-3">Browse Categories</h2>
+              <p className="text-gray-600 text-lg font-medium">Find the perfect security solution for your needs.</p>
+            </div>
+            <div className="flex items-center gap-6">
+              <Link href="/categories" className="hidden md:flex text-[#002B5E] font-bold items-center hover:text-amber-500 transition-colors gap-1">
+                View All <ArrowRight className="w-5 h-5" />
+              </Link>
+              <div className="hidden md:flex gap-3">
+                <button onClick={() => scrollCategorySlider('left')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button onClick={() => scrollCategorySlider('right')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </div>
-        ))}
 
-        {/* Slide Indicators */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-4">
-          {[0, 1, 2].map((i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentSlide(i)}
-              className={`h-1 transition-all duration-300 ${currentSlide === i ? 'w-12 bg-white' : 'w-6 bg-white/40 hover:bg-white/60'}`}
-              aria-label={`Go to slide ${i + 1}`}
-            />
-          ))}
-        </div>
-
-        {/* Decoration */}
-        <div className="absolute bottom-10 right-6 md:right-16 z-20 hidden md:block">
-          <div className="text-white/40 text-sm font-light tracking-widest vertical-text transform rotate-180" style={{ writingMode: 'vertical-rl' }}>
-            EST. 2026 — COLLECTION
-          </div>
-        </div>
-
-      </section>
-
-      {/* Categories Section - God Level Redesign */}
-      <section className="py-20 md:py-32 bg-white relative overflow-hidden">
-        {/* Decorative Background Element */}
-        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
-          <AnimatedSection className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-            <div className="relative">
-              <span className="block text-sm font-medium tracking-[0.2em] text-gray-500 mb-3 uppercase">Olfactory Families</span>
-              <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl text-gray-900 leading-[1.1]">
-                Shop by <span className="italic text-gray-400">Category</span>
-              </h2>
-            </div>
-            <div className="flex items-center gap-6">
-              <p className="hidden md:block text-gray-500 max-w-xs text-right font-light leading-relaxed">
-                Explore our curated collection of fragrances, categorized by their dominant notes.
-              </p>
-              <Link href="/categories" className="group flex items-center justify-center w-14 h-14 rounded-full border border-gray-200 hover:border-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300">
-                <i className="ri-arrow-right-line text-xl transition-transform group-hover:translate-x-1"></i>
-              </Link>
-            </div>
-          </AnimatedSection>
-
-          <AnimatedGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {[
-              {
-                id: 'mens',
-                name: "Men's Fragrances",
-                subtitle: 'Bold, confident, timeless',
-                slug: 'mens',
-                image: '/Whisk_4e28dc6bf0d6be98458435c0c2950e3ddr.jpeg',
-                tint: 'bg-blue-900'
-              },
-              {
-                id: 'womens',
-                name: "Women's Fragrances",
-                subtitle: 'Romantic, soft, elegant',
-                slug: 'womens',
-                image: '/Whisk_50c2f050b440b4b95064c372c1ec7ee1dr.jpeg',
-                tint: 'bg-rose-900'
-              },
-              {
-                id: 'unisex',
-                name: 'Unisex Collection',
-                subtitle: 'For everyone, every mood',
-                slug: 'unisex',
-                image: '/Whisk_64e2698834d1476801a4b505b30c324bdr.jpeg',
-                tint: 'bg-amber-900'
-              },
-              {
-                id: 'oud',
-                name: 'Oud Collection',
-                subtitle: 'Rich, opulent, lasting',
-                slug: 'oud',
-                image: '/Whisk_6ec7df94ec3ca85b49644810b7fab2ecdr.jpeg',
-                tint: 'bg-stone-900'
-              },
-              {
-                id: 'gift-sets',
-                name: 'Gift Sets',
-                subtitle: 'Curated for gifting',
-                slug: 'gift-sets',
-                image: '/Whisk_6f28ce8873000718f834bc0d63e3bc87dr.jpeg',
-                tint: 'bg-rose-900'
-              },
-              {
-                id: 'new-arrivals',
-                name: 'New Arrivals',
-                subtitle: 'Just landed',
-                slug: 'new-arrivals',
-                image: '/Whisk_835b10a10eab0caa2c7419d4a6e01102dr.jpeg',
-                tint: 'bg-blue-900'
-              }
-            ].map((category) => (
-              <Link href={`/shop?category=${category.slug}`} key={category.id} className="group block h-full w-full">
-                <div className="relative aspect-[3/4] overflow-hidden isolate bg-gray-900 shadow-2xl rounded-3xl">
-
-                  {/* Image: Cinematic Slow Zoom & Brightness Shift */}
-                  <div className="absolute inset-0 transition-transform duration-[1500ms] ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100">
-                    <Image
-                      src={category.image}
-                      alt={category.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                    />
-                  </div>
-
-                  {/* Cinematic Grading Overlays */}
-                  {/* 1. Base Darkening Gradient (Bottom Up) */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 transition-opacity duration-700 group-hover:opacity-90"></div>
-
-                  {/* 2. Color Tint Overlay (Mix Blend) */}
-                  <div className={`absolute inset-0 ${category.tint} mix-blend-overlay opacity-40 transition-opacity duration-700 group-hover:opacity-50`}></div>
-
-                  {/* 3. Top Down Vignette for depth */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent opacity-60"></div>
-
-                  {/* Content Container */}
-                  <div className="absolute inset-0 p-8 flex flex-col justify-end z-10">
-
-                    {/* Floating 'Explore' Tag - Reveals on Hover */}
-                    <div className="absolute top-8 right-8 overflow-hidden">
-                      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-[10px] font-bold text-white tracking-widest uppercase transform translate-y-[-150%] opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-                        Explore <i className="ri-arrow-right-line"></i>
-                      </span>
-                    </div>
-
-                    {/* Category Title */}
-                    <div className="overflow-hidden">
-                      <h3 className="font-serif text-3xl md:text-4xl lg:text-5xl text-white leading-[0.9] mb-3 transform transition-transform duration-700 ease-out group-hover:-translate-y-2 drop-shadow-xl">
-                        {category.name}
-                      </h3>
-                    </div>
-
-                    {/* Decorative Line */}
-                    <div className="h-[1px] w-12 bg-white/60 mb-4 transition-all duration-700 ease-out group-hover:w-full group-hover:bg-white/90"></div>
-
-                    {/* Subtitle / Description */}
-                    <div className="overflow-hidden">
-                      <p className="text-white/80 font-light text-sm tracking-widest uppercase transform translate-y-full opacity-0 transition-all duration-700 ease-out group-hover:translate-y-0 group-hover:opacity-100 delay-100">
-                        {category.subtitle}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Premium Border Frame Effect */}
-                  <div className="absolute inset-5 border border-white/20 scale-[0.95] opacity-0 transition-all duration-700 ease-out group-hover:scale-100 group-hover:opacity-100 pointer-events-none z-20">
-                    {/* Corner Accents */}
-                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/60"></div>
-                    <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/60"></div>
-                    <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/60"></div>
-                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/60"></div>
-                  </div>
-
+          {/* Horizontal Slider */}
+          <div
+            ref={categorySliderRef}
+            className="flex overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide gap-6 md:gap-8 pt-4"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            {categories.map((cat, idx) => (
+              <Link
+                href={`/shop?category=${cat.slug}`}
+                key={cat.id}
+                className="group relative flex-none w-[280px] sm:w-[320px] md:w-[400px] h-[320px] rounded-2xl overflow-hidden snap-start shadow-md hover:shadow-xl transition-shadow"
+              >
+                <Image src={cat.image_url || '/hero%202.jpg'} alt={cat.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#001733]/90 via-[#001733]/40 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <p className="text-amber-400 text-sm font-bold tracking-wider uppercase mb-1">Explore</p>
+                  <h3 className="text-white text-2xl font-bold group-hover:text-amber-400 transition-colors">{cat.name}</h3>
                 </div>
               </Link>
             ))}
-          </AnimatedGrid>
+          </div>
         </div>
       </section>
 
-      {/* Featured Products */}
-      <section className="py-16 md:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="text-center mb-16">
-            <span className="text-xs font-semibold tracking-[0.2em] text-gray-400 uppercase">Curated Picks</span>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-gray-900 mt-3 mb-4">Featured Products</h2>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">Top picks from our latest arrivals</p>
-          </AnimatedSection>
+      {/* 3. FEATURED PRODUCTS SLIDER */}
+      <section className="py-16 md:py-24 bg-white border-y border-gray-100">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
+            <div className="text-left w-full md:w-auto">
+              <span className="text-sm font-bold tracking-widest text-amber-500 uppercase mb-2 block">Top Rated</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#002B5E] mb-2">Featured Products</h2>
+            </div>
+            <div className="hidden md:flex gap-3">
+              <button onClick={() => scrollSlider('left')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button onClick={() => scrollSlider('right')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-8">
+            <div className="flex gap-6 overflow-hidden">
               {[...Array(4)].map((_, i) => (
-                <ProductCardSkeleton key={i} />
+                <div key={i} className="min-w-[280px] w-[280px]"><ProductCardSkeleton /></div>
               ))}
             </div>
           ) : (
-            <AnimatedGrid className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8">
+            <div
+              ref={sliderRef}
+              className="flex overflow-x-auto gap-6 sm:gap-8 pb-10 snap-x snap-mandatory scrollbar-hide pt-4"
+              style={{ scrollBehavior: 'smooth' }}
+            >
               {featuredProducts.map((product) => {
                 const variants = product.product_variants || [];
                 const hasVariants = variants.length > 0;
@@ -406,7 +245,6 @@ export default function Home() {
                 const totalVariantStock = hasVariants ? variants.reduce((sum: number, v: any) => sum + (v.quantity || 0), 0) : 0;
                 const effectiveStock = hasVariants ? totalVariantStock : product.quantity;
 
-                // Extract unique colors from option2
                 const colorVariants: ColorVariant[] = [];
                 const seenColors = new Set<string>();
                 for (const v of variants) {
@@ -421,83 +259,105 @@ export default function Home() {
                 }
 
                 return (
-                  <ProductCard
-                    key={product.id}
-                    id={product.id}
-                    slug={product.slug}
-                    name={product.name}
-                    price={product.price}
-                    originalPrice={product.compare_at_price}
-                    image={product.product_images?.[0]?.url || 'https://via.placeholder.com/400x500'}
-                    rating={product.rating_avg || 5}
-                    reviewCount={product.review_count || 0}
-                    badge={product.featured ? 'Featured' : undefined}
-                    inStock={effectiveStock > 0}
-                    maxStock={effectiveStock || 50}
-                    moq={product.moq || 1}
-                    hasVariants={hasVariants}
-                    minVariantPrice={minVariantPrice}
-                    colorVariants={colorVariants}
-                  />
+                  <div key={product.id} className="min-w-[280px] w-[280px] sm:min-w-[320px] sm:w-[320px] snap-start">
+                    <ProductCard
+                      id={product.id}
+                      slug={product.slug}
+                      name={product.name}
+                      price={product.price}
+                      originalPrice={product.compare_at_price}
+                      image={product.product_images?.[0]?.url || 'https://via.placeholder.com/400x500'}
+                      rating={product.rating_avg || 5}
+                      reviewCount={product.review_count || 0}
+                      badge={product.featured ? 'Featured' : undefined}
+                      inStock={effectiveStock > 0}
+                      maxStock={effectiveStock || 50}
+                      moq={product.moq || 1}
+                      hasVariants={hasVariants}
+                      minVariantPrice={minVariantPrice}
+                      colorVariants={colorVariants}
+                    />
+                  </div>
                 );
               })}
-            </AnimatedGrid>
+            </div>
           )}
+        </div>
+      </section>
 
-          <div className="text-center mt-16">
-            <Link
-              href="/shop"
-              className="inline-flex items-center justify-center bg-gray-900 text-white px-10 py-4 rounded-full font-medium hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300"
-            >
-              View All Products
-            </Link>
+      {/* 4. PROMO SECTION 1 */}
+      <section className="relative py-24 bg-[#001733] overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full text-white fill-current">
+            <polygon points="100,0 100,100 0,100" />
+          </svg>
+        </div>
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center gap-12">
+          <div className="flex-1 text-white z-10 text-center md:text-left">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight">
+              Protect What <br /><span className="text-amber-400 drop-shadow-md">Matters Most</span>
+            </h2>
+            <p className="text-base sm:text-lg text-blue-50 font-medium mb-6 sm:mb-8 max-w-xl mx-auto md:mx-0 leading-relaxed text-opacity-90">
+              Reliable Security Solutions for Homes and Businesses. From high-grade steel doors to intelligent surveillance systems, we provide the ultimate peace of mind.
+            </p>
+            <ul className="space-y-3 sm:space-y-4 mb-8 sm:mb-10 text-left w-max mx-auto md:mx-0">
+              {['24/7 Protection Capabilities', 'Weather-resistant Materials', 'Smart Home Integration', 'Vandal-proof Designs'].map((item, i) => (
+                <li key={i} className="flex items-center gap-3 text-blue-50 font-medium">
+                  <CheckCircle2 className="text-amber-400 w-6 h-6" /> {item}
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-center md:justify-start">
+              <Link href="/shop" className="inline-flex items-center justify-center gap-2 bg-amber-500 text-[#002B5E] px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-amber-400 transition-colors shadow-xl shadow-amber-500/20 w-full sm:w-auto">
+                Explore Solutions
+              </Link>
+            </div>
+          </div>
+          <div className="flex-1 w-full relative">
+            <div className="aspect-square w-full max-w-lg mx-auto relative rounded-3xl overflow-hidden shadow-2xl shadow-black/50 border-8 border-[#002B5E]">
+              {promoImages.map((src, idx) => (
+                <div
+                  key={src}
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === promoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                >
+                  <Image
+                    src={src}
+                    fill
+                    alt={`Security Control ${idx + 1}`}
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Brand Story Teaser */}
-      <section className="py-20 md:py-28 bg-stone-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <AnimatedSection>
-            <span className="text-xs font-semibold tracking-[0.2em] text-gray-400 uppercase">Our Philosophy</span>
-            <h2 className="font-serif text-3xl sm:text-4xl text-gray-900 mt-3 mb-6 leading-tight">
-              More than a scent — an <span className="italic text-gray-500">experience</span>
-            </h2>
-            <p className="text-gray-600 text-lg leading-relaxed">
-              The Perfume Empire is built on a belief that fragrance should feel personal and premium. From East Legon, we bring you a curated selection of authentic perfumes for every moment — wholesale and retail.
-            </p>
-            <Link href="/about" className="inline-block mt-8 text-gray-900 font-medium border-b border-gray-900 pb-1 hover:opacity-70 transition-opacity">
-              Read our story
-            </Link>
-          </AnimatedSection>
+
+      {/* 5. FOOTER CTA */}
+      <section className="py-16 bg-white border-b border-gray-100">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-[#0b1c3c] rounded-3xl p-8 sm:p-12 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl shrink-0 pointer-events-none"></div>
+
+            <div className="relative z-10 text-center md:text-left">
+              <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Need Security Advice?</h3>
+              <p className="text-blue-200 text-lg font-medium max-w-xl">
+                Not sure which products fit your building? Our experts are ready to guide you.
+              </p>
+            </div>
+
+            <div className="relative z-10 flex flex-col sm:flex-row gap-4 shrink-0">
+              <a href="tel:0593610190" className="flex items-center justify-center gap-3 bg-white text-[#002B5E] px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg">
+                <PhoneCall className="w-6 h-6" /> Call 059 361 0190
+              </a>
+              <a href="https://wa.me/233593517270" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-3 bg-green-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-500 transition-colors shadow-lg">
+                WhatsApp Us
+              </a>
+            </div>
+          </div>
         </div>
       </section>
-
-      {/* Testimonials */}
-      <section className="py-16 md:py-24 bg-white border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="text-center mb-12">
-            <span className="text-xs font-semibold tracking-[0.2em] text-gray-400 uppercase">Kind Words</span>
-            <h2 className="font-serif text-3xl sm:text-4xl text-gray-900 mt-3">What our customers say</h2>
-          </AnimatedSection>
-          <AnimatedGrid className="grid md:grid-cols-3 gap-8">
-            {[
-              { quote: 'Quality and packaging are top-notch. Will definitely order again.', name: 'Ama K.', role: 'Retail customer' },
-              { quote: 'Best wholesale prices I\'ve found. Fast delivery and genuine products.', name: 'David M.', role: 'Reseller' },
-              { quote: 'The fragrances last all day. Exactly what I was looking for.', name: 'Sarah T.', role: 'Customer' }
-            ].map((t, i) => (
-              <div key={i} className="p-8 rounded-2xl bg-stone-50/80 border border-gray-100 hover:border-gray-200 transition-colors">
-                <p className="text-gray-700 leading-relaxed mb-6 font-light">"{t.quote}"</p>
-                <p className="font-semibold text-gray-900">{t.name}</p>
-                <p className="text-sm text-gray-500">{t.role}</p>
-              </div>
-            ))}
-          </AnimatedGrid>
-        </div>
-      </section>
-
-      {/* Newsletter - Homepage Only */}
-      <NewsletterSection />
 
     </main>
   );

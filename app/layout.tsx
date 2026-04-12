@@ -2,39 +2,31 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { SEO } from "@/lib/seo";
 import "./globals.css";
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#2563eb',
+  themeColor: '#002B5E',
 };
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tiwaperfumestyle.com';
+const siteUrl = SEO.siteUrl;
 
-// Favicon: favicon folder assets in public; OG image: logo.png
+// God-level SEO: Sambatek — overrides CMS. OG/twitter images from app/opengraph-image.tsx & twitter-image.tsx
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "The Perfume Empire | Premium Fragrances — East Legon",
-    template: "%s | The Perfume Empire"
+    default: SEO.defaultTitle,
+    template: `%s | ${SEO.siteName}`,
   },
-  description: "Premium fragrances at East Legon, near America House. Wholesale & retail. 055 396 7658. Instagram @Theperfumempire · TikTok @Theperfume_empire.",
-  keywords: [
-    "The Perfume Empire",
-    "perfumes Ghana",
-    "East Legon perfumes",
-    "wholesale fragrances Accra",
-    "retail perfumes",
-    "America House",
-    "fragrance Ghana",
-    "Ghana perfumes"
-  ],
-  authors: [{ name: "The Perfume Empire" }],
-  creator: "The Perfume Empire",
-  publisher: "The Perfume Empire",
-  applicationName: "The Perfume Empire",
+  description: SEO.defaultDescription,
+  keywords: SEO.keywords,
+  authors: [{ name: SEO.siteName }],
+  creator: SEO.siteName,
+  publisher: SEO.siteName,
+  applicationName: SEO.siteName,
   referrer: "origin-when-cross-origin",
   robots: {
     index: true,
@@ -49,9 +41,9 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico', type: 'image/x-icon', sizes: 'any' },
+      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
     ],
     shortcut: '/favicon.ico',
     apple: '/apple-touch-icon.png',
@@ -60,7 +52,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'The Perfume Empire',
+    title: SEO.siteName,
   },
   formatDetection: {
     telephone: true,
@@ -72,31 +64,42 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    locale: "en_GH",
+    locale: "en",
     url: siteUrl,
-    title: "The Perfume Empire | Premium Fragrances — East Legon",
-    description: "Premium fragrances at East Legon, near America House. Wholesale & retail. 055 396 7658.",
-    siteName: "The Perfume Empire",
+    title: SEO.defaultTitle,
+    description: SEO.defaultDescription,
+    siteName: SEO.siteName,
     images: [
       {
-        url: "/logo.png",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "The Perfume Empire — Premium Fragrances",
+        alt: SEO.taglineLong,
+        type: "image/png",
+      },
+      {
+        url: "/social-square.png",
+        width: 1080,
+        height: 1080,
+        alt: SEO.taglineLong,
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Perfume Empire | Premium Fragrances",
-    description: "Premium fragrances at East Legon. Wholesale & retail. 055 396 7658.",
-    images: ["/logo.png"],
+    title: SEO.defaultTitle,
+    description: SEO.defaultDescription,
+    images: ["/og-image.png"],
+    creator: SEO.social.twitter || undefined,
   },
   alternates: {
     canonical: siteUrl,
   },
   category: "shopping",
+  other: {
+    "geo.region": "GH",
+  },
 };
 
 // Google Analytics Measurement ID
@@ -110,25 +113,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* PWA Meta Tags */}
-        <meta name="theme-color" content="#2563eb" />
+        <meta name="theme-color" content="#002B5E" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="The Perfume Empire" />
+        <meta name="apple-mobile-web-app-title" content="Sambatek" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#2563eb" />
+        <meta name="msapplication-TileColor" content="#002B5E" />
         <meta name="msapplication-tap-highlight" content="no" />
 
-        {/* Favicon from favicon folder assets */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        {/* Favicon set from public (favicon/ assets) */}
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="any" />
         <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
         <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
         <link rel="shortcut icon" href="/favicon.ico" />
-
-        {/* Apple Touch Icons */}
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
         <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
 
         <link
@@ -140,30 +141,52 @@ export default function RootLayout({
         {/* eslint-disable-next-line @next/next/no-page-custom-font -- App Router: fonts loaded in root layout apply to all pages */}
         <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-        {/* Structured Data - Organization */}
+        {/* Structured Data - Organization/LocalBusiness + WebSite (God-level SEO) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "The Perfume Empire",
-              "url": siteUrl,
-              "logo": siteUrl + "/logo.png",
-              "description": "Premium fragrances at East Legon, near America House. Wholesale & retail.",
-              "address": {
-                "@type": "PostalAddress",
-                "addressCountry": "GH",
-                "addressLocality": "Accra",
-                "streetAddress": "East Legon, near America House"
-              },
-              "telephone": "+233553967658",
-              "contactPoint": {
-                "@type": "ContactPoint",
-                "contactType": "customer service",
-                "telephone": "+233553967658",
-                "availableLanguage": "English"
-              }
+              "@graph": [
+                {
+                  "@type": ["Organization", "LocalBusiness"],
+                  "@id": `${siteUrl}/#organization`,
+                  "name": SEO.siteName,
+                  "url": siteUrl,
+                  "logo": { "@type": "ImageObject", "url": SEO.logoUrl },
+                  "description": SEO.defaultDescription,
+                  "areaServed": ["Accra", "Tarkwa", "Ghana"],
+                  "knowsAbout": [
+                    "Security doors",
+                    "CCTV surveillance",
+                    "Smart locks",
+                    "Access control systems"
+                  ],
+                  "telephone": SEO.contact.phone,
+                  "email": SEO.contact.email,
+                  "sameAs": Object.values(SEO.social).filter(Boolean),
+                  "contactPoint": {
+                    "@type": "ContactPoint",
+                    "contactType": "customer service",
+                    "telephone": SEO.contact.phone,
+                    "areaServed": "GH",
+                    "availableLanguage": "English",
+                  },
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": `${siteUrl}/#website`,
+                  "url": siteUrl,
+                  "name": SEO.siteName,
+                  "description": SEO.defaultDescription,
+                  "publisher": { "@id": `${siteUrl}/#organization` },
+                  "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": { "@type": "EntryPoint", "urlTemplate": `${siteUrl}/shop?search={search_term_string}` },
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+              ],
             })
           }}
         />
@@ -197,7 +220,7 @@ export default function RootLayout({
         />
       )}
 
-      <body className="antialiased font-sans overflow-x-hidden pwa-body">
+      <body className="antialiased font-sans overflow-x-hidden pwa-body" suppressHydrationWarning>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[10000] focus:px-6 focus:py-3 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:font-semibold focus:shadow-lg"

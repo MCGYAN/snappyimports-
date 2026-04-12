@@ -1,245 +1,132 @@
-# Supabase Row Level Security (RLS) Setup — CRITICAL
+# Supabase Row Level Security (RLS) — SAMBATEK
 
-## Why This Is Urgent
+## Why This Matters
 
-Your Supabase anon key is public (visible in browser JavaScript). Without RLS, **anyone** can query ALL your tables directly using that key. This is likely how the attacker accessed your customer data.
-
-## How to Enable RLS
-
-Go to your Supabase Dashboard:
-**https://supabase.com/dashboard/project/bskojprmfxugvkycvetc**
-
-Navigate to: **Database → Tables** (or **Table Editor**)
-
-For EACH table below, click on the table, go to **RLS** (or **Policies**), and:
-1. **Enable RLS** (toggle it ON)
-2. **Add the policies listed below**
+Your Supabase **anon key is public** (visible in browser JavaScript). Without RLS,
+anyone who finds it can query **all** your tables directly, dumping every order,
+customer, and admin record. RLS ensures only the right people get the right data.
 
 ---
 
-## Table: `orders`
+## Quickest Way to Apply (2 minutes)
 
-### Enable RLS: YES
+### Option A — SQL Editor (recommended, no setup needed)
 
-**Policy 1: Users can view their own orders**
-```sql
-CREATE POLICY "Users can view own orders"
-ON orders FOR SELECT
-USING (auth.uid() = user_id);
-```
+1. Open your Supabase SQL Editor:  
+   **https://supabase.com/dashboard/project/axabkvacexbexeeazzpy/sql/new**
 
-**Policy 2: Users can insert orders (during checkout)**
-```sql
-CREATE POLICY "Users can create orders"
-ON orders FOR INSERT
-WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
-```
+2. Copy the entire contents of **`scripts/enable-rls.sql`** from this repo.
 
-**Policy 3: Service role can do everything (for API routes)**
-- This is automatic — the service role key bypasses RLS.
+3. Paste it into the editor and click **Run**.
+
+4. The last query in the file is a verification `SELECT` — check that every
+   table shows `✅ SECURED`.
 
 ---
 
-## Table: `order_items`
+### Option B — Automated script (requires DB password)
 
-### Enable RLS: YES
+1. Find your database password:  
+   **Supabase Dashboard → Project Settings → Database → Database password**  
+   *(Reset it if you've never set it.)*
 
-**Policy 1: Users can view items for their orders**
-```sql
-CREATE POLICY "Users can view own order items"
-ON order_items FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM orders
-    WHERE orders.id = order_items.order_id
-    AND orders.user_id = auth.uid()
-  )
-);
-```
+2. Add to `.env.local`:
+   ```
+   SUPABASE_DB_PASSWORD=your-actual-db-password
+   ```
 
-**Policy 2: Allow insert during checkout**
-```sql
-CREATE POLICY "Users can insert order items"
-ON order_items FOR INSERT
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM orders
-    WHERE orders.id = order_items.order_id
-    AND (orders.user_id = auth.uid() OR orders.user_id IS NULL)
-  )
-);
-```
+3. Run:
+   ```bash
+   node scripts/apply-rls-direct.mjs
+   ```
 
 ---
 
-## Table: `profiles`
+## What the SQL Secures
 
-### Enable RLS: YES
+| Table | Policy |
+|---|---|
+| `orders` | Users see **only their own** orders. Guest orders are server-only (service_role). |
+| `order_items` | Same as orders. Removed the `guest order items` public exposure hole. |
+| `order_status_history` | Users see history only for their orders. |
+| `profiles` | Users see/edit only their own. Staff can read all. |
+| `addresses` | Users manage their own. Staff manage all. |
+| `customers` | **Admin/staff + service_role only**. Completely blocked from anon/users. |
+| `products` | Public sees **active** only. Staff see all (drafts, archived). |
+| `product_images` | Public read. Staff write. |
+| `product_variants` | Public read. Staff write. |
+| `categories` | Public read. Staff write. |
+| `coupons` | Public sees only **active** coupons within their date window. Staff manage all. |
+| `reviews` | Public sees only **approved**. Users see/edit their own pending reviews. |
+| `review_images` | Public sees images for approved reviews only. |
+| `blog_posts` | Public sees only **published**. Staff see drafts. |
+| `banners` | Public sees only **active** banners. Staff manage all. |
+| `cms_content` | Public reads **active** blocks. Admin manages all. |
+| `site_settings` | Public read. Admin write. |
+| `store_settings` | Public read. Admin write. |
+| `store_modules` | Public read. **Admin/staff only write** (fixed hole: any user could toggle features). |
+| `navigation_menus` | Public read. Admin write. |
+| `navigation_items` | Public sees active items. Admin manages all. |
+| `pages` | Public read. Admin write. |
+| `cart_items` | Users see/manage only their own cart. |
+| `wishlist_items` | Users see/manage only their own wishlist. |
+| `support_tickets` | Users manage their own tickets. Staff manage all. |
+| `support_messages` | Users see messages on their own tickets. Staff manage all. |
+| `return_requests` | Users see/create their own returns. Staff manage all. |
+| `return_items` | Users see items on their own returns. Staff manage all. |
+| `notifications` | Users manage their own. Staff can read all. |
+| `audit_logs` | Staff/admin read-only. Only service_role can insert. |
 
-**Policy 1: Users can view their own profile**
-```sql
-CREATE POLICY "Users can view own profile"
-ON profiles FOR SELECT
-USING (auth.uid() = id);
-```
+### Storage Buckets
 
-**Policy 2: Users can update their own profile**
-```sql
-CREATE POLICY "Users can update own profile"
-ON profiles FOR UPDATE
-USING (auth.uid() = id)
-WITH CHECK (auth.uid() = id);
-```
-
----
-
-## Table: `customers`
-
-### Enable RLS: YES
-
-**Policy 1: Only authenticated admins via service role**
-No public policies needed — only the service role (API routes) should access this table.
-
-If you need any read access:
-```sql
-CREATE POLICY "Admins only"
-ON customers FOR ALL
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND profiles.role IN ('admin', 'staff')
-  )
-);
-```
-
----
-
-## Table: `products`
-
-### Enable RLS: YES
-
-**Policy 1: Everyone can view published products**
-```sql
-CREATE POLICY "Public can view products"
-ON products FOR SELECT
-USING (status = 'active' OR status = 'published' OR status IS NULL);
-```
+| Bucket | Policy |
+|---|---|
+| `products` | Public read. Admin/staff upload/update/delete. |
+| `media` | Public read. Admin/staff upload/delete. |
+| `avatars` | Public read. Users manage their own folder. |
+| `blog` | Public read. Staff upload/delete. |
+| `reviews` | Public read. Authenticated users upload. |
 
 ---
 
-## Table: `product_images`
+## Security Holes Fixed vs Old Scripts
 
-### Enable RLS: YES
-
-**Policy 1: Everyone can view product images**
-```sql
-CREATE POLICY "Public can view product images"
-ON product_images FOR SELECT
-USING (true);
-```
-
----
-
-## Table: `categories`
-
-### Enable RLS: YES
-
-**Policy 1: Everyone can view categories**
-```sql
-CREATE POLICY "Public can view categories"
-ON categories FOR SELECT
-USING (true);
-```
-
----
-
-## Table: `banners`
-
-### Enable RLS: YES
-
-**Policy 1: Everyone can view active banners**
-```sql
-CREATE POLICY "Public can view banners"
-ON banners FOR SELECT
-USING (active = true OR active IS NULL);
-```
-
----
-
-## Table: `store_modules`
-
-### Enable RLS: YES
-
-**Policy 1: Everyone can view modules**
-```sql
-CREATE POLICY "Public can view modules"
-ON store_modules FOR SELECT
-USING (true);
-```
-
----
-
-## Table: `reviews`
-
-### Enable RLS: YES
-
-**Policy 1: Public can view approved reviews**
-```sql
-CREATE POLICY "Public can view approved reviews"
-ON reviews FOR SELECT
-USING (status = 'approved' OR status IS NULL);
-```
-
-**Policy 2: Users can create reviews**
-```sql
-CREATE POLICY "Users can create reviews"
-ON reviews FOR INSERT
-WITH CHECK (auth.uid() IS NOT NULL);
-```
-
----
-
-## Other Tables
-
-For any other tables (coupons, blog_posts, etc.):
-- **Enable RLS on ALL tables**
-- Public data: Add `SELECT` policy with `USING (true)` or appropriate filter
-- Private data: Add policy restricted to `auth.uid()` or admin role
-- When in doubt: Enable RLS with NO policies (blocks all access via anon key)
-
----
-
-## Environment Variable to Add
-
-Add to your `.env.local`:
-```
-MOOLRE_CALLBACK_SECRET=<get this from Moolre dashboard or generate a strong random string>
-```
-
-This is used to verify payment callbacks are actually from Moolre.
+| Issue | Fix |
+|---|---|
+| `"Enable select for guest orders"` — anyone could SELECT all guest orders via anon key | **Removed.** Guest orders are only accessible via service_role on the server. |
+| `"Enable select for guest order items"` — same exposure for order items | **Removed.** |
+| `"Allow authenticated update"` on `store_modules` — any logged-in user could toggle site features | **Removed.** Admin/staff only. |
+| `coupons` exposing inactive/future/expired codes | Now filters to `is_active = true` within date window. |
+| `reviews` exposing pending/rejected reviews publicly | Now only approved reviews are public. |
+| `blog_posts` exposing draft posts publicly | Now only published posts are public. |
+| `cms_content` / `banners` exposing inactive blocks | Now filters `is_active = true`. |
+| `audit_logs` allowing any staff to insert (potential log tampering) | Only `service_role` may insert. |
 
 ---
 
 ## Verification
 
-After setting up RLS, test by:
-1. Open browser DevTools console on your store
-2. Try: `const { data } = await supabase.from('customers').select('*')`
-3. It should return an empty array or error — NOT customer data
-4. Try: `const { data } = await supabase.from('orders').select('*')`
-5. Should only return orders belonging to the logged-in user (or empty)
+After applying, open the browser DevTools console on your live site and run:
+
+```javascript
+// Should return [] or error — NOT your customer list
+const { data } = await supabase.from('customers').select('*');
+console.log(data);
+
+// Should return [] — not all orders
+const { data: orders } = await supabase.from('orders').select('*');
+console.log(orders);
+```
+
+Both should be empty arrays (or an error), not real data.
 
 ---
 
-## Summary of Changes Made in Code
+## Add to `.env.local` (if missing)
 
-1. **Payment verify endpoint** — No longer trusts `fromRedirect` flag; only Moolre API verification
-2. **Payment initiation** — Amount fetched from database, never trusted from client
-3. **Payment callback** — Secret verification mandatory when configured; amount mismatches rejected
-4. **Middleware** — Server-side auth check for all `/admin` routes
-5. **Notifications API** — All sensitive types require admin auth; contact form validated
-6. **Order tracking** — Email verification now required (mandatory)
-7. **Test SMS** — Requires admin auth token
-8. **HTML sanitization** — All user input escaped before HTML injection
-9. **Security headers** — X-Content-Type-Options, X-Frame-Options, Referrer-Policy added
+```
+MOOLRE_CALLBACK_SECRET=<generate a strong random string from your Moolre dashboard>
+SUPABASE_DB_PASSWORD=<your Supabase project DB password>
+NEXT_PUBLIC_APP_URL=https://sambatek.com
+NEXT_PUBLIC_SITE_NAME=Sambatek
+```

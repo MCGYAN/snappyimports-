@@ -20,6 +20,7 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState<string>('');
   const { getToken, verifying } = useRecaptcha();
 
   useEffect(() => {
@@ -42,11 +43,13 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus('idle');
+    setSubmitError('');
 
     // reCAPTCHA verification
     const isHuman = await getToken('contact');
     if (!isHuman) {
       setSubmitStatus('error');
+      setSubmitError('Security verification failed. Please try again.');
       setIsSubmitting(false);
       return;
     }
@@ -68,30 +71,42 @@ export default function ContactPage() {
         console.log('Note: contact_submissions table may not exist');
       }
 
-      // Send Contact Notification
-      fetch('/api/notifications', {
+      // Send Contact Notification (await so we can show email errors)
+      const notifRes = await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'contact',
           payload: formData
         })
-      }).catch(err => console.error('Contact notification error:', err));
+      });
+      const notifData = await notifRes.json().catch(() => ({}));
+      if (!notifRes.ok) {
+        setSubmitError(notifData.error || `Request failed (${notifRes.status})`);
+        setSubmitStatus('error');
+        setIsSubmitting(false);
+        return;
+      }
 
       setSubmitStatus('success');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (error) {
       setSubmitStatus('error');
+      setSubmitError(error instanceof Error ? error.message : 'Failed to send message.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Get contact details from CMS settings
-  const contactEmail = getSetting('contact_email') || 'tiwaperfumestyle@gmail.com';
-  const contactPhone = getSetting('contact_phone') || '0545010949';
-  const contactWhatsapp = getSetting('contact_whatsapp') || '0554169992';
-  const contactAddress = getSetting('contact_address') || 'Satellite, Accra';
+  const contactEmail = getSetting('contact_email') || 'joelyrix52@gmail.com';
+  const contactPhone = getSetting('contact_phone') || '0593610190';
+  const contactWhatsapp = getSetting('contact_whatsapp') || '0593517270';
+  const contactAddressAccra = getSetting('contact_address') || 'Pokuase, Accra';
+  const contactAddressTarkwa = getSetting('contact_address_tarkwa') || 'Tarkwa, Ghana';
+  const socialFacebook = getSetting('social_facebook') || 'https://www.facebook.com/samuel.mbah.967';
+  const socialInstagram = getSetting('social_instagram') || 'https://www.instagram.com/joelyrix?igsh=cTVkemY5ZHllYXUw';
+  const socialTikTok = getSetting('social_tiktok') || 'https://www.tiktok.com/@joelyrix?_r=1&_t=ZS-94lgb0VN2Is';
 
   const heroTitle = pageContent?.title || 'Get In Touch';
   const heroSubtitle = pageContent?.subtitle || 'Have a question or need assistance?';
@@ -127,20 +142,41 @@ export default function ContactPage() {
     {
       icon: 'ri-map-pin-line',
       title: 'Visit Us',
-      value: contactAddress,
-      link: 'https://maps.google.com',
-      description: 'Satellite, Accra'
+      value: 'Accra • Tarkwa',
+      link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${contactAddressAccra} / ${contactAddressTarkwa}`)}`,
+      description: `${contactAddressAccra} • ${contactAddressTarkwa}`
+    },
+    {
+      icon: 'ri-facebook-circle-line',
+      title: 'Facebook',
+      value: '@SaMbaTeK',
+      link: socialFacebook,
+      description: 'Follow us for updates'
+    },
+    {
+      icon: 'ri-instagram-line',
+      title: 'Instagram',
+      value: '@joelyrix',
+      link: socialInstagram,
+      description: 'See installs & products'
+    },
+    {
+      icon: 'ri-tiktok-line',
+      title: 'TikTok',
+      value: '@joelyrix',
+      link: socialTikTok,
+      description: 'Watch short demos'
     }
   ];
 
   const faqs = [
     {
       question: 'What are your delivery times?',
-      answer: 'Standard delivery takes 2-5 business days within Ghana. Express delivery is available for Accra and Kumasi. We ship perfumes and fragrances with care.'
+      answer: 'Standard delivery takes 2-5 business days. Express delivery may be available in select areas. We ship with care.'
     },
     {
       question: 'Do you offer international shipping?',
-      answer: 'Currently, we ship within Ghana only. We handle all logistics so you simply order and receive your perfumes.'
+      answer: 'Shipping availability depends on your location. We handle logistics so you can order and receive your products.'
     },
     {
       question: 'What payment methods do you accept?',
@@ -152,11 +188,11 @@ export default function ContactPage() {
     <div className="min-h-screen bg-white">
       <PageHero
         title="Get In Touch"
-        subtitle="Have a question or need assistance? We're here to help from Satellite, Accra."
-        backgroundImage="/Whisk_835b10a10eab0caa2c7419d4a6e01102dr.jpeg"
+        subtitle="Have a question or need assistance? We're here to help."
+        backgroundImages={['/hero%201.jpg', '/hero%202.jpg', '/hero%203.jpg', '/hero4.jpg']}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {contactMethods.map((method, index) => (
             <a
@@ -276,7 +312,7 @@ export default function ContactPage() {
               {submitStatus === 'error' && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
                   <i className="ri-error-warning-line mr-2"></i>
-                  Failed to send message. Please try again or contact us directly.
+                  {submitError || 'Failed to send message. Please try again or contact us directly.'}
                 </div>
               )}
 
@@ -341,7 +377,7 @@ export default function ContactPage() {
             <div className="flex flex-wrap justify-center gap-4 text-gray-600">
               <div className="flex items-center gap-2">
                 <i className="ri-map-pin-2-line text-blue-700"></i>
-                <span>{contactAddress}</span>
+                <span>{contactAddressAccra} • {contactAddressTarkwa}</span>
               </div>
               <div className="flex items-center gap-2">
                 <i className="ri-time-line text-blue-700"></i>

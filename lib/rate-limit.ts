@@ -142,6 +142,12 @@ export const RATE_LIMITS = {
     windowSeconds: 3600 // 5 imports per hour
   },
 
+  // Order tracking - prevent enumeration
+  orderTracking: {
+    maxRequests: 15,
+    windowSeconds: 60 // 15 lookups per minute per client
+  },
+
   // General API - default limits
   default: {
     maxRequests: 100,
