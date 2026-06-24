@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
-import { SITE_LOGO_PATH } from '@/lib/brand';
+import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -64,10 +64,10 @@ export default function AdminLoginPage() {
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
             <Image
-              src={SITE_LOGO_PATH}
+              src={SITE_LOGO_LIGHT_BG_PATH}
               alt="Snappy Imports Global"
-              width={280}
-              height={141}
+              width={575}
+              height={292}
               priority
               className="mx-auto h-auto w-[min(280px,85vw)] object-contain"
             />

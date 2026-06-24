@@ -27,8 +27,8 @@ export default function StoreLogo({ className = '', priority = false, size = 'de
       <Image
         src={src}
         alt={siteName}
-        width={220}
-        height={44}
+        width={575}
+        height={292}
         priority={priority}
         unoptimized
         className={imageSizeClass}

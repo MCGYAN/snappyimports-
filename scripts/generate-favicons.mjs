@@ -1,27 +1,73 @@
 import sharp from 'sharp';
-import { readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const ROOT = process.cwd();
-const logoPath = join(ROOT, 'public', 'logo.png');
+const SOURCE_CANDIDATES = [
+  join(ROOT, 'public', 'images', 'snappy-favicon-source.png'),
+  join(
+    ROOT,
+    'public',
+    'images',
+    'snappy-imports-global-logo.png',
+  ),
+];
 
-async function generateFavicons() {
-  const logo = sharp(logoPath);
-  const meta = await logo.metadata();
-  console.log(`Logo: ${meta.width}x${meta.height}, format: ${meta.format}`);
+function resolveSource() {
+  for (const path of SOURCE_CANDIDATES) {
+    if (existsSync(path)) return path;
+  }
+  throw new Error(
+    'No favicon source found. Add public/images/snappy-favicon-source.png',
+  );
+}
 
-  // Extract only the shield icon (left portion, no text)
-  const shieldWidth = Math.round(meta.width * 0.22);
-  const shieldHeight = Math.round(meta.height * 0.55);
-  const shieldLeft = Math.round(meta.width * 0.12);
-  const shieldTop = Math.round(meta.height * 0.18);
+const BRAND_NAVY = { r: 11, g: 31, b: 58, alpha: 1 };
 
-  const shieldBuffer = await sharp(logoPath)
-    .extract({ left: shieldLeft, top: shieldTop, width: shieldWidth, height: shieldHeight })
+async function extractEmblem(sourcePath) {
+  const meta = await sharp(sourcePath).metadata();
+  const width = meta.width ?? 1024;
+  const height = meta.height ?? 512;
+
+  // Horizontal logo: crop left emblem. Square source: use full frame.
+  const isWide = width > height * 1.2;
+  const crop = isWide
+    ? {
+        left: Math.round(width * 0.04),
+        top: Math.round(height * 0.06),
+        width: Math.round(width * 0.38),
+        height: Math.round(height * 0.88),
+      }
+    : { left: 0, top: 0, width, height };
+
+  const emblem = await sharp(sourcePath).extract(crop).png().toBuffer();
+  const cropMeta = await sharp(emblem).metadata();
+  const side = Math.max(cropMeta.width ?? 1, cropMeta.height ?? 1);
+
+  return sharp({
+    create: {
+      width: side,
+      height: side,
+      channels: 4,
+      background: BRAND_NAVY,
+    },
+  })
+    .composite([
+      {
+        input: emblem,
+        left: Math.floor((side - (cropMeta.width ?? side)) / 2),
+        top: Math.floor((side - (cropMeta.height ?? side)) / 2),
+      },
+    ])
     .png()
     .toBuffer();
+}
 
-  // Generate square versions with padding on dark background
+async function generateFavicons() {
+  const sourcePath = resolveSource();
+  console.log(`Source: ${sourcePath}`);
+  const emblemBuffer = await extractEmblem(sourcePath);
+
   const sizes = [
     { name: 'favicon-16x16.png', size: 16 },
     { name: 'favicon-32x32.png', size: 32 },
@@ -30,12 +76,15 @@ async function generateFavicons() {
     { name: 'android-chrome-512x512.png', size: 512 },
   ];
 
-  for (const { name, size } of sizes) {
-    const padding = Math.round(size * 0.1);
-    const innerSize = size - padding * 2;
+  const outDirs = [join(ROOT, 'public', 'favicon'), join(ROOT, 'favicon')];
+  for (const dir of outDirs) mkdirSync(dir, { recursive: true });
 
-    const resizedShield = await sharp(shieldBuffer)
-      .resize(innerSize, innerSize, { fit: 'contain', background: { r: 0, g: 27, b: 51, alpha: 1 } })
+  for (const { name, size } of sizes) {
+    const padding = Math.max(1, Math.round(size * 0.08));
+    const inner = size - padding * 2;
+
+    const resized = await sharp(emblemBuffer)
+      .resize(inner, inner, { fit: 'contain', background: BRAND_NAVY })
       .png()
       .toBuffer();
 
@@ -44,39 +93,33 @@ async function generateFavicons() {
         width: size,
         height: size,
         channels: 4,
-        background: { r: 0, g: 27, b: 51, alpha: 1 } // #001B33 dark navy
-      }
+        background: BRAND_NAVY,
+      },
     })
-      .composite([{ input: resizedShield, left: padding, top: padding }])
+      .composite([{ input: resized, left: padding, top: padding }])
       .png()
       .toBuffer();
 
-    // Write to public/favicon/ (served at /favicon/*) and favicon/ (source copy)
-    const faviconDir = join(ROOT, 'public', 'favicon');
-    writeFileSync(join(faviconDir, name), output);
-    console.log(`  Generated public/favicon/${name} (${size}x${size})`);
-
-    if (name.startsWith('favicon-') || name === 'apple-touch-icon.png' || name.startsWith('android-chrome-')) {
-      writeFileSync(join(ROOT, 'favicon', name), output);
-      console.log(`  Generated favicon/${name}`);
+    for (const dir of outDirs) {
+      writeFileSync(join(dir, name), output);
     }
+    console.log(`  Generated ${name} (${size}x${size})`);
   }
 
-  // Generate .ico from the 32x32 version
-  const ico32 = await sharp(join(ROOT, 'public', 'favicon-32x32.png'))
+  const ico32 = await sharp(join(ROOT, 'public', 'favicon', 'favicon-32x32.png'))
     .resize(32, 32)
     .png()
     .toBuffer();
-  // ICO is just a PNG wrapped in the ICO container for modern browsers
-  // Modern browsers accept PNG as favicon.ico
-  writeFileSync(join(ROOT, 'public', 'favicon', 'favicon.ico'), ico32);
-  writeFileSync(join(ROOT, 'favicon', 'favicon.ico'), ico32);
-  console.log('  Generated favicon.ico (32x32 PNG)');
 
-  console.log('\nDone! All favicons generated from logo.');
+  for (const dir of outDirs) {
+    writeFileSync(join(dir, 'favicon.ico'), ico32);
+  }
+  console.log('  Generated favicon.ico');
+
+  console.log('\nDone! Favicons generated from Snappy Imports emblem.');
 }
 
-generateFavicons().catch(err => {
+generateFavicons().catch((err) => {
   console.error('Error generating favicons:', err);
   process.exit(1);
 });
