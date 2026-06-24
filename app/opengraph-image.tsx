@@ -1,17 +1,34 @@
-import { NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { ImageResponse } from 'next/og';
+import { SEO } from '@/lib/seo';
 
-export const alt = 'SaMba TeK | Security Doors, CCTV, Smart Locks & Access Control in Ghana';
+/** Edge avoids a Node `@vercel/og` + `fileURLToPath` bug when the project path contains spaces (e.g. `SNAPPY IMPORT`). */
+export const runtime = 'edge';
+
+export const alt = SEO.siteName;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default async function Image() {
-  const buffer = await readFile(join(process.cwd(), 'public', 'og-image.png'));
-  return new NextResponse(buffer, {
-    headers: {
-      'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=31536000, immutable',
-    },
-  });
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #0B1F3A 0%, #050f1f 55%, #1a0a05 100%)',
+          color: '#fff',
+          fontSize: 56,
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {SEO.siteName}
+      </div>
+    ),
+    { ...size }
+  );
 }

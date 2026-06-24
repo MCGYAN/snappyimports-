@@ -14,7 +14,7 @@ export default function AdminBlogPage() {
       slug: '10-essential-tips-minimalist-home',
       author: 'Staff',
       category: 'Interior Design',
-      image: 'https://readdy.ai/api/search-image?query=modern%20minimalist%20living%20room%20interior%20design%20with%20clean%20lines%20natural%20light%20and%20simple%20elegant%20furniture%20in%20neutral%20tones&width=600&height=400&seq=blogadm1&orientation=landscape',
+      image: 'https://picsum.photos/seed/ph-page-1/600/400',
       excerpt: 'Discover how to transform your living space into a serene minimalist haven with these practical tips...',
       status: 'Published',
       views: 2456,
@@ -28,7 +28,7 @@ export default function AdminBlogPage() {
       slug: 'art-of-choosing-perfect-home-textiles',
       author: 'Staff',
       category: 'Home Styling',
-      image: 'https://readdy.ai/api/search-image?query=luxurious%20home%20textiles%20collection%20with%20cotton%20linens%20throws%20and%20pillows%20in%20natural%20cream%20and%20beige%20tones%20on%20elegant%20display&width=600&height=400&seq=blogadm2&orientation=landscape',
+      image: 'https://picsum.photos/seed/ph-page-2/600/400',
       excerpt: 'Learn the secrets to selecting textiles that elevate your home aesthetic and comfort...',
       status: 'Published',
       views: 1892,
@@ -42,7 +42,7 @@ export default function AdminBlogPage() {
       slug: 'sustainable-living-eco-friendly-guide',
       author: 'Staff',
       category: 'Sustainability',
-      image: 'https://readdy.ai/api/search-image?query=eco-friendly%20sustainable%20home%20products%20including%20natural%20materials%20bamboo%20organic%20cotton%20and%20reusable%20items%20arranged%20aesthetically&width=600&height=400&seq=blogadm3&orientation=landscape',
+      image: 'https://picsum.photos/seed/ph-page-3/600/400',
       excerpt: 'Make conscious choices for your home with our comprehensive guide to sustainable products...',
       status: 'Published',
       views: 3124,
@@ -56,7 +56,7 @@ export default function AdminBlogPage() {
       slug: 'lighting-design-creating-ambiance',
       author: 'Staff',
       category: 'Interior Design',
-      image: 'https://readdy.ai/api/search-image?query=elegant%20contemporary%20home%20lighting%20design%20with%20brass%20fixtures%20pendant%20lights%20and%20table%20lamps%20creating%20warm%20ambient%20atmosphere&width=600&height=400&seq=blogadm4&orientation=landscape',
+      image: 'https://picsum.photos/seed/ph-page-4/600/400',
       excerpt: 'Master the art of lighting to transform the mood and functionality of your spaces...',
       status: 'Draft',
       views: 0,
@@ -70,7 +70,7 @@ export default function AdminBlogPage() {
       slug: 'gift-guide-thoughtful-home-accessories',
       author: 'Staff',
       category: 'Gift Ideas',
-      image: 'https://readdy.ai/api/search-image?query=curated%20collection%20of%20elegant%20home%20accessories%20and%20decor%20items%20beautifully%20arranged%20as%20gift%20ideas%20on%20clean%20white%20background&width=600&height=400&seq=blogadm5&orientation=landscape',
+      image: 'https://picsum.photos/seed/ph-page-5/600/400',
       excerpt: 'Find the perfect gifts for home lovers with our carefully curated selection...',
       status: 'Scheduled',
       views: 0,
@@ -84,7 +84,7 @@ export default function AdminBlogPage() {
       slug: 'color-psychology-choosing-palette',
       author: 'Staff',
       category: 'Home Styling',
-      image: 'https://readdy.ai/api/search-image?query=color%20palette%20swatches%20and%20paint%20samples%20in%20harmonious%20neutral%20and%20earth%20tones%20for%20interior%20design%20inspiration&width=600&height=400&seq=blogadm6&orientation=landscape',
+      image: 'https://picsum.photos/seed/ph-page-6/600/400',
       excerpt: 'Understand how colors affect mood and create the perfect atmosphere in your home...',
       status: 'Published',
       views: 1567,
@@ -95,9 +95,9 @@ export default function AdminBlogPage() {
   ];
 
   const statusColors: any = {
-    'Published': 'bg-blue-100 text-blue-700',
+    'Published': 'bg-brand-primary/10 text-brand-primary',
     'Draft': 'bg-gray-100 text-gray-700',
-    'Scheduled': 'bg-blue-100 text-blue-700'
+    'Scheduled': 'bg-brand-primary/10 text-brand-primary'
   };
 
   const handleSelectAll = () => {
@@ -123,7 +123,7 @@ export default function AdminBlogPage() {
           <h1 className="text-3xl font-bold text-gray-900">Blog Posts</h1>
           <p className="text-gray-600 mt-1">Create and manage your blog content</p>
         </div>
-        <Link href="/admin/blog/new" className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap">
+        <Link href="/admin/blog/new" className="bg-brand-primary hover:bg-brand-accent text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap">
           <i className="ri-add-line mr-2"></i>
           New Post
         </Link>
@@ -136,7 +136,7 @@ export default function AdminBlogPage() {
         </div>
         <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
           <p className="text-sm text-gray-600 mb-1">Published</p>
-          <p className="text-2xl font-bold text-blue-700">{posts.filter(p => p.status === 'Published').length}</p>
+          <p className="text-2xl font-bold text-brand-primary">{posts.filter(p => p.status === 'Published').length}</p>
         </div>
         <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
           <p className="text-sm text-gray-600 mb-1">Total Views</p>
@@ -144,7 +144,7 @@ export default function AdminBlogPage() {
         </div>
         <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
           <p className="text-sm text-gray-600 mb-1">Comments</p>
-          <p className="text-2xl font-bold text-blue-700">{posts.reduce((sum, p) => sum + p.comments, 0)}</p>
+          <p className="text-2xl font-bold text-brand-primary">{posts.reduce((sum, p) => sum + p.comments, 0)}</p>
         </div>
       </div>
 
@@ -152,20 +152,20 @@ export default function AdminBlogPage() {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <select className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium cursor-pointer">
+              <select className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer">
                 <option>All Status</option>
                 <option>Published</option>
                 <option>Draft</option>
                 <option>Scheduled</option>
               </select>
-              <select className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium cursor-pointer">
+              <select className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer">
                 <option>All Categories</option>
                 <option>Interior Design</option>
                 <option>Home Styling</option>
                 <option>Sustainability</option>
                 <option>Gift Ideas</option>
               </select>
-              <select className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium cursor-pointer">
+              <select className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer">
                 <option>Sort by Date</option>
                 <option>Sort by Views</option>
                 <option>Sort by Comments</option>
@@ -175,7 +175,7 @@ export default function AdminBlogPage() {
               <button
                 onClick={() => setViewMode('grid')}
                 className={`w-10 h-10 flex items-center justify-center transition-colors ${
-                  viewMode === 'grid' ? 'bg-blue-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                  viewMode === 'grid' ? 'bg-brand-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <i className="ri-grid-line text-xl"></i>
@@ -183,7 +183,7 @@ export default function AdminBlogPage() {
               <button
                 onClick={() => setViewMode('list')}
                 className={`w-10 h-10 flex items-center justify-center border-l-2 border-gray-300 transition-colors ${
-                  viewMode === 'list' ? 'bg-blue-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                  viewMode === 'list' ? 'bg-brand-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <i className="ri-list-check text-xl"></i>
@@ -193,12 +193,12 @@ export default function AdminBlogPage() {
         </div>
 
         {selectedPosts.length > 0 && (
-          <div className="p-4 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
-            <p className="text-blue-800 font-semibold">
+          <div className="p-4 bg-brand-primary/5 border-b border-brand-primary/20 flex items-center justify-between">
+            <p className="text-brand-primary font-semibold">
               {selectedPosts.length} post{selectedPosts.length > 1 ? 's' : ''} selected
             </p>
             <div className="flex items-center space-x-2">
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+              <button className="px-4 py-2 bg-brand-primary hover:bg-brand-accent text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
                 Publish
               </button>
               <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
@@ -220,7 +220,7 @@ export default function AdminBlogPage() {
                     type="checkbox"
                     checked={selectedPosts.includes(post.id)}
                     onChange={() => handleSelectPost(post.id)}
-                    className="absolute top-3 left-3 w-5 h-5 text-blue-700 border-gray-300 rounded focus:ring-blue-500 cursor-pointer z-10"
+                    className="absolute top-3 left-3 w-5 h-5 text-brand-primary border-gray-300 rounded focus:ring-brand-accent/25 cursor-pointer z-10"
                   />
                   <div className="aspect-video bg-gray-100 overflow-hidden">
                     <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
@@ -233,7 +233,7 @@ export default function AdminBlogPage() {
                 </div>
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-blue-700">{post.category}</span>
+                    <span className="text-xs font-semibold text-brand-primary">{post.category}</span>
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[post.status]}`}>
                       {post.status}
                     </span>
@@ -254,11 +254,11 @@ export default function AdminBlogPage() {
                   <div className="flex items-center space-x-2">
                     <Link
                       href={`/admin/blog/${post.id}`}
-                      className="flex-1 bg-blue-700 hover:bg-blue-800 text-white py-2 rounded-lg text-sm font-medium text-center transition-colors whitespace-nowrap"
+                      className="flex-1 bg-brand-primary hover:bg-brand-accent text-white py-2 rounded-lg text-sm font-medium text-center transition-colors whitespace-nowrap"
                     >
                       Edit Post
                     </Link>
-                    <button className="w-9 h-9 flex items-center justify-center border-2 border-gray-300 text-gray-700 hover:border-blue-600 hover:text-blue-600 rounded-lg transition-colors">
+                    <button className="w-9 h-9 flex items-center justify-center border-2 border-gray-300 text-gray-700 hover:border-brand-accent hover:text-brand-accent rounded-lg transition-colors">
                       <i className="ri-eye-line"></i>
                     </button>
                   </div>
@@ -276,7 +276,7 @@ export default function AdminBlogPage() {
                       type="checkbox"
                       checked={selectedPosts.length === posts.length}
                       onChange={handleSelectAll}
-                      className="w-4 h-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                      className="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-accent/25 cursor-pointer"
                     />
                   </th>
                   <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Post</th>
@@ -296,7 +296,7 @@ export default function AdminBlogPage() {
                         type="checkbox"
                         checked={selectedPosts.includes(post.id)}
                         onChange={() => handleSelectPost(post.id)}
-                        className="w-4 h-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        className="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-accent/25 cursor-pointer"
                       />
                     </td>
                     <td className="py-4 px-4">
@@ -305,7 +305,7 @@ export default function AdminBlogPage() {
                           <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <Link href={`/admin/blog/${post.id}`} className="font-semibold text-gray-900 hover:text-blue-700">
+                          <Link href={`/admin/blog/${post.id}`} className="font-semibold text-gray-900 hover:text-brand-accent">
                             {post.title}
                           </Link>
                           <p className="text-sm text-gray-500 mt-1">{post.publishDate}</p>
@@ -325,11 +325,11 @@ export default function AdminBlogPage() {
                       <div className="flex items-center space-x-2">
                         <Link
                           href={`/admin/blog/${post.id}`}
-                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent hover:bg-brand-primary/5 rounded-lg transition-colors"
                         >
                           <i className="ri-edit-line text-lg"></i>
                         </Link>
-                        <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+                        <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent hover:bg-brand-primary/5 rounded-lg transition-colors">
                           <i className="ri-eye-line text-lg"></i>
                         </button>
                         <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
@@ -350,7 +350,7 @@ export default function AdminBlogPage() {
             <button className="w-10 h-10 flex items-center justify-center border-2 border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
               <i className="ri-arrow-left-s-line text-xl text-gray-600"></i>
             </button>
-            <button className="w-10 h-10 flex items-center justify-center bg-blue-700 text-white rounded-lg font-semibold">1</button>
+            <button className="w-10 h-10 flex items-center justify-center bg-brand-primary text-white rounded-lg font-semibold">1</button>
             <button className="w-10 h-10 flex items-center justify-center border-2 border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
               <i className="ri-arrow-right-s-line text-xl text-gray-600"></i>
             </button>

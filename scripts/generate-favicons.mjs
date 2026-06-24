@@ -51,9 +51,10 @@ async function generateFavicons() {
       .png()
       .toBuffer();
 
-    // Write to public/ and favicon/
-    writeFileSync(join(ROOT, 'public', name), output);
-    console.log(`  Generated public/${name} (${size}x${size})`);
+    // Write to public/favicon/ (served at /favicon/*) and favicon/ (source copy)
+    const faviconDir = join(ROOT, 'public', 'favicon');
+    writeFileSync(join(faviconDir, name), output);
+    console.log(`  Generated public/favicon/${name} (${size}x${size})`);
 
     if (name.startsWith('favicon-') || name === 'apple-touch-icon.png' || name.startsWith('android-chrome-')) {
       writeFileSync(join(ROOT, 'favicon', name), output);
@@ -68,7 +69,7 @@ async function generateFavicons() {
     .toBuffer();
   // ICO is just a PNG wrapped in the ICO container for modern browsers
   // Modern browsers accept PNG as favicon.ico
-  writeFileSync(join(ROOT, 'public', 'favicon.ico'), ico32);
+  writeFileSync(join(ROOT, 'public', 'favicon', 'favicon.ico'), ico32);
   writeFileSync(join(ROOT, 'favicon', 'favicon.ico'), ico32);
   console.log('  Generated favicon.ico (32x32 PNG)');
 

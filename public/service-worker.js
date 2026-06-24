@@ -15,11 +15,7 @@ const STATIC_ASSETS = [
   '/categories',
   '/offline',
   '/favicon.ico',
-  '/favicon-16x16.png',
-  '/favicon-32x32.png',
-  '/apple-touch-icon.png',
-  '/android-chrome-192x192.png',
-  '/android-chrome-512x512.png',
+  '/icon',
 ];
 
 // Cache size limits
@@ -229,8 +225,8 @@ self.addEventListener('push', (event) => {
   const data = event.data.json();
   const options = {
     body: data.body || 'New update from Store',
-icon: '/android-chrome-192x192.png',
-      badge: '/android-chrome-192x192.png',
+    icon: '/icon',
+    badge: '/icon',
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/',

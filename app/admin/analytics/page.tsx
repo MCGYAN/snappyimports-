@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import ChartContainer from '@/components/admin/ChartContainer';
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('30days');
@@ -176,14 +177,14 @@ export default function AnalyticsPage() {
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className="px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium pr-8 cursor-pointer bg-white"
+              className="px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium pr-8 cursor-pointer bg-white"
             >
               <option value="7days">Last 7 Days</option>
               <option value="30days">Last 30 Days</option>
               <option value="90days">Last 90 Days</option>
               <option value="year">This Year</option>
             </select>
-            <button className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center">
+            <button className="bg-brand-primary hover:bg-brand-accent text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center">
               <i className="ri-download-line mr-2"></i>
               Export
             </button>
@@ -200,19 +201,19 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-2xl text-blue-700"></i>
+              <div className="w-12 h-12 flex items-center justify-center bg-brand-primary/10 rounded-lg">
+                <i className="ri-money-dollar-circle-line text-2xl text-brand-primary"></i>
               </div>
-              <span className="text-blue-700 font-semibold text-sm">Live</span>
+              <span className="text-brand-primary font-semibold text-sm">Live</span>
             </div>
             <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-            <p className="text-3xl font-bold text-gray-900">GH₵{metrics.revenue.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-gray-900">${metrics.revenue.toLocaleString()}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg">
-                <i className="ri-shopping-cart-line text-2xl text-blue-700"></i>
+              <div className="w-12 h-12 flex items-center justify-center bg-brand-primary/10 rounded-lg">
+                <i className="ri-shopping-cart-line text-2xl text-brand-primary"></i>
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-1">Total Orders</p>
@@ -221,12 +222,12 @@ export default function AnalyticsPage() {
 
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 flex items-center justify-center bg-purple-100 rounded-lg">
-                <i className="ri-bar-chart-box-line text-2xl text-purple-700"></i>
+              <div className="w-12 h-12 flex items-center justify-center bg-brand-primary/10 rounded-lg">
+                <i className="ri-bar-chart-box-line text-2xl text-brand-primary"></i>
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-1">Avg. Order Value</p>
-            <p className="text-3xl font-bold text-gray-900">GH₵{metrics.aov.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">${metrics.aov.toFixed(2)}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">
@@ -247,24 +248,22 @@ export default function AnalyticsPage() {
             <h2 className="text-xl font-bold text-gray-900">Revenue & Performance Trends</h2>
             {/* Report Type Toggles omitted for brevity, hardcoded to Sales for now */}
           </div>
-          <div style={{ width: '100%', height: 350 }}>
-            <ResponsiveContainer>
-              <AreaChart data={salesData.length > 0 ? salesData : [{ date: 'No Data', sales: 0 }]}>
-                <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip />
-                <Legend />
-                <Area type="monotone" dataKey="sales" stroke="#10b981" fillOpacity={1} fill="url(#colorSales)" name="Sales (GH₵)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartContainer className="h-[350px] w-full min-w-0">
+            <AreaChart data={salesData.length > 0 ? salesData : [{ date: 'No Data', sales: 0 }]}>
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="date" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip />
+              <Legend />
+              <Area type="monotone" dataKey="sales" stroke="#10b981" fillOpacity={1} fill="url(#colorSales)" name="Sales ($)" />
+            </AreaChart>
+          </ChartContainer>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -272,27 +271,25 @@ export default function AnalyticsPage() {
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Revenue by Category</h2>
             <div className="flex items-center justify-center mb-6">
-              <div style={{ width: '100%', height: 250 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={categoryRevenue.length > 0 ? categoryRevenue : [{ name: 'No Data', value: 1 }]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {categoryRevenue.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartContainer className="h-[250px] w-full min-w-0">
+                <PieChart>
+                  <Pie
+                    data={categoryRevenue.length > 0 ? categoryRevenue : [{ name: 'No Data', value: 1 }]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {categoryRevenue.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ChartContainer>
             </div>
           </div>
 
@@ -313,7 +310,7 @@ export default function AnalyticsPage() {
                     <tr key={index}>
                       <td className="py-3 text-sm font-medium text-gray-900">{product.name}</td>
                       <td className="py-3 text-right text-sm text-gray-600">{product.units}</td>
-                      <td className="py-3 text-right text-sm font-semibold text-blue-600">GH₵{product.revenue.toLocaleString()}</td>
+                      <td className="py-3 text-right text-sm font-semibold text-brand-primary">${product.revenue.toLocaleString()}</td>
                     </tr>
                   ))}
                   {topProducts.length === 0 && <tr><td colSpan={3} className="text-center py-4 text-gray-500">No sales data yet.</td></tr>}

@@ -129,9 +129,9 @@ export default function AdminOrdersPage() {
 
   const statusColors: Record<string, string> = {
     'pending': 'bg-amber-100 text-amber-700 border-amber-200',
-    'processing': 'bg-blue-100 text-blue-700 border-blue-200',
-    'shipped': 'bg-purple-100 text-purple-700 border-purple-200',
-    'delivered': 'bg-blue-100 text-blue-700 border-blue-200',
+    'processing': 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
+    'shipped': 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
+    'delivered': 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
     'cancelled': 'bg-red-100 text-red-700 border-red-200',
     'awaiting_payment': 'bg-gray-100 text-gray-700 border-gray-200'
   };
@@ -325,23 +325,23 @@ export default function AdminOrdersPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-5 md:space-y-6">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
-          <p className="text-gray-600 mt-1">Manage and track all customer orders</p>
+          <h1 className="font-heading text-2xl font-bold text-brand-primary md:text-3xl">Orders</h1>
+          <p className="mt-1 text-sm text-slate-600 md:text-base">Manage and track all customer orders</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex w-full items-center gap-3 md:w-auto">
           <button
             onClick={() => setShowProductStats(true)}
-            className="flex-1 md:flex-none bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer shadow-sm flex items-center justify-center"
+            className="admin-btn-secondary flex flex-1 items-center justify-center px-5 py-3 shadow-sm md:flex-none"
           >
             <i className="ri-bar-chart-groupped-line mr-2"></i>
             Stats
           </button>
           <button
             onClick={handleExportAll}
-            className="flex-1 md:flex-none bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer shadow-sm flex items-center justify-center"
+            className="admin-btn-primary flex flex-1 items-center justify-center px-5 py-3 shadow-sm md:flex-none"
           >
             <i className="ri-download-line mr-2"></i>
             Export
@@ -350,13 +350,11 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* View Tabs: Confirmed Orders vs Abandoned Carts */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-white/50">
         <button
           onClick={() => { setOrderViewTab('confirmed'); setStatusFilter('all'); }}
-          className={`px-6 py-3 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
-            orderViewTab === 'confirmed'
-              ? 'border-blue-700 text-blue-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+          className={`cursor-pointer px-4 py-3 text-sm font-semibold transition-colors md:px-6 ${
+            orderViewTab === 'confirmed' ? 'admin-tab-active' : 'admin-tab-idle'
           }`}
         >
           <i className="ri-check-double-line mr-2"></i>
@@ -364,10 +362,10 @@ export default function AdminOrdersPage() {
         </button>
         <button
           onClick={() => { setOrderViewTab('abandoned'); setStatusFilter('all'); }}
-          className={`px-6 py-3 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`cursor-pointer px-4 py-3 text-sm font-semibold transition-colors md:px-6 ${
             orderViewTab === 'abandoned'
-              ? 'border-amber-600 text-amber-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-b-2 border-brand-accent font-semibold text-brand-accent'
+              : 'admin-tab-idle'
           }`}
         >
           <i className="ri-shopping-cart-2-line mr-2"></i>
@@ -376,18 +374,17 @@ export default function AdminOrdersPage() {
       </div>
 
       {orderViewTab === 'confirmed' && (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4 lg:grid-cols-6">
         {orderStats.map((stat) => (
           <button
             key={stat.status}
             onClick={() => setStatusFilter(stat.status)}
-            className={`p-4 rounded-xl border-2 transition-all text-left cursor-pointer ${statusFilter === stat.status
-              ? 'border-blue-700 bg-blue-50'
-              : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+            className={`cursor-pointer rounded-xl p-3 text-left transition-all md:p-4 ${
+              statusFilter === stat.status ? 'admin-stat-pill-active' : 'admin-stat-pill'
+            }`}
           >
-            <p className="text-2xl font-bold text-gray-900">{stat.count}</p>
-            <p className="text-sm text-gray-600 mt-1">{stat.label}</p>
+            <p className="text-xl font-bold text-brand-primary md:text-2xl">{stat.count}</p>
+            <p className="mt-0.5 text-xs text-slate-600 md:mt-1 md:text-sm">{stat.label}</p>
           </button>
         ))}
       </div>
@@ -408,8 +405,8 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
+      <div className="admin-card overflow-hidden">
+        <div className="border-b border-white/50 p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -419,7 +416,7 @@ export default function AdminOrdersPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by order ID, customer name, or email..."
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent text-sm"
                 />
               </div>
             </div>
@@ -435,7 +432,7 @@ export default function AdminOrdersPage() {
               <select
                 value={productFilter}
                 onChange={(e) => setProductFilter(e.target.value)}
-                className="px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium cursor-pointer"
+                className="px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer"
               >
                 <option value="all">All Products</option>
                 {availableProducts.map((name) => (
@@ -445,7 +442,7 @@ export default function AdminOrdersPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium cursor-pointer"
+                className="px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer"
               >
                 <option value="date">Sort by Date</option>
                 <option value="total">Sort by Total</option>
@@ -484,20 +481,20 @@ export default function AdminOrdersPage() {
         </div>
 
         {selectedOrders.length > 0 && (
-          <div className="p-4 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
-            <p className="text-blue-800 font-semibold">
+          <div className="p-4 bg-brand-primary/5 border-b border-brand-primary/20 flex items-center justify-between">
+            <p className="text-brand-primary font-semibold">
               {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''} selected
             </p>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => handleBulkAction('Mark as Processing', 'processing')}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+                className="px-4 py-2 bg-brand-primary hover:bg-brand-accent text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
               >
                 Mark Processing
               </button>
               <button
                 onClick={() => handleBulkAction('Mark as Packaged', 'shipped')}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+                className="px-4 py-2 bg-brand-primary hover:bg-brand-accent text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
               >
                 Mark Packaged
               </button>
@@ -521,7 +518,7 @@ export default function AdminOrdersPage() {
                     type="checkbox"
                     checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                    className="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-accent/25 cursor-pointer"
                   />
                 </th>
                 <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Order ID</th>
@@ -538,7 +535,7 @@ export default function AdminOrdersPage() {
               {loading ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-gray-500">
-                    <i className="ri-loader-4-line animate-spin text-3xl text-blue-700"></i>
+                    <i className="ri-loader-4-line animate-spin text-3xl text-brand-primary"></i>
                     <p className="mt-2">Loading orders...</p>
                   </td>
                 </tr>
@@ -558,11 +555,11 @@ export default function AdminOrdersPage() {
                         type="checkbox"
                         checked={selectedOrders.includes(order.id)}
                         onChange={() => handleSelectOrder(order.id)}
-                        className="w-4 h-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        className="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-accent/25 cursor-pointer"
                       />
                     </td>
                     <td className="py-4 px-4">
-                      <Link href={`/admin/orders/${order.id}`} className="text-blue-700 hover:text-blue-800 font-semibold whitespace-nowrap cursor-pointer">
+                      <Link href={`/admin/orders/${order.id}`} className="text-brand-primary hover:text-brand-accent font-semibold whitespace-nowrap cursor-pointer">
                         {order.order_number || order.id.substring(0, 8)}
                       </Link>
                     </td>
@@ -579,7 +576,7 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="py-4 px-4 text-gray-700 text-sm whitespace-nowrap">{formatDate(order.created_at)}</td>
                     <td className="py-4 px-4 text-gray-700">{getItemCount(order)}</td>
-                    <td className="py-4 px-4 font-semibold text-gray-900 whitespace-nowrap">GH₵ {order.total?.toFixed(2) || '0.00'}</td>
+                    <td className="py-4 px-4 font-semibold text-gray-900 whitespace-nowrap">$ {order.total?.toFixed(2) || '0.00'}</td>
                     <td className="py-4 px-4 text-sm whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-gray-700">{order.payment_method || 'N/A'}</span>
@@ -599,7 +596,7 @@ export default function AdminOrdersPage() {
                       <div className="flex items-center space-x-2">
                         <Link
                           href={`/admin/orders/${order.id}`}
-                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent hover:bg-brand-primary/5 rounded-lg transition-colors cursor-pointer"
                           title="View Order"
                         >
                           <i className="ri-eye-line text-lg w-4 h-4 flex items-center justify-center"></i>
@@ -620,7 +617,7 @@ export default function AdminOrdersPage() {
                         )}
                         <button
                           onClick={() => handlePrintInvoice(order.id)}
-                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent hover:bg-brand-primary/5 rounded-lg transition-colors cursor-pointer"
                           title="Print Invoice"
                         >
                           <i className="ri-printer-line text-lg w-4 h-4 flex items-center justify-center"></i>

@@ -26,7 +26,7 @@ function OrderSuccessContent() {
           const orderData = await res.json();
           setOrder(orderData);
         } else if (paymentSuccess === 'true') {
-          // Order not yet marked as paid — trigger verification
+          // Order not yet marked as paid: trigger verification
           await verifyPayment(orderNumber);
           return;
         }
@@ -95,7 +95,7 @@ function OrderSuccessContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <i className="ri-loader-4-line text-4xl text-blue-700 animate-spin mb-4 block"></i>
+          <i className="ri-loader-4-line text-4xl text-brand-primary animate-spin mb-4 block"></i>
           <p className="text-gray-500">Loading order details...</p>
         </div>
       </div>
@@ -106,8 +106,8 @@ function OrderSuccessContent() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md mx-auto px-4">
-          <i className="ri-loader-4-line text-5xl text-blue-700 animate-spin mb-6 block"></i>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Verifying Your Payment</h1>
+          <i className="ri-loader-4-line text-5xl text-brand-primary animate-spin mb-6 block"></i>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Checking your payment</h1>
           <p className="text-gray-600 mb-2">Please wait while we confirm your payment with the provider.</p>
           <p className="text-sm text-gray-500">This usually takes a few seconds...</p>
         </div>
@@ -120,13 +120,13 @@ function OrderSuccessContent() {
       <main className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md mx-auto px-4">
           <i className="ri-error-warning-line text-4xl text-amber-500 mb-4 block"></i>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Processing</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Almost there</h1>
           <p className="text-gray-600 mb-6">
             Your payment is being processed. If you completed the payment, your order will be confirmed shortly.
             You can check your order status from your account.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/account?tab=orders" className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+            <Link href="/account?tab=orders" className="bg-brand-primary hover:bg-[#0d2747] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
               Check Order Status
             </Link>
             <Link href="/shop" className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors">
@@ -143,7 +143,7 @@ function OrderSuccessContent() {
   const pointsEarned = Math.floor(order.total / 10); // Example logic: 1 point per 10 currency units
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+    <main className="min-h-screen bg-brand-light">
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
           {[...Array(50)].map((_, i) => (
@@ -166,13 +166,13 @@ function OrderSuccessContent() {
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center mb-8">
-            <div className="w-24 h-24 flex items-center justify-center mx-auto mb-6 bg-blue-100 rounded-full">
-              <i className="ri-checkbox-circle-fill text-6xl text-blue-600"></i>
+            <div className="w-24 h-24 flex items-center justify-center mx-auto mb-6 bg-brand-light rounded-full">
+              <i className="ri-checkbox-circle-fill text-6xl text-brand-accent"></i>
             </div>
 
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Order Confirmed!</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">You are all set</h1>
             <p className="text-xl text-gray-600 mb-8">
-              Thank you for your purchase. We're processing your order now.
+              Your order is in. We will keep you updated every step of the way.
             </p>
 
             <div className="bg-blue-50 rounded-xl p-6 mb-8">
@@ -187,7 +187,7 @@ function OrderSuccessContent() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Estimated Delivery</p>
-                  <p className="text-lg font-bold text-blue-700">{estimatedDelivery}</p>
+                  <p className="text-lg font-bold text-brand-primary">{estimatedDelivery}</p>
                 </div>
               </div>
             </div>
@@ -195,7 +195,7 @@ function OrderSuccessContent() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Link
                 href={`/account?tab=orders`}
-                className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-4 rounded-lg font-semibold transition-colors inline-flex items-center justify-center whitespace-nowrap"
+                className="bg-brand-primary hover:bg-[#0d2747] text-white px-8 py-4 rounded-lg font-semibold transition-colors inline-flex items-center justify-center whitespace-nowrap"
               >
                 <i className="ri-file-list-3-line mr-2"></i>
                 View Order
@@ -255,23 +255,23 @@ function OrderSuccessContent() {
                         </p>
                       )}
                     </div>
-                    <p className="font-bold text-gray-900">GH₵{item.unit_price.toFixed(2)}</p>
+                    <p className="font-bold text-gray-900">${item.unit_price.toFixed(2)}</p>
                   </div>
                 ))}
               </div>
               <div className="border-t border-gray-200 mt-4 pt-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
                   <span>Subtotal</span>
-                  <span>GH₵{order.subtotal.toFixed(2)}</span>
+                  <span>${order.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
                   <span>Shipping</span>
-                  <span>GH₵{order.shipping_total.toFixed(2)}</span>
+                  <span>${order.shipping_total.toFixed(2)}</span>
                 </div>
 
                 <div className="flex justify-between text-xl font-bold text-gray-900 border-t border-gray-200 pt-2">
                   <span>Total Paid</span>
-                  <span>GH₵{order.total.toFixed(2)}</span>
+                  <span>${order.total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -309,21 +309,21 @@ function OrderSuccessContent() {
                 <h3 className="font-semibold text-gray-900 mb-3">What's Next?</h3>
                 <div className="space-y-3">
                   <div className="flex items-start space-x-3">
-                    <i className="ri-mail-line text-blue-700 mt-1"></i>
+                    <i className="ri-mail-line text-brand-primary mt-1"></i>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Email Confirmation</p>
                       <p className="text-sm text-gray-600">Sent to {order.email}</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <i className="ri-box-3-line text-blue-700 mt-1"></i>
+                    <i className="ri-box-3-line text-brand-primary mt-1"></i>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Processing</p>
                       <p className="text-sm text-gray-600">We'll pack your order today</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <i className="ri-truck-line text-blue-700 mt-1"></i>
+                    <i className="ri-truck-line text-brand-primary mt-1"></i>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Shipping Updates</p>
                       <p className="text-sm text-gray-600">Track via email & SMS</p>
@@ -337,15 +337,15 @@ function OrderSuccessContent() {
           <div className="mt-8 text-center">
             <p className="text-gray-600 mb-4">Need help with your order?</p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/contact" className="text-blue-700 hover:text-blue-900 font-semibold whitespace-nowrap">
+              <Link href="/contact" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
                 <i className="ri-customer-service-line mr-1"></i>
                 Contact Support
               </Link>
-              <Link href="/account/orders" className="text-blue-700 hover:text-blue-900 font-semibold whitespace-nowrap">
+              <Link href="/account/orders" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
                 <i className="ri-question-line mr-1"></i>
                 Order Help
               </Link>
-              <Link href="/returns" className="text-blue-700 hover:text-blue-900 font-semibold whitespace-nowrap">
+              <Link href="/returns" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
                 <i className="ri-arrow-left-right-line mr-1"></i>
                 Returns Policy
               </Link>
@@ -373,7 +373,7 @@ export default function OrderSuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-16 h-16 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     }>
       <OrderSuccessContent />

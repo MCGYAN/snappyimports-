@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { SITE_LOGO_PATH } from '@/lib/brand';
 
 export default function AdminLayout({
   children,
@@ -141,7 +142,7 @@ export default function AdminLayout({
   };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">Loading Admin...</div>;
+    return <div className="flex min-h-screen items-center justify-center store-site-bg text-brand-primary/60">Loading Admin...</div>;
   }
 
   const menuItems = [
@@ -241,7 +242,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen store-site-bg">
 
       {/* Mobile Overlay */}
       {isSidebarOpen && (
@@ -253,7 +254,7 @@ export default function AdminLayout({
 
       {/* Sidebar - Mobile: Transform / Desktop: Width transition */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 transition-all duration-300
+        className={`fixed top-0 left-0 z-40 h-screen liquid-glass border-r border-white/50 transition-all duration-300
           w-64
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
           ${isSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}
@@ -261,12 +262,18 @@ export default function AdminLayout({
         `}
       >
         <div className="h-full px-4 py-6 overflow-y-auto flex flex-col">
-          {/* Official logo: dark blue pill + shield + SAMBA TEK + taglines (no gold-only shield) */}
-          <Link href="/admin" className="flex items-center gap-3 mb-8 px-2 cursor-pointer min-h-0 shrink-0">
-            <span className="flex-1 min-w-0 rounded-lg overflow-hidden">
-              <Image src="/logo.png?v=official" alt="Sambatek - Security Doors & Accessories" width={320} height={108} className="h-20 w-auto max-w-[280px] object-contain object-left" unoptimized />
+          <Link href="/admin" className="mb-8 block shrink-0 px-2">
+            <Image
+              src={SITE_LOGO_PATH}
+              alt="Snappy Imports Global"
+              width={220}
+              height={111}
+              priority
+              className="h-auto w-full max-w-[200px] object-contain"
+            />
+            <span className="mt-2 block text-[11px] font-semibold uppercase tracking-widest text-brand-accent">
+              Admin Dashboard
             </span>
-            <span className="text-sm font-semibold text-gray-500 shrink-0">ADMIN</span>
           </Link>
 
           <nav className="space-y-1">
@@ -277,13 +284,13 @@ export default function AdminLayout({
                   key={item.path}
                   href={item.path}
                   onClick={() => window.innerWidth < 1024 && setIsSidebarOpen(false)} // Close on mobile click
-                  className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors cursor-pointer ${isActive
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-50'
+                  className={`group flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-all duration-300 ${isActive
+                    ? 'border-l-4 border-brand-accent bg-brand-primary/5 font-semibold text-brand-accent'
+                    : 'text-brand-primary/70 hover:-translate-y-[1px] hover:bg-brand-primary/5 hover:text-brand-primary hover:shadow-sm'
                     }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <i className={`${item.icon} text-xl w-5 h-5 flex items-center justify-center`}></i>
+                    <i className={`${item.icon} flex h-5 w-5 items-center justify-center text-xl ${isActive ? 'admin-nav-icon-active' : 'admin-nav-icon-idle group-hover:text-brand-primary'}`} />
                     <span>{item.title}</span>
                   </div>
                   {item.badge && (
@@ -296,14 +303,14 @@ export default function AdminLayout({
             })}
           </nav>
 
-          <div className="mt-8 pt-8 border-t border-gray-200">
+          <div className="mt-8 border-t border-white/50 pt-8">
             <Link
               href="/"
               target="_blank"
               onClick={() => window.innerWidth < 1024 && setIsSidebarOpen(false)}
-              className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+              className="flex cursor-pointer items-center space-x-3 rounded-lg px-4 py-3 text-brand-primary/80 transition-colors hover:bg-brand-primary/5 hover:text-brand-accent"
             >
-              <i className="ri-external-link-line text-xl w-5 h-5 flex items-center justify-center"></i>
+              <i className="ri-external-link-line flex h-5 w-5 items-center justify-center text-xl text-brand-accent" />
               <span>View Store</span>
             </Link>
           </div>
@@ -312,46 +319,48 @@ export default function AdminLayout({
 
       {/* Main Content */}
       <div className={`transition-all duration-300 ml-0 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="px-4 py-4 lg:px-6 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
+        <header className="sticky top-0 z-30 border-b border-white/50 liquid-glass pt-[env(safe-area-inset-top,0px)]">
+          <div className="flex items-center justify-between gap-3 px-3 py-3 md:px-4 md:py-4 lg:px-6">
+            <div className="flex min-w-0 items-center gap-2 md:gap-3">
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="w-10 h-10 flex-shrink-0 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                className="flex h-10 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg text-brand-primary transition-colors hover:bg-brand-primary/5 hover:text-brand-accent"
+                aria-label="Toggle menu"
               >
                 <i className={`${isSidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'} text-xl`}></i>
               </button>
-              <Link href="/admin" className="hidden sm:block min-w-0">
-                <Image src="/logo.png?v=official" alt="Sambatek - Security Doors & Accessories" width={280} height={88} className="h-14 w-auto max-w-[260px] object-contain" unoptimized />
+              <Link href="/admin" className="min-w-0 truncate font-heading text-sm font-bold text-brand-primary md:text-lg">
+                <span className="md:hidden">Dashboard</span>
+                <span className="hidden md:inline">Dashboard Overview</span>
               </Link>
             </div>
 
-            <div className="flex items-center space-x-2 lg:space-x-4 shrink-0">
-              <button className="relative w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+            <div className="flex shrink-0 items-center space-x-1 md:space-x-2 lg:space-x-4">
+              <button className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-brand-primary transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-primary/5 hover:text-brand-accent">
                 <i className="ri-notification-3-line text-xl"></i>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="absolute top-2 right-2 w-2 h-2 bg-brand-accent rounded-full border-2 border-white"></span>
               </button>
 
               <div className="relative user-menu-container">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-2 lg:space-x-3 px-2 lg:px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="flex cursor-pointer items-center space-x-2 rounded-lg px-2 py-2 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-primary/5 lg:space-x-3 lg:px-3"
                 >
-                  <div className="w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full font-semibold">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary font-semibold text-white shadow-sm lg:h-9 lg:w-9">
                     {user?.email?.charAt(0).toUpperCase() || 'A'}
                   </div>
-                  <div className="text-left hidden md:block">
-                    <p className="text-sm font-semibold text-gray-900 capitalize">{userRole || 'Admin'}</p>
-                    <p className="text-xs text-gray-500 max-w-[100px] truncate">{user?.email}</p>
+                  <div className="hidden text-left md:block">
+                    <p className="text-sm font-semibold capitalize text-brand-primary">{userRole || 'Admin'}</p>
+                    <p className="max-w-[100px] truncate text-xs text-slate-500">{user?.email}</p>
                   </div>
-                  <i className="ri-arrow-down-s-line text-gray-600"></i>
+                  <i className="ri-arrow-down-s-line hidden text-brand-primary/60 sm:block" />
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20">
+                  <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-white/50 liquid-glass-card shadow-lg">
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors border-t border-gray-200 text-left cursor-pointer"
+                      className="flex w-full cursor-pointer items-center space-x-3 border-t border-white/40 px-4 py-3 text-left transition-colors hover:bg-brand-primary/5"
                     >
                       <i className="ri-logout-box-line text-red-600 w-5 h-5 flex items-center justify-center"></i>
                       <span className="text-red-600">Logout</span>
@@ -363,7 +372,7 @@ export default function AdminLayout({
           </div>
         </header>
 
-        <main className="p-4 lg:p-6">
+        <main className="p-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-4 lg:p-6">
           {children}
         </main>
       </div>

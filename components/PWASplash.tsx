@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
-
 export default function PWASplash() {
   const [showSplash, setShowSplash] = useState(false);
 
@@ -28,10 +26,8 @@ export default function PWASplash() {
 
   return (
     <div className="pwa-splash" aria-hidden="true">
-      <div className="pwa-splash-logo mb-6 flex items-center justify-center">
-        <Image src="/logo.png" alt="Sambatek" width={360} height={120} className="w-80 h-auto max-h-32 object-contain" />
-      </div>
-      <p className="text-blue-200 text-sm font-medium mb-8">Security Doors & Accessories</p>
+      <div className="pwa-splash-logo mb-6 text-white text-3xl font-bold tracking-wide">Snappy Import</div>
+      <p className="text-white/75 text-sm font-medium mb-8">Importing is no longer stressful</p>
       <div className="pwa-splash-dots flex gap-1.5">
         <span className="w-2 h-2 bg-white rounded-full" />
         <span className="w-2 h-2 bg-white rounded-full" />

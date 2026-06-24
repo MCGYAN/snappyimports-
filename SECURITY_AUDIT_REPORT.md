@@ -1,4 +1,4 @@
-# Security Audit Report — SAMBATEK STORE
+# Security Audit Report
 
 Completed per **SECURITY_AUDIT_PROMPT.md**. Summary of findings and fixes.
 
@@ -65,7 +65,7 @@ Completed per **SECURITY_AUDIT_PROMPT.md**. Summary of findings and fixes.
 
 ## 8. HTML Sanitization
 
-- **Status:** **`lib/sanitize.ts`** exists with `escapeHtml()`, `sanitizeHtml()`, `isValidEmail()`, `isValidGhanaPhone()`. **`lib/notifications.ts`** uses `escapeHtml` for user content. No change.
+- **Status:** **`lib/sanitize.ts`** exists with `escapeHtml()`, `sanitizeHtml()`, `isValidEmail()`, `isValidPhoneNumberFormat()`. **`lib/notifications.ts`** uses `escapeHtml` for user content. No change.
 
 ---
 

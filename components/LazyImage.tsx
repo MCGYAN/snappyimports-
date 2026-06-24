@@ -12,6 +12,7 @@ interface LazyImageProps {
   priority?: boolean;
   onLoad?: () => void;
   sizes?: string;
+  fit?: 'cover' | 'contain';
 }
 
 export default function LazyImage({
@@ -22,7 +23,8 @@ export default function LazyImage({
   height,
   priority = false,
   onLoad,
-  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw',
+  fit = 'cover',
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -57,7 +59,7 @@ export default function LazyImage({
         alt={alt}
         fill
         sizes={sizes}
-        className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`${fit === 'contain' ? 'object-contain' : 'object-cover'} transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
         onLoad={handleLoad}
         onError={handleError}
         priority={priority}

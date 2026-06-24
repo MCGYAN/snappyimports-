@@ -98,101 +98,137 @@ export default function ContactPage() {
     }
   };
 
-  // Get contact details from CMS settings
-  const contactEmail = getSetting('contact_email') || 'joelyrix52@gmail.com';
-  const contactPhone = getSetting('contact_phone') || '0593610190';
-  const contactWhatsapp = getSetting('contact_whatsapp') || '0593517270';
-  const contactAddressAccra = getSetting('contact_address') || 'Pokuase, Accra';
-  const contactAddressTarkwa = getSetting('contact_address_tarkwa') || 'Tarkwa, Ghana';
-  const socialFacebook = getSetting('social_facebook') || 'https://www.facebook.com/samuel.mbah.967';
-  const socialInstagram = getSetting('social_instagram') || 'https://www.instagram.com/joelyrix?igsh=cTVkemY5ZHllYXUw';
-  const socialTikTok = getSetting('social_tiktok') || 'https://www.tiktok.com/@joelyrix?_r=1&_t=ZS-94lgb0VN2Is';
+  // Get contact details from CMS settings (defaults are neutral placeholders)
+  const contactEmail = getSetting('contact_email') || 'contact@example.com';
+  const contactPhone = getSetting('contact_phone') || '';
+  const contactWhatsapp = getSetting('contact_whatsapp') || '';
+  const primaryAddressLine = getSetting('contact_address') || '';
+  const secondaryAddressLine = getSetting('contact_address_tarkwa') || '';
+  const socialFacebook = getSetting('social_facebook') || '';
+  const socialInstagram = getSetting('social_instagram') || '';
+  const socialTikTok = getSetting('social_tiktok') || '';
 
   const heroTitle = pageContent?.title || 'Get In Touch';
   const heroSubtitle = pageContent?.subtitle || 'Have a question or need assistance?';
   const heroContent = pageContent?.content || 'Our friendly team is here to help. Reach out through any of our contact channels.';
 
+  const defaultCc = (process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '1').replace(/\D/g, '') || '1';
   const waNumber = contactWhatsapp.replace(/[^0-9]/g, '');
-  const waLink = waNumber.startsWith('0') ? `https://wa.me/233${waNumber.slice(1)}` : `https://wa.me/${waNumber}`;
+  const waLink = waNumber
+    ? `https://wa.me/${waNumber.startsWith('0') ? `${defaultCc}${waNumber.slice(1)}` : waNumber}`
+    : '';
   const telNumber = contactPhone.replace(/\s/g, '');
-  const telLink = telNumber.startsWith('0') ? `tel:+233${telNumber.slice(1)}` : `tel:${telNumber}`;
+  const telLink = telNumber
+    ? telNumber.startsWith('+')
+      ? `tel:${telNumber}`
+      : telNumber.startsWith('0')
+        ? `tel:+${defaultCc}${telNumber.slice(1)}`
+        : `tel:${telNumber}`
+    : '';
+
+  const addressParts = [primaryAddressLine, secondaryAddressLine].filter(Boolean);
+  const locationDescription = addressParts.length ? addressParts.join(' • ') : '';
 
   const contactMethods = [
-    {
-      icon: 'ri-phone-line',
-      title: 'Call Us',
-      value: contactPhone,
-      link: telLink,
-      description: 'Mon-Fri, 8am-6pm GMT'
-    },
+    ...(contactPhone
+      ? [
+          {
+            icon: 'ri-phone-line',
+            title: 'Call Us',
+            value: contactPhone,
+            link: telLink,
+            description: 'Mon-Fri, 8am-6pm GMT',
+          },
+        ]
+      : []),
     {
       icon: 'ri-mail-line',
       title: 'Email Us',
       value: contactEmail,
       link: `mailto:${contactEmail}`,
-      description: 'We respond within 24 hours'
+      description: 'We respond within 24 hours',
     },
-    {
-      icon: 'ri-whatsapp-line',
-      title: 'WhatsApp',
-      value: contactWhatsapp,
-      link: waLink,
-      description: 'Chat with us instantly'
-    },
-    {
-      icon: 'ri-map-pin-line',
-      title: 'Visit Us',
-      value: 'Accra • Tarkwa',
-      link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${contactAddressAccra} / ${contactAddressTarkwa}`)}`,
-      description: `${contactAddressAccra} • ${contactAddressTarkwa}`
-    },
-    {
-      icon: 'ri-facebook-circle-line',
-      title: 'Facebook',
-      value: '@SaMbaTeK',
-      link: socialFacebook,
-      description: 'Follow us for updates'
-    },
-    {
-      icon: 'ri-instagram-line',
-      title: 'Instagram',
-      value: '@joelyrix',
-      link: socialInstagram,
-      description: 'See installs & products'
-    },
-    {
-      icon: 'ri-tiktok-line',
-      title: 'TikTok',
-      value: '@joelyrix',
-      link: socialTikTok,
-      description: 'Watch short demos'
-    }
+    ...(contactWhatsapp
+      ? [
+          {
+            icon: 'ri-whatsapp-line',
+            title: 'WhatsApp',
+            value: contactWhatsapp,
+            link: waLink,
+            description: 'Chat with us instantly',
+          },
+        ]
+      : []),
+    ...(addressParts.length
+      ? [
+          {
+            icon: 'ri-map-pin-line',
+            title: 'Visit Us',
+            value: locationDescription,
+            link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressParts.join(', '))}`,
+            description: locationDescription,
+          },
+        ]
+      : []),
+    ...(socialFacebook
+      ? [
+          {
+            icon: 'ri-facebook-circle-line',
+            title: 'Facebook',
+            value: 'Facebook',
+            link: socialFacebook,
+            description: 'Follow us for updates',
+          },
+        ]
+      : []),
+    ...(socialInstagram
+      ? [
+          {
+            icon: 'ri-instagram-line',
+            title: 'Instagram',
+            value: 'Instagram',
+            link: socialInstagram,
+            description: 'Photos and updates',
+          },
+        ]
+      : []),
+    ...(socialTikTok
+      ? [
+          {
+            icon: 'ri-tiktok-line',
+            title: 'TikTok',
+            value: 'TikTok',
+            link: socialTikTok,
+            description: 'Short videos',
+          },
+        ]
+      : []),
   ];
 
   const faqs = [
     {
-      question: 'What are your delivery times?',
-      answer: 'Standard delivery takes 2-5 business days. Express delivery may be available in select areas. We ship with care.'
+      question: 'How long does an import take?',
+      answer: 'It depends on air or sea and what you are buying. We give you a real date up front. We update you if anything changes. No vague "soon" answers.'
     },
     {
-      question: 'Do you offer international shipping?',
-      answer: 'Shipping availability depends on your location. We handle logistics so you can order and receive your products.'
+      question: 'Do you only ship to Ghana?',
+      answer: 'Yes. China to Ghana is what we do best. Ask us if you need something different. We will tell you honestly.'
     },
     {
-      question: 'What payment methods do you accept?',
-      answer: 'We accept MOMO, Instant Bank Transfer, Cash (in store only), and Visa Card. Please note we do not accept payment on delivery.'
+      question: 'How do I pay?',
+      answer: 'MOMO, bank transfer, cash in store, or card. Big orders may need staged payments. We explain everything before you commit.'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="store-page">
       <PageHero
-        title="Get In Touch"
-        subtitle="Have a question or need assistance? We're here to help."
-        backgroundImages={['/hero%201.jpg', '/hero%202.jpg', '/hero%203.jpg', '/hero4.jpg']}
+        size="large"
+        title="We are here to help"
+        subtitle="Quotes, timelines, or a quick question. Talk to real people who move imports from China to Ghana."
       />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="store-container store-section">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {contactMethods.map((method, index) => (
             <a
@@ -200,13 +236,13 @@ export default function ContactPage() {
               href={method.link}
               target={method.link.startsWith('http') ? '_blank' : '_self'}
               rel={method.link.startsWith('http') ? 'noopener noreferrer' : ''}
-              className="bg-white border border-gray-200 p-6 rounded-2xl hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer"
+              className="liquid-glass-card liquid-glass-card-interactive cursor-pointer p-6 transition-all"
             >
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <i className={`${method.icon} text-2xl text-blue-700`}></i>
+              <div className="w-12 h-12 bg-brand-light rounded-full flex items-center justify-center mb-4">
+                <i className={`${method.icon} text-2xl text-brand-primary`}></i>
               </div>
               <h3 className="font-bold text-gray-900 mb-2">{method.title}</h3>
-              <p className="text-blue-700 font-medium mb-1">{method.value}</p>
+              <p className="text-brand-primary font-medium mb-1">{method.value}</p>
               <p className="text-sm text-gray-500">{method.description}</p>
             </a>
           ))}
@@ -215,9 +251,9 @@ export default function ContactPage() {
 
         <div className="grid lg:grid-cols-2 gap-12">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Send Us a Message</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Send a message</h2>
             <p className="text-gray-600 mb-8">
-              Fill out the form below and we'll get back to you as soon as possible.
+              Tell us what you need. We reply within 24 hours.
             </p>
 
             <form id="contactForm" onSubmit={handleSubmit} className="space-y-6">
@@ -232,7 +268,7 @@ export default function ContactPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-accent focus:border-transparent text-sm"
                   placeholder="John Doe"
                 />
               </div>
@@ -248,7 +284,7 @@ export default function ContactPage() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-accent focus:border-transparent text-sm"
                   placeholder="john@example.com"
                 />
               </div>
@@ -263,8 +299,8 @@ export default function ContactPage() {
                   name="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  placeholder="+233 XX XXX XXXX"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-accent focus:border-transparent text-sm"
+                  placeholder="+1 555 000 0000"
                 />
               </div>
 
@@ -279,7 +315,7 @@ export default function ContactPage() {
                   required
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-accent focus:border-transparent text-sm"
                   placeholder="Order inquiry, product question, etc."
                 />
               </div>
@@ -296,14 +332,14 @@ export default function ContactPage() {
                   maxLength={500}
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-accent focus:border-transparent resize-none text-sm"
                   placeholder="Tell us how we can help you..."
                 ></textarea>
                 <p className="text-xs text-gray-500 mt-1">{formData.message.length}/500 characters</p>
               </div>
 
               {submitStatus === 'success' && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl">
+                <div className="bg-blue-50 border border-blue-200 text-brand-primary px-4 py-3 rounded-xl">
                   <i className="ri-check-line mr-2"></i>
                   Message sent successfully! We'll respond within 24 hours.
                 </div>
@@ -319,7 +355,7 @@ export default function ContactPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || verifying}
-                className="w-full bg-blue-700 text-white py-4 rounded-xl font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
+                className="w-full bg-brand-primary text-white py-4 rounded-xl font-medium hover:bg-[#0d2747] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
               >
                 {isSubmitting || verifying ? (verifying ? 'Verifying...' : 'Sending...') : 'Send Message'}
               </button>
@@ -327,9 +363,9 @@ export default function ContactPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Quick Answers</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Quick answers</h2>
             <p className="text-gray-600 mb-8">
-              Find answers to common questions before reaching out
+              Common questions before you reach out
             </p>
 
             <div className="space-y-4 mb-12">
@@ -349,19 +385,21 @@ export default function ContactPage() {
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-4">
                 <i className="ri-customer-service-2-line text-2xl"></i>
               </div>
-              <h3 className="text-2xl font-bold mb-3">Need Immediate Help?</h3>
+              <h3 className="text-2xl font-bold mb-3">Need help now?</h3>
               <p className="text-blue-100 mb-6 leading-relaxed">
-                Our customer support team is available Monday to Friday, 8am-6pm GMT. For urgent matters, reach out via WhatsApp.
+                We are here Monday to Friday, 8am to 6pm. For urgent questions, message us on WhatsApp.
               </p>
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white text-blue-700 px-6 py-3 rounded-full font-medium hover:bg-blue-50 transition-colors whitespace-nowrap"
-              >
-                <i className="ri-whatsapp-line text-xl"></i>
-                Chat on WhatsApp
-              </a>
+              {waLink ? (
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white text-brand-primary px-6 py-3 rounded-full font-medium hover:bg-blue-50 transition-colors whitespace-nowrap"
+                >
+                  <i className="ri-whatsapp-line text-xl"></i>
+                  Chat on WhatsApp
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
@@ -370,17 +408,19 @@ export default function ContactPage() {
       <div className="bg-gray-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Visit Our Store</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Visit us</h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              Prefer to shop in person? Visit our store. Our knowledgeable staff will be happy to assist you with product selection and answer any questions.
+              Prefer to talk in person? Come see us. We help you pick the right import.
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-gray-600">
+              {locationDescription ? (
+                <div className="flex items-center gap-2">
+                  <i className="ri-map-pin-2-line text-brand-primary"></i>
+                  <span>{locationDescription}</span>
+                </div>
+              ) : null}
               <div className="flex items-center gap-2">
-                <i className="ri-map-pin-2-line text-blue-700"></i>
-                <span>{contactAddressAccra} • {contactAddressTarkwa}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className="ri-time-line text-blue-700"></i>
+                <i className="ri-time-line text-brand-primary"></i>
                 <span>Mon-Sat: 9am-6pm</span>
               </div>
             </div>

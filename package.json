@@ -32,6 +32,7 @@
     "typescript": "^5"
   },
   "name": "store",
+  "description": "Snappy Import Ghana — hybrid import storefront (Next.js, Supabase, Moolre). UI focused on trust, WhatsApp, and structured journeys.",
   "private": true,
   "scripts": {
     "build": "next build",

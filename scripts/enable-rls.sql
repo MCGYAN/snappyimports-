@@ -1,5 +1,5 @@
 -- ============================================================================
--- SAMBATEK STORE — COMPLETE ROW LEVEL SECURITY (RLS)
+-- STORE — COMPLETE ROW LEVEL SECURITY (RLS)
 -- Run this entire script in: Supabase Dashboard → SQL Editor
 -- It is safe to re-run multiple times (all DROP IF EXISTS before CREATE).
 -- ============================================================================

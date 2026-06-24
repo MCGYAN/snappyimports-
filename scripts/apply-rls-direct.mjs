@@ -146,7 +146,7 @@ async function tryConnect(connStr, label) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
     console.log('======================================================');
-    console.log('   SAMBATEK — Applying RLS Policies to Supabase');
+    console.log('   Applying RLS policies to Supabase');
     console.log('======================================================');
     console.log(`Project: ${PROJECT_REF}`);
     console.log(`SQL statements to apply: ${SQL_STATEMENTS.length}\n`);

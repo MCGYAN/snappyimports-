@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         const requestUrl = new URL(req.url);
         const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin).replace(/\/+$/, '');
         if (baseUrl.includes('localhost')) {
-            console.warn('[Payment] baseUrl is localhost — callback will not work from Moolre. Set NEXT_PUBLIC_APP_URL to https://www.sambatekgh.com in production.');
+            console.warn('[Payment] baseUrl is localhost — callback will not work from Moolre. Set NEXT_PUBLIC_APP_URL to your public HTTPS origin in production.');
         }
 
         // Generate a unique external reference for Moolre
@@ -75,12 +75,12 @@ export async function POST(req: Request) {
         const payload = {
             type: 1,
             amount: amount.toString(),
-            email: process.env.MOOLRE_MERCHANT_EMAIL || 'admin@standardecom.com',
+            email: process.env.MOOLRE_MERCHANT_EMAIL || 'admin@example.com',
             externalref: uniqueRef,
             callback: `${baseUrl}/api/payment/moolre/callback`,
             redirect: `${baseUrl}/order-success?order=${orderRef}&payment_success=true`,
             reusable: "0",
-            currency: "GHS",
+            currency: process.env.MOOLRE_CURRENCY || 'USD',
             accountnumber: process.env.MOOLRE_ACCOUNT_NUMBER,
             metadata: {
                 customer_email: customerEmail || order.email,

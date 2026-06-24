@@ -174,7 +174,7 @@ export default function ImportForm() {
             type="button"
             onClick={() => setTab('zip')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              tab === 'zip' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'
+              tab === 'zip' ? 'bg-brand-primary/5 text-brand-primary border-b-2 border-brand-accent' : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
             ZIP Upload
@@ -183,7 +183,7 @@ export default function ImportForm() {
             type="button"
             onClick={() => setTab('csv')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              tab === 'csv' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'
+              tab === 'csv' ? 'bg-brand-primary/5 text-brand-primary border-b-2 border-brand-accent' : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
             CSV + Images Upload
@@ -195,7 +195,7 @@ export default function ImportForm() {
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleZipDrop}
-              className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-400 focus-within:border-blue-500 transition-colors"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-brand-accent/40 focus-within:border-brand-accent transition-colors"
             >
               <input
                 type="file"
@@ -288,7 +288,7 @@ export default function ImportForm() {
                 type="button"
                 onClick={() => setConfirmOpen(true)}
                 disabled={!canSubmit || loading}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-accent disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Processing...' : 'Upload & Process'}
               </button>
@@ -317,7 +317,7 @@ export default function ImportForm() {
                   setConfirmOpen(false);
                   startImport();
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-accent"
               >
                 Continue
               </button>

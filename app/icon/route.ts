@@ -1,19 +1,33 @@
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import { NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import path from 'path';
 
-// Serve the real 32x32 favicon from public (same as favicon/ assets)
+const LOGO_PATH = join(process.cwd(), 'public', 'favicon', 'favicon-32x32.png');
+
+/** Minimal valid 1×1 transparent PNG fallback */
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+);
+
 export async function GET() {
   try {
-    const filePath = path.join(process.cwd(), 'public', 'favicon-32x32.png');
-    const buffer = await readFile(filePath);
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
-    });
+    if (existsSync(LOGO_PATH)) {
+      const buf = readFileSync(LOGO_PATH);
+      return new NextResponse(buf, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=604800, immutable',
+        },
+      });
+    }
   } catch {
-    return new NextResponse(null, { status: 404 });
+    // fall through
   }
+  return new NextResponse(PNG_1X1, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  });
 }

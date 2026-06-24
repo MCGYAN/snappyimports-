@@ -112,28 +112,19 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
     }
 }
 
-// Helper to format phone number for SMS (Ghana specific for now)
-// Helper to format phone number for SMS (Ghana specific for now)
+// Helper to format phone numbers for SMS (adjust country code / rules for your provider)
 function formatPhoneNumber(phone: string): string {
-    // Remove all non-digit characters (including + for now)
+    const cc = (process.env.MOOLRE_SMS_COUNTRY_CODE || process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '1').replace(/\D/g, '') || '1';
     let cleaned = phone.replace(/\D/g, '');
 
-    // If starts with 0 (e.g. 024...), replace 0 with 233
     if (cleaned.startsWith('0')) {
-        cleaned = '233' + cleaned.substring(1);
+        cleaned = cc + cleaned.substring(1);
     }
 
-    // If length is 9 (e.g. 24...), prepend 233
     if (cleaned.length === 9) {
-        cleaned = '233' + cleaned;
+        cleaned = cc + cleaned;
     }
 
-    // Ensure it starts with correct country code before prepending +
-    if (!cleaned.startsWith('233') && cleaned.length === 12) {
-        // Assuming it's some other format, but if it starts with 233, it's fine.
-    }
-
-    // Return with + prefix as per E.164
     return '+' + cleaned;
 }
 
@@ -257,7 +248,7 @@ export async function sendOrderConfirmation(order: any) {
   ${emailInfoRow('Order Number', `#${order_number || id}`)}
   ${emailInfoRow('Order Date', new Date(created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))}
   ${trackingNumber ? emailInfoRow('Tracking', trackingNumber) : ''}
-  ${emailInfoRow('Total', `GH₵${Number(total).toFixed(2)}`)}
+  ${emailInfoRow('Total', `$${Number(total).toFixed(2)}`)}
 </table>
 
 ${emailShippingNotes(shippingNotes)}
@@ -283,7 +274,7 @@ ${emailButton('Track Your Order', trackingUrl)}
   ${emailInfoRow('Order', `#${order_number || id}`)}
   ${emailInfoRow('Customer', `${name}`)}
   ${emailInfoRow('Email', email)}
-  ${emailInfoRow('Total', `GH₵${Number(total).toFixed(2)}`)}
+  ${emailInfoRow('Total', `$${Number(total).toFixed(2)}`)}
   ${trackingNumber ? emailInfoRow('Tracking', trackingNumber) : ''}
 </table>
 
@@ -488,12 +479,12 @@ export async function sendPaymentLink(order: any) {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:20px 0;">
   ${emailInfoRow('Order Number', `#${order_number}`)}
-  ${emailInfoRow('Amount Due', `<span style="color:${BRAND.color};font-size:18px;font-weight:700;">GH₵${Number(total).toFixed(2)}</span>`)}
+  ${emailInfoRow('Amount Due', `<span style="color:${BRAND.color};font-size:18px;font-weight:700;">$${Number(total).toFixed(2)}</span>`)}
 </table>
 
 <p style="color:#374151;font-size:14px;line-height:1.6;margin:16px 0;">Click the button below to securely complete your payment. This link will remain active until your order is completed or cancelled.</p>
 
-${emailButton('Pay Now — GH₵' + Number(total).toFixed(2), paymentUrl, '#d97706')}
+${emailButton('Pay Now ($' + Number(total).toFixed(2) + ')', paymentUrl, '#d97706')}
 
 <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">Or copy this link: <a href="${paymentUrl}" style="color:${BRAND.color};">${paymentUrl}</a></p>
 `, `Complete payment for order #${order_number}`)
@@ -501,7 +492,7 @@ ${emailButton('Pay Now — GH₵' + Number(total).toFixed(2), paymentUrl, '#d977
 
     // SMS with payment link
     if (phone) {
-        const smsMessage = `Hi ${name}, complete your order #${order_number} (GH₵${Number(total).toFixed(2)}) here: ${paymentUrl}`;
+        const smsMessage = `Hi ${name}, complete your order #${order_number} ($${Number(total).toFixed(2)}) here: ${paymentUrl}`;
 
         await sendSMS({
             to: phone,
@@ -547,7 +538,7 @@ export async function sendContactMessage(data: { name: string, email: string, su
         to: ADMIN_EMAIL,
         subject: `Contact: ${subject}`,
         html: emailLayout(`
-<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">&#128233; New Contact Message</h2>
+<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">New contact message</h2>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:16px 0;">
   ${emailInfoRow('From', safeName)}

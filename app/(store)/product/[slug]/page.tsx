@@ -22,17 +22,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description =
     (product.description && typeof product.description === 'string'
       ? product.description.replace(/<[^>]*>/g, '').slice(0, 160)
-      : `${product.name} — Security solutions from ${SEO.siteName}.`) + '…';
+      : `${product.name}. Import from China with ${SEO.siteName}.`) + '…';
   const image =
     (product.product_images as { url?: string }[])?.[0]?.url ||
-    `${SEO.siteUrl}/logo.png`;
+    `${SEO.siteUrl}/opengraph-image`;
 
   return generateSEOMetadata({
     title: product.name,
     description,
     ogImage: image.startsWith('http') ? image : `${SEO.siteUrl}${image.startsWith('/') ? '' : '/'}${image}`,
     ogType: 'product',
-    keywords: [product.name, product.slug ?? '', 'Ghana', SEO.siteName],
+    keywords: [product.name, product.slug ?? '', 'online store', SEO.siteName],
   });
 }
 

@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Server-side Supabase client (no auth needed for public data)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
 
 // Simple in-memory cache
 let cache: { data: any; timestamp: number } | null = null;
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutes — products don't change frequently
 
 export async function GET(request: Request) {
+    if (!supabaseUrl || !supabaseKey) {
+        console.warn('[Storefront API] Supabase credentials missing');
+        return NextResponse.json([], { status: 200 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
     const { searchParams } = new URL(request.url);
     const featured = searchParams.get('featured') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -46,17 +50,35 @@ export async function GET(request: Request) {
         if (featured) {
             query = query.eq('featured', true).limit(limit);
         } else if (category) {
-            // Filter by category slug or name
             query = query.limit(limit);
         } else {
             query = query.limit(limit);
         }
 
-        const { data, error } = await query;
+        let { data, error } = await query;
 
         if (error) {
             console.error('[Storefront API] Products error:', error);
             return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+        }
+
+        // Home featured row: fall back to latest active products when none are flagged featured
+        if (featured && (!data || data.length === 0)) {
+            const { data: fallbackData, error: fallbackError } = await supabase
+                .from('products')
+                .select(`
+                    id, name, slug, price, compare_at_price, quantity, description, metadata,
+                    categories(id, name, slug),
+                    product_images(url, position),
+                    product_variants(id, name, price, quantity)
+                `)
+                .eq('status', 'active')
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            if (!fallbackError && fallbackData?.length) {
+                data = fallbackData;
+            }
         }
 
         // Cache the result

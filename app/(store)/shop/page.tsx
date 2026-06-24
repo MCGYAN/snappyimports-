@@ -12,12 +12,12 @@ import PageHero from '@/components/PageHero';
 import { Filter, X, Star, Inbox, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function ShopContent() {
-  usePageTitle('Shop All Products');
+  usePageTitle('Browse featured products | Snappy Import Ghana');
   const searchParams = useSearchParams();
 
   // State
   const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([{ id: 'all', name: 'All Products', count: 0 }]);
+  const [categories, setCategories] = useState<any[]>([{ id: 'all', name: 'All imports', count: 0 }]);
   const [loading, setLoading] = useState(true);
   const [totalProducts, setTotalProducts] = useState(0);
 
@@ -178,6 +178,8 @@ function ShopContent() {
               maxStock: effectiveStock || 50,
               moq: p.moq || 1,
               category: p.categories?.name,
+              categoryName: p.categories?.name,
+              categorySlug: p.categories?.slug,
               hasVariants,
               minVariantPrice,
               colorVariants
@@ -199,35 +201,36 @@ function ShopContent() {
   const totalPages = Math.ceil(totalProducts / productsPerPage);
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="store-page">
       <PageHero
-        title="Shop All Products"
-        subtitle="Browse our range of products"
-        backgroundImage="/hero4.jpg"
+        title="Browse imports"
+        subtitle="Find what you need. Filter by category and price. No guesswork."
       />
 
       {/* Mobile Filter Toggle */}
-      <div className="lg:hidden bg-white border-b border-gray-200 py-4 px-4 sticky top-[72px] z-20">
+      <div className="sticky top-[72px] z-20 border-b border-white/40 liquid-glass px-4 py-4 md:hidden">
         <div className="flex justify-between items-center">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="flex items-center space-x-2 text-[#002B5E] font-medium"
+            className="flex items-center space-x-2 text-brand-primary font-medium"
           >
             <Filter className="w-5 h-5" />
             <span>Filters & Sort</span>
           </button>
-          <span className="text-sm text-gray-500">{totalProducts} Products</span>
+          <span className="text-sm text-gray-500">{totalProducts} listings</span>
         </div>
       </div>
 
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <aside className={`${isFilterOpen ? 'fixed inset-0 z-50 bg-white overflow-y-auto' : 'hidden'} lg:block lg:w-64 lg:flex-shrink-0`}>
-              <div className="lg:sticky lg:top-24">
-                <div className="bg-white lg:bg-transparent p-6 lg:p-0">
-                  <div className="flex items-center justify-between mb-6 lg:hidden">
-                    <h2 className="text-xl font-bold text-[#002B5E]">Filters</h2>
+          <div className="flex flex-col gap-8 md:flex-row">
+            <aside
+              className={`${isFilterOpen ? 'fixed inset-0 z-50 overflow-y-auto liquid-glass' : 'hidden'} md:block md:w-64 md:flex-shrink-0`}
+            >
+              <div className="md:sticky md:top-28">
+                <div className="liquid-glass-card p-6 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none md:border-0">
+                  <div className="mb-6 flex items-center justify-between md:hidden">
+                    <h2 className="text-xl font-bold text-brand-primary">Filters</h2>
                     <button
                       onClick={() => setIsFilterOpen(false)}
                       className="w-10 h-10 flex items-center justify-center text-gray-700"
@@ -239,7 +242,7 @@ function ShopContent() {
                   <div className="space-y-8">
                     {/* Categories */}
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-4">Categories</h3>
+                      <h3 className="font-semibold text-gray-900 mb-4">Browse categories</h3>
                       <div className="space-y-1">
                         <button
                           onClick={() => {
@@ -248,11 +251,11 @@ function ShopContent() {
                             setIsFilterOpen(false);
                           }}
                           className={`w-full text-left px-4 py-2.5 rounded-xl transition-colors ${selectedCategory === 'all'
-                            ? 'bg-[#002B5E] text-white font-medium shadow-md'
+                            ? 'bg-brand-primary text-white font-medium shadow-md'
                             : 'text-gray-700 hover:bg-gray-50'
                             }`}
                         >
-                          All Products
+                          All imports
                         </button>
 
                         {/* Parent Categories */}
@@ -271,7 +274,7 @@ function ShopContent() {
                                   // Don't close filter immediately if exploring hierarchy
                                 }}
                                 className={`w-full text-left px-4 py-2.5 rounded-xl transition-colors flex justify-between items-center ${isSelected
-                                  ? 'bg-[#002B5E] text-white font-medium shadow-md'
+                                  ? 'bg-brand-primary text-white font-medium shadow-md'
                                   : 'text-gray-700 hover:bg-gray-50'
                                   }`}
                               >
@@ -307,7 +310,7 @@ function ShopContent() {
 
                     {/* Price Range */}
                     <div className="border-t border-gray-200 pt-8">
-                      <h3 className="font-semibold text-gray-900 mb-4">Max Price: GH₵{priceRange[1]}</h3>
+                      <h3 className="font-semibold text-gray-900 mb-4">Max Price: ${priceRange[1]}</h3>
                       <div className="space-y-4">
                         <input
                           type="range"
@@ -319,11 +322,11 @@ function ShopContent() {
                             setPriceRange([0, parseInt(e.target.value)]);
                             setPage(1);
                           }}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-primary"
                         />
                         <div className="flex items-center justify-between text-sm text-gray-600">
-                          <span>GH₵0</span>
-                          <span>GH₵5000+</span>
+                          <span>$0</span>
+                          <span>$5000+</span>
                         </div>
                       </div>
                     </div>
@@ -340,7 +343,7 @@ function ShopContent() {
                               setPage(1);
                             }}
                             className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedRating === rating
-                              ? 'bg-blue-100 text-blue-700'
+                              ? 'bg-brand-light text-brand-primary'
                               : 'text-gray-700 hover:bg-gray-100'
                               }`}
                           >
@@ -348,7 +351,7 @@ function ShopContent() {
                               {[1, 2, 3, 4, 5].map(star => (
                                 <Star
                                   key={star}
-                                  className={`w-4 h-4 ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
+                                  className={`w-4 h-4 ${star <= rating ? 'fill-brand-accent text-brand-accent' : 'text-gray-300'}`}
                                 />
                               ))}
                               <span className="text-sm">& Up</span>
@@ -363,7 +366,7 @@ function ShopContent() {
                         // Re-fetch handled by effect dependencies
                         setIsFilterOpen(false);
                       }}
-                      className="w-full bg-[#002B5E] hover:bg-amber-500 hover:text-[#002B5E] text-white py-3 rounded-xl font-bold transition-all shadow-md whitespace-nowrap"
+                      className="btn-primary w-full whitespace-nowrap rounded-xl bg-brand-primary py-3 font-bold text-white hover:bg-brand-accent"
                     >
                       Show Results
                     </button>
@@ -375,7 +378,7 @@ function ShopContent() {
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                 <p className="text-gray-600">
-                  Showing <span className="font-semibold text-gray-900">{products.length}</span> of <span className="font-semibold text-gray-900">{totalProducts}</span> products
+                  Showing <span className="font-semibold text-gray-900">{products.length}</span> of <span className="font-semibold text-gray-900">{totalProducts}</span> featured listings
                 </p>
 
                 <div className="flex items-center space-x-3">
@@ -386,7 +389,7 @@ function ShopContent() {
                       setSortBy(e.target.value);
                       setPage(1);
                     }}
-                    className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white cursor-pointer"
+                    className="cursor-pointer rounded-lg border border-white/50 bg-white/50 px-4 py-2 pr-8 text-sm backdrop-blur-xl focus:border-brand-accent focus:ring-2 focus:ring-brand-accent"
                   >
                     <option value="popular">Most Popular</option>
                     <option value="new">Newest</option>
@@ -416,8 +419,8 @@ function ShopContent() {
                       <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 bg-red-50 text-red-500 border border-red-100 rounded-full">
                         <Inbox className="w-10 h-10" />
                       </div>
-                      <h3 className="text-2xl font-bold text-[#002B5E] mb-2">No Products Found</h3>
-                      <p className="text-gray-500 mb-8 font-medium">Try adjusting your filters to find what you're looking for</p>
+                      <h3 className="text-2xl font-bold text-brand-primary mb-2">No featured products match</h3>
+                      <p className="text-gray-500 mb-8 font-medium">Widen your filters or browse categories. Your next import might be one click away.</p>
                       <button
                         onClick={() => {
                           setSelectedCategory('all');
@@ -425,7 +428,7 @@ function ShopContent() {
                           setSelectedRating(0);
                           setPage(1);
                         }}
-                        className="inline-flex items-center bg-[#002B5E] hover:bg-amber-500 hover:text-[#002B5E] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-md whitespace-nowrap"
+                        className="btn-primary inline-flex items-center whitespace-nowrap rounded-xl bg-brand-primary px-8 py-3.5 font-bold text-white hover:bg-brand-accent"
                       >
                         Clear All Filters
                       </button>
@@ -441,7 +444,7 @@ function ShopContent() {
                     <button
                       onClick={() => setPage(p => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-[#002B5E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-700"
+                      className="btn-icon flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -454,7 +457,7 @@ function ShopContent() {
                     <button
                       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
-                      className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-[#002B5E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-700"
+                      className="btn-icon flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
@@ -471,7 +474,7 @@ function ShopContent() {
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-12 h-12 border-4 border-blue-700 border-t-transparent rounded-full animate-spin"></div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div></div>}>
       <ShopContent />
     </Suspense>
   );

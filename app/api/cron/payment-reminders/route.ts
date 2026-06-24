@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendPaymentLink } from '@/lib/notifications';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // This endpoint is called by a cron job to send payment reminders
 // for orders that haven't been paid within 15 minutes
@@ -15,6 +15,14 @@ export async function GET(request: Request) {
     
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({
+        success: true,
+        message: 'Skipping reminders: Supabase is not configured in this environment',
+        processed: 0,
+      });
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

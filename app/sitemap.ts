@@ -1,9 +1,6 @@
 import { MetadataRoute } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import { SEO } from '@/lib/seo';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = SEO.siteUrl;
@@ -27,7 +24,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let productPages: MetadataRoute.Sitemap = [];
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (!isSupabaseConfigured) {
+      return [...staticPages];
+    }
+
     const { data: products } = await supabase
       .from('products')
       .select('slug, updated_at')

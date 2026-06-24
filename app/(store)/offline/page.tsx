@@ -40,7 +40,7 @@ export default function OfflinePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-6">
+    <div className="min-h-screen bg-brand-light flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center">
         {/* Animated illustration */}
         <div className="relative mb-8">
@@ -48,9 +48,9 @@ export default function OfflinePage() {
             {/* Outer ring */}
             <div className="absolute inset-0 rounded-full border-4 border-blue-100 animate-pulse" />
             {/* Inner circle */}
-            <div className="absolute inset-3 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+            <div className="absolute inset-3 rounded-full bg-gradient-to-br from-brand-light to-white flex items-center justify-center">
               <div className="relative">
-                <i className="ri-wifi-off-line text-5xl text-blue-600" />
+                <i className="ri-wifi-off-line text-5xl text-brand-accent" />
                 {/* Animated dots */}
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
               </div>
@@ -59,12 +59,11 @@ export default function OfflinePage() {
         </div>
 
         {/* Content */}
-        <h1 className="font-serif text-3xl font-bold text-gray-900 mb-3">
-          You&apos;re Offline
+        <h1 className="text-3xl font-bold text-gray-900 mb-3">
+          You are offline
         </h1>
         <p className="text-gray-500 mb-8 leading-relaxed">
-          No worries! Check your connection and try again.
-          You can still browse pages you&apos;ve visited before.
+          Check your connection and try again. Pages you visited before may still work.
         </p>
 
         {/* Available actions */}
@@ -72,7 +71,7 @@ export default function OfflinePage() {
           <button
             onClick={handleRetry}
             disabled={retrying}
-            className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white py-4 px-6 rounded-2xl font-semibold transition-all active:scale-[0.98] shadow-lg shadow-blue-700/20 flex items-center justify-center gap-2"
+            className="w-full bg-brand-primary hover:bg-[#0d2747] disabled:bg-brand-primary/50 text-white py-4 px-6 rounded-2xl font-semibold transition-all active:scale-[0.98] shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2"
           >
             {retrying ? (
               <>
@@ -113,7 +112,7 @@ export default function OfflinePage() {
                 key={tip.text}
                 className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-2"
               >
-                <i className={`${tip.icon} text-blue-600 text-sm`} />
+                <i className={`${tip.icon} text-brand-accent text-sm`} />
                 <span>{tip.text}</span>
               </div>
             ))}

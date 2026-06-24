@@ -23,7 +23,7 @@ export function generateMetadata({
   ogImage,
   ogType = 'website',
   price,
-  currency = 'GHS',
+  currency = 'USD',
   availability,
   category,
   publishedTime,
@@ -31,7 +31,7 @@ export function generateMetadata({
   noindex = false
 }: SEOProps): Metadata {
   const siteUrl = SEO.siteUrl;
-  const defaultOgImage = `${siteUrl}/og-image.png`;
+  const defaultOgImage = `${siteUrl}/opengraph-image`;
   const resolvedOgImage = ogImage || defaultOgImage;
   const siteName = SEO.siteName;
   const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
@@ -113,7 +113,7 @@ export function generateProductSchema(product: {
     offers: {
       '@type': 'Offer',
       price: product.price,
-      priceCurrency: product.currency || 'GHS',
+      priceCurrency: product.currency || 'USD',
       availability: product.availability === 'in_stock'
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
@@ -153,13 +153,16 @@ export function generateBreadcrumbSchema(items: { name: string; url: string }[])
 }
 
 export function generateOrganizationSchema() {
+  const withLogo =
+    SEO.logoUrl && SEO.logoUrl.length > 0
+      ? { logo: SEO.logoUrl, image: SEO.logoUrl }
+      : {};
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: SEO.siteName,
     url: SEO.siteUrl,
-    logo: SEO.logoUrl,
-    image: SEO.logoUrl,
+    ...withLogo,
     contactPoint: {
       '@type': 'ContactPoint',
       telephone: SEO.contact.phone,

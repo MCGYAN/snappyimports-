@@ -133,7 +133,7 @@ export default function InventoryManagementPage() {
           </div>
           <Link
             href="/admin"
-            className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap text-center"
+            className="bg-brand-primary hover:bg-brand-accent text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap text-center"
           >
             Back to Dashboard
           </Link>
@@ -146,8 +146,8 @@ export default function InventoryManagementPage() {
                 <p className="text-sm text-gray-600 mb-1">Total Products</p>
                 <p className="text-3xl font-bold text-gray-900">{products.length}</p>
               </div>
-              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg">
-                <i className="ri-stack-line text-2xl text-blue-600"></i>
+              <div className="w-12 h-12 flex items-center justify-center bg-brand-primary/10 rounded-lg">
+                <i className="ri-stack-line text-2xl text-brand-primary"></i>
               </div>
             </div>
           </div>
@@ -180,10 +180,10 @@ export default function InventoryManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Retail Value</p>
-                <p className="text-3xl font-bold text-blue-600">GH₵{totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                <p className="text-3xl font-bold text-brand-primary">${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
               </div>
-              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-2xl text-blue-600"></i>
+              <div className="w-12 h-12 flex items-center justify-center bg-brand-primary/10 rounded-lg">
+                <i className="ri-money-dollar-circle-line text-2xl text-brand-primary"></i>
               </div>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function InventoryManagementPage() {
                   placeholder="Search by product name or SKU..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent text-sm"
                 />
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function InventoryManagementPage() {
 
               <button
                 onClick={() => setShowImportModal(true)}
-                className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer"
+                className="bg-brand-primary hover:bg-brand-accent text-white px-4 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer"
               >
                 <i className="ri-upload-line"></i>
                 <span>Import CSV</span>
@@ -242,14 +242,14 @@ export default function InventoryManagementPage() {
           </div>
 
           {selectedProducts.length > 0 && (
-            <div className="mt-4 flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-800 font-medium">
+            <div className="mt-4 flex items-center justify-between p-4 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
+              <p className="text-brand-primary font-medium">
                 {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
               </p>
               <div className="flex items-center space-x-3">
                 <button
                   onClick={handleBulkRestock}
-                  className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
+                  className="bg-brand-primary hover:bg-brand-accent text-white px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Bulk Restock
                 </button>
@@ -274,7 +274,7 @@ export default function InventoryManagementPage() {
                       type="checkbox"
                       checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
                       onChange={toggleAllProducts}
-                      className="w-5 h-5 text-blue-700 rounded cursor-pointer"
+                      className="w-5 h-5 text-brand-primary rounded cursor-pointer"
                     />
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product</th>
@@ -299,7 +299,7 @@ export default function InventoryManagementPage() {
                           type="checkbox"
                           checked={selectedProducts.includes(product.id)}
                           onChange={() => toggleProductSelection(product.id)}
-                          className="w-5 h-5 text-blue-700 rounded cursor-pointer"
+                          className="w-5 h-5 text-brand-primary rounded cursor-pointer"
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -315,12 +315,12 @@ export default function InventoryManagementPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="font-semibold text-gray-900">
-                          GH₵{(product.currentStock * product.price).toFixed(2)}
+                          ${(product.currentStock * product.price).toFixed(2)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         {product.status === 'good' && (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 whitespace-nowrap">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-primary/10 text-brand-primary whitespace-nowrap">
                             <i className="ri-checkbox-circle-fill mr-1"></i>
                             In Stock
                           </span>
@@ -341,13 +341,13 @@ export default function InventoryManagementPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
                           <button
-                            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 transition-colors cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent transition-colors cursor-pointer"
                             title="Edit"
                           >
                             <i className="ri-edit-line text-lg"></i>
                           </button>
                           <button
-                            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 transition-colors cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent transition-colors cursor-pointer"
                             title="View Details"
                           >
                             <i className="ri-eye-line text-lg"></i>

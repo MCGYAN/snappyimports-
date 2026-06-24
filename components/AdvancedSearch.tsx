@@ -26,42 +26,42 @@ export default function AdvancedSearch() {
       name: 'Premium Wireless Headphones',
       category: 'Electronics',
       price: 450,
-      image: 'https://readdy.ai/api/search-image?query=premium%20wireless%20headphones%20with%20sleek%20black%20design%20and%20cushioned%20ear%20cups%20on%20clean%20white%20background%20professional%20product%20photography%20minimalist%20style%20high%20quality&width=200&height=200&seq=search1&orientation=squarish'
+      image: 'https://picsum.photos/seed/ph-AdvancedSearch-1/200/200'
     },
     {
       id: '2',
       name: 'Smart Fitness Watch',
       category: 'Wearables',
       price: 320,
-      image: 'https://readdy.ai/api/search-image?query=modern%20smart%20fitness%20watch%20with%20black%20band%20and%20digital%20display%20showing%20health%20metrics%20on%20clean%20white%20background%20professional%20product%20photography%20minimalist%20style&width=200&height=200&seq=search2&orientation=squarish'
+      image: 'https://picsum.photos/seed/ph-AdvancedSearch-2/200/200'
     },
     {
       id: '3',
       name: 'Leather Crossbody Bag',
       category: 'Fashion',
       price: 289,
-      image: 'https://readdy.ai/api/search-image?query=elegant%20premium%20leather%20crossbody%20bag%20in%20forest%20green%20color%20on%20clean%20white%20background%20professional%20product%20photography%20luxury%20style%20high%20quality&width=200&height=200&seq=search3&orientation=squarish'
+      image: 'https://picsum.photos/seed/ph-AdvancedSearch-3/200/200'
     },
     {
       id: '4',
       name: 'Minimalist Ceramic Vase Set',
       category: 'Home Decor',
       price: 159,
-      image: 'https://readdy.ai/api/search-image?query=modern%20minimalist%20ceramic%20vase%20set%20in%20cream%20and%20charcoal%20colors%20on%20white%20background%20elegant%20home%20decor%20professional%20photography%20clean%20lines&width=200&height=200&seq=search4&orientation=squarish'
+      image: 'https://picsum.photos/seed/ph-AdvancedSearch-4/200/200'
     },
     {
       id: '5',
       name: 'Organic Cotton T-Shirt',
       category: 'Clothing',
       price: 45,
-      image: 'https://readdy.ai/api/search-image?query=premium%20organic%20cotton%20t-shirt%20in%20white%20color%20on%20clean%20background%20professional%20clothing%20photography%20minimalist%20style%20high%20quality%20fabric&width=200&height=200&seq=search5&orientation=squarish'
+      image: 'https://picsum.photos/seed/ph-AdvancedSearch-5/200/200'
     },
     {
       id: '6',
       name: 'Bamboo Desk Organizer',
       category: 'Office',
       price: 68,
-      image: 'https://readdy.ai/api/search-image?query=modern%20bamboo%20desk%20organizer%20with%20multiple%20compartments%20on%20clean%20white%20background%20professional%20product%20photography%20minimalist%20office%20style%20high%20quality&width=200&height=200&seq=search6&orientation=squarish'
+      image: 'https://picsum.photos/seed/ph-AdvancedSearch-6/200/200'
     }
   ];
 
@@ -204,7 +204,7 @@ export default function AdvancedSearch() {
                     <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
                     <p className="text-xs text-gray-500">{product.category}</p>
                   </div>
-                  <p className="font-bold text-gray-900">GH₵{product.price}</p>
+                  <p className="font-bold text-gray-900">${product.price}</p>
                 </Link>
               ))}
             </div>

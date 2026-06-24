@@ -44,13 +44,13 @@ export default function ResultsSummary({ summary, errors, warnings, onImportMore
             <p className="text-2xl font-bold text-green-700">{summary.productsCreated}</p>
             <p className="text-sm text-green-600">Products created</p>
           </div>
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-2xl font-bold text-blue-700">{summary.imagesUploaded}</p>
-            <p className="text-sm text-blue-600">Images uploaded</p>
+          <div className="bg-brand-primary/5 rounded-lg p-4">
+            <p className="text-2xl font-bold text-brand-primary">{summary.imagesUploaded}</p>
+            <p className="text-sm text-brand-primary">Images uploaded</p>
           </div>
-          <div className="bg-indigo-50 rounded-lg p-4">
-            <p className="text-2xl font-bold text-indigo-700">{summary.variantsCreated}</p>
-            <p className="text-sm text-indigo-600">Variants created</p>
+          <div className="bg-brand-primary/5 rounded-lg p-4">
+            <p className="text-2xl font-bold text-brand-primary">{summary.variantsCreated}</p>
+            <p className="text-sm text-brand-primary">Variants created</p>
           </div>
           <div className="bg-red-50 rounded-lg p-4">
             <p className="text-2xl font-bold text-red-700">{summary.errors}</p>
@@ -74,7 +74,7 @@ export default function ResultsSummary({ summary, errors, warnings, onImportMore
                 <a
                   href={`data:text/csv;charset=utf-8,${encodeURIComponent(errorCsv)}`}
                   download="import-errors.csv"
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-brand-primary hover:underline"
                 >
                   Download error report
                 </a>
@@ -83,7 +83,7 @@ export default function ResultsSummary({ summary, errors, warnings, onImportMore
             <ul className="max-h-40 overflow-y-auto text-sm text-red-700 space-y-1 border border-red-100 rounded-lg p-3 bg-red-50">
               {errors.slice(0, 20).map((e, i) => (
                 <li key={i}>
-                  Row {e.row}: {e.field} — {e.message}
+                  Row {e.row}: {e.field}: {e.message}
                 </li>
               ))}
               {errors.length > 20 && (
@@ -99,7 +99,7 @@ export default function ResultsSummary({ summary, errors, warnings, onImportMore
             <ul className="max-h-32 overflow-y-auto text-sm text-amber-700 space-y-1 border border-amber-100 rounded-lg p-3 bg-amber-50">
               {warnings.slice(0, 10).map((e, i) => (
                 <li key={i}>
-                  Row {e.row}: {e.field} — {e.message}
+                  Row {e.row}: {e.field}: {e.message}
                 </li>
               ))}
               {warnings.length > 10 && (
@@ -112,7 +112,7 @@ export default function ResultsSummary({ summary, errors, warnings, onImportMore
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
             href="/admin/products"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-accent transition-colors"
           >
             <i className="ri-list-check-2" />
             View Products

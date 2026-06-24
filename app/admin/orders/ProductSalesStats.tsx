@@ -160,7 +160,7 @@ export default function ProductSalesStats({ isOpen, onClose }: { isOpen: boolean
                             key={p}
                             onClick={() => setPeriod(p)}
                             className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${period === p
-                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                    ? 'bg-brand-primary text-white shadow-md shadow-brand-accent/20'
                                     : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-transparent'
                                 }`}
                         >
@@ -184,7 +184,7 @@ export default function ProductSalesStats({ isOpen, onClose }: { isOpen: boolean
                             {loading ? (
                                 <tr>
                                     <td colSpan={4} className="p-12 text-center text-gray-500">
-                                        <i className="ri-loader-4-line text-3xl animate-spin text-blue-600 mb-2 block"></i>
+                                        <i className="ri-loader-4-line text-3xl animate-spin text-brand-primary mb-2 block"></i>
                                         Loading sales data...
                                     </td>
                                 </tr>
@@ -203,7 +203,7 @@ export default function ProductSalesStats({ isOpen, onClose }: { isOpen: boolean
                                         return (
                                     <>
                                     <tr 
-                                        className={`hover:bg-blue-50/30 transition-colors ${hasVariants ? 'cursor-pointer' : ''}`}
+                                        className={`hover:bg-brand-primary/5/30 transition-colors ${hasVariants ? 'cursor-pointer' : ''}`}
                                         onClick={() => hasVariants && setExpandedProduct(expandedProduct === s.productId ? null : s.productId)}
                                     >
                                         <td className="p-4 pl-6 font-medium text-gray-900">
@@ -215,19 +215,19 @@ export default function ProductSalesStats({ isOpen, onClose }: { isOpen: boolean
                                                 )}
                                                 <span>{s.productName}</span>
                                                 {hasVariants && (
-                                                    <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                                    <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-semibold">
                                                         {s.variants.length} variants
                                                     </span>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="p-4 text-center">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-primary/10 text-brand-primary">
                                                 {s.ordersCount}
                                             </span>
                                         </td>
                                         <td className="p-4 text-center">
-                                            <span className="font-bold text-blue-700 text-base">{s.itemsSold}</span>
+                                            <span className="font-bold text-brand-primary text-base">{s.itemsSold}</span>
                                         </td>
                                         <td className="p-4 text-right pr-6 text-gray-600 font-mono">
                                             {s.totalRevenue > 0 ? s.totalRevenue.toLocaleString() : '-'}
@@ -235,10 +235,10 @@ export default function ProductSalesStats({ isOpen, onClose }: { isOpen: boolean
                                     </tr>
                                     {expandedProduct === s.productId && hasVariants && (
                                         s.variants.map((v) => (
-                                            <tr key={`${s.productId}-${v.name}`} className="bg-gray-50/80 border-l-2 border-purple-200">
+                                            <tr key={`${s.productId}-${v.name}`} className="bg-gray-50/80 border-l-2 border-brand-primary/20">
                                                 <td className="p-3 pl-14 text-gray-600 text-xs">
                                                     <span className="inline-flex items-center space-x-1.5">
-                                                        <i className="ri-price-tag-3-line text-purple-400"></i>
+                                                        <i className="ri-price-tag-3-line text-brand-accent/60"></i>
                                                         <span className="font-medium">{v.name}</span>
                                                     </span>
                                                 </td>

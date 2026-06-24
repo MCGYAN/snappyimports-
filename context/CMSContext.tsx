@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { SITE_LOGO_PATH } from '@/lib/brand';
 
 interface SiteSettings {
     site_name: string;
@@ -67,12 +68,12 @@ interface CMSContextType {
 }
 
 const defaultSettings: SiteSettings = {
-    site_name: 'Store',
-    site_tagline: 'Shop online.',
-    site_logo: '/logo.png?v=official',
-    contact_email: 'joelyrix52@gmail.com',
-    contact_phone: '0593610190',
-    contact_whatsapp: '0593517270',
+    site_name: 'Snappy Import Ghana',
+    site_tagline: 'Importing is no longer stressful. We handle the hard part so you do not have to.',
+    site_logo: SITE_LOGO_PATH,
+    contact_email: 'contact@example.com',
+    contact_phone: '',
+    contact_whatsapp: '',
     contact_address: '',
     social_facebook: '',
     social_instagram: '',
@@ -80,10 +81,10 @@ const defaultSettings: SiteSettings = {
     social_tiktok: '',
     social_snapchat: '',
     social_youtube: '',
-    primary_color: '#059669',
-    secondary_color: '#0D9488',
-    currency: 'GHS',
-    currency_symbol: 'GH₵',
+    primary_color: '#0ea5e9',
+    secondary_color: '#fbbf24',
+    currency: 'USD',
+    currency_symbol: '$',
 };
 
 const CMSContext = createContext<CMSContextType>({
@@ -99,12 +100,12 @@ const CMSContext = createContext<CMSContextType>({
 
 export function CMSProvider({ children }: { children: ReactNode }) {
     const [settings, setSettings] = useState<SiteSettings>({
-        site_name: 'Store',
-        site_tagline: 'Shop online.',
-        site_logo: '/logo.png?v=official',
-        contact_email: 'joelyrix52@gmail.com',
-        contact_phone: '0593610190',
-        contact_whatsapp: '0593517270',
+        site_name: 'Snappy Import Ghana',
+        site_tagline: 'Importing is no longer stressful. We handle the hard part so you do not have to.',
+        site_logo: SITE_LOGO_PATH,
+        contact_email: 'contact@example.com',
+        contact_phone: '',
+        contact_whatsapp: '',
         contact_address: '',
         social_facebook: '',
         social_instagram: '',
@@ -112,10 +113,10 @@ export function CMSProvider({ children }: { children: ReactNode }) {
         social_tiktok: '',
         social_snapchat: '',
         social_youtube: '',
-        primary_color: '#2563eb',
-        secondary_color: '#FBF6F2',
-        currency: 'GHS',
-        currency_symbol: 'GH₵',
+        primary_color: '#0ea5e9',
+        secondary_color: '#fbbf24',
+        currency: 'USD',
+        currency_symbol: '$',
     });
     const [content, setContent] = useState<CMSContent[]>([]);
     const [banners, setBanners] = useState<Banner[]>([]);

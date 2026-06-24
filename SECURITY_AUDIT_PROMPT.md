@@ -1,6 +1,6 @@
 # Security Audit & Fix Prompt
 
-> **Use this prompt with Cursor Agent (or any AI coding assistant) to perform a full security audit and fix on any project built from the standardecom framework.**
+> **Use this prompt with Cursor Agent (or any AI coding assistant) to perform a full security audit and fix on this Next.js e-commerce codebase.**
 >
 > **Prerequisites:** Ensure the AI has access to your Supabase MCP connection before starting.
 
@@ -125,7 +125,7 @@ Read all files under `app/admin/` that use `'use server'` or server actions:
 Read `lib/notifications.ts` (or wherever emails are composed):
 
 - Any user-provided text (contact form name, email, subject, message; campaign subject/message) inserted into HTML email templates must be escaped using an `escapeHtml()` function that converts `<>&"'` to HTML entities.
-- Create a `lib/sanitize.ts` utility with `escapeHtml()`, `sanitizeHtml()` (for blog/CMS content rendering), `isValidEmail()`, and `isValidGhanaPhone()` functions.
+- Create a `lib/sanitize.ts` utility with `escapeHtml()`, `sanitizeHtml()` (for blog/CMS content rendering), `isValidEmail()`, and `isValidPhoneNumberFormat()` functions.
 
 ### 9. ENVIRONMENT & SECRETS
 

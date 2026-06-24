@@ -94,7 +94,7 @@ export async function POST(req: Request) {
       phone: String(phone ?? '').trim(),
       status: 'pending',
       payment_status: 'pending',
-      currency: 'GHS',
+      currency: 'USD',
       subtotal,
       tax_total: taxTotal,
       shipping_total: shippingTotal,

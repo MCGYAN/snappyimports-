@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'Sambatek';
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'Store';
 
 export function usePageTitle(title: string) {
   useEffect(() => {

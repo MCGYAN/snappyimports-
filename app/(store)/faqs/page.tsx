@@ -20,112 +20,112 @@ export default function FAQsPage() {
     {
       category: 'orders',
       question: 'How do I place an order?',
-      answer: 'Browse our products, add items to your cart, proceed to checkout, provide your delivery address, select payment method, and confirm your order. You\'ll receive an email confirmation with your order details and tracking number.'
+      answer: 'Browse what you need. Add it to your cart. Check out or message us on WhatsApp. We confirm everything before you pay.'
     },
     {
       category: 'orders',
-      question: 'Can I modify or cancel my order?',
-      answer: 'You can modify or cancel your order within 1 hour of placing it. Contact our customer service immediately via the Contact page. Once an order is processed, modifications may not be possible.'
+      question: 'Can I change or cancel my order?',
+      answer: 'Yes, within one hour of ordering. Contact us right away. After that, we may already be sourcing your item.'
     },
     {
       category: 'orders',
-      question: 'How do I track my order?',
-      answer: 'After your order ships, you\'ll receive a tracking number via email and SMS. Visit our Order Tracking page and enter your order number and email address to see real-time updates on your delivery status.'
+      question: 'Where is my order?',
+      answer: 'Go to order tracking and enter your order number and email. You see every step from China to Ghana.'
     },
     {
       category: 'orders',
-      question: 'What if I receive the wrong item?',
-      answer: 'We sincerely apologise if you receive the wrong item. Contact us within 48 hours with photos of the item received. We\'ll arrange for the correct item to be sent immediately and collect the wrong item at no cost to you.'
+      question: 'What if I get the wrong item?',
+      answer: 'Tell us within 48 hours with photos. We fix it fast. Wrong items are collected at no cost to you.'
     },
     {
       category: 'shipping',
-      question: 'What are your delivery times?',
-      answer: 'Standard delivery takes 2-5 business days within Ghana. Express delivery (next-day) is available for Accra and Kumasi. Orders placed before 2pm are dispatched same day. Remote areas may take 5-7 business days.'
+      question: 'How long does delivery take?',
+      answer: 'Sea freight takes a few weeks. Air is faster. We give you a real date up front, not a vague promise.'
     },
     {
       category: 'shipping',
       question: 'How much does shipping cost?',
-      answer: 'Standard shipping costs GHS 20. Express delivery costs GHS 40. Orders over GHS 300 qualify for FREE standard shipping. Store pickup is also available at no charge from our Accra location.'
+      answer: 'It depends on size, weight, and method. We quote the full landed cost before you commit. No surprise fees.'
     },
     {
       category: 'shipping',
       question: 'Do you ship outside Ghana?',
-      answer: 'Currently, we only ship within Ghana. We\'re working on expanding to neighbouring West African countries. Sign up for our newsletter to be notified when international shipping becomes available.'
+      answer: 'We focus on China to Ghana. Ask us if you need something else. We will tell you honestly.'
     },
     {
       category: 'shipping',
-      question: 'What if nobody is home for delivery?',
-      answer: 'Our delivery partner will attempt delivery twice. If unsuccessful, the package will be held at the nearest collection point for 5 days. You\'ll receive SMS and email notifications with collection instructions.'
+      question: 'What if nobody is home?',
+      answer: 'We try twice. Then we hold it for pickup. You get a text and email with instructions.'
     },
     {
       category: 'returns',
-      question: 'What is your return policy?',
-      answer: 'We offer a 14-day return policy for unused items in original packaging. Simply initiate a return from your account, print the return label, and ship it back. Refunds are processed within 5-7 business days after we receive the item.'
+      question: 'Can I return an item?',
+      answer: 'Yes, within 14 days if unused and in original packaging. Start a return from your account. Refunds take 5 to 7 days.'
     },
     {
       category: 'returns',
-      question: 'Which items cannot be returned?',
-      answer: 'For hygiene reasons, we cannot accept returns on opened cosmetics, intimate apparel, earrings, or perishable goods. Custom or personalised items are also non-returnable unless defective.'
+      question: 'What cannot be returned?',
+      answer: 'Opened personal care items, custom orders, and perishables cannot be returned unless they are defective.'
     },
     {
       category: 'returns',
-      question: 'Who pays for return shipping?',
-      answer: 'If you\'re returning due to a defect or our error, we cover return shipping. For change-of-mind returns, customers pay return shipping costs (GHS 15 standard rate). Free shipping on returns for defective items.'
+      question: 'Who pays return shipping?',
+      answer: 'We cover it if it is our mistake or a defect. For change of mind, you usually pay return shipping.'
     },
     {
       category: 'returns',
-      question: 'Can I exchange an item instead of returning it?',
-      answer: 'Yes! If you need a different size or colour, select "Exchange" when initiating your return. We\'ll send the replacement as soon as we receive your original item. Exchange shipping is FREE.'
+      question: 'Can I swap for a different size?',
+      answer: 'Yes. Choose exchange when you start your return. We send the new one when we get the old one back.'
     },
     {
       category: 'payment',
-      question: 'What payment methods do you accept?',
-      answer: 'We accept MOMO (Mobile Money), Instant Bank Transfer, Cash (in store only), and Visa Card payment. Please note we do not accept payment on delivery.'
+      question: 'How can I pay?',
+      answer: 'MOMO, bank transfer, cash in store, or card. We do not accept payment on delivery.'
     },
     {
       category: 'payment',
-      question: 'Is it safe to use my credit card on your site?',
-      answer: 'Absolutely. We use industry-standard SSL encryption and partner with Moolre for secure payment processing. We never store your full card details on our servers. All transactions are PCI-DSS compliant.'
+      question: 'Is my card safe?',
+      answer: 'Yes. We use secure encryption. We never store your full card number on our servers.'
     },
     {
       category: 'payment',
-      question: 'Can I pay in instalments?',
-      answer: 'Yes! We offer payment plans through our partners for purchases over GHS 500. Select "Pay in Instalments" at checkout to see available options. Approval is instant and no interest is charged.'
+      question: 'Can I pay in parts?',
+      answer: 'Big imports may allow staged payments. We explain the plan before you agree to anything.'
     },
     {
       category: 'payment',
-      question: 'When will my payment be charged?',
-      answer: 'For card and mobile money payments, you\'re charged immediately. We do not accept payment on delivery — payment must be completed before dispatch. If an item is out of stock, we\'ll refund you within 24 hours.'
+      question: 'When am I charged?',
+      answer: 'Right when you pay online or in store. If something is out of stock, we refund you within 24 hours.'
     },
     {
       category: 'payment',
       question: 'How do refunds work?',
-      answer: 'Refunds are processed to your original payment method within 5-7 business days after we receive and inspect your return. For mobile money refunds, ensure you provide correct details. You\'ll receive confirmation via email.'
+      answer: 'Money goes back to how you paid. It takes 5 to 7 business days. We email you when it is done.'
     },
     {
       category: 'account',
-      question: 'Do I need an account to place an order?',
-      answer: 'No, you can checkout as a guest. However, creating an account lets you track orders, save addresses, view purchase history, manage your wishlist, and receive exclusive offers. It only takes 30 seconds to sign up.'
+      question: 'Do I need an account?',
+      answer: 'No. You can check out as a guest. An account lets you track orders and save your details for next time.'
     },
     {
       category: 'account',
       question: 'How do I reset my password?',
-      answer: 'Click "Forgot Password" on the login page, enter your email address, and we\'ll send you a reset link. The link is valid for 1 hour. If you don\'t receive it, check your spam folder or contact support.'
+      answer: 'Click forgot password on the login page. We email you a link. It works for one hour.'
     },
     {
       category: 'account',
-      question: 'Can I have multiple delivery addresses?',
-      answer: 'Yes! You can save multiple delivery addresses in your account. During checkout, simply select the address you want to use or add a new one. This is perfect for sending gifts or alternating between work and home.'
+      question: 'Can I save more than one address?',
+      answer: 'Yes. Save home, work, or any address. Pick the right one at checkout.'
     },
     {
       category: 'account',
-      question: 'How do I update my account information?',
-      answer: 'Log in to your account and go to "Account Settings". You can update your name, email, phone number, password, and saved addresses. Changes are saved instantly and you\'ll receive a confirmation email.'
+      question: 'How do I update my details?',
+      answer: 'Log in and go to account settings. Change your name, email, phone, or password anytime.'
     },
     {
       category: 'account',
-      question: 'What are loyalty points and how do they work?',
-      answer: 'Earn 1 point for every GHS 10 spent. 100 points = GHS 10 discount on your next purchase. Points are automatically added to your account after each order. Check your points balance in your account dashboard.'
+      question: 'Do you have loyalty points?',
+      answer: 'If a rewards programme is active, you see your points in your account after you buy.'
     }
   ];
 
@@ -138,41 +138,40 @@ export default function FAQsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="bg-gradient-to-br from-blue-50 via-white to-amber-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Frequently Asked Questions
+    <div className="store-page">
+      <div className="store-page-header">
+        <div className="store-container relative z-10">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="store-eyebrow mb-3">Help</p>
+            <h1 className="font-heading text-3xl font-bold text-white sm:text-4xl lg:text-5xl">
+              Quick answers
             </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Find quick answers to common questions about ordering, shipping, returns, payments, and more.
+            <p className="mt-4 text-lg leading-relaxed text-white/80">
+              Common questions about orders, shipping, payments, and returns. Plain and simple.
             </p>
 
-            <div className="relative">
+            <div className="relative mt-8">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for answers..."
-                className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm shadow-lg"
+                className="store-input rounded-full py-4 pl-12 pr-4 shadow-store-lg"
               />
-              <i className="ri-search-line absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
+              <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-xl text-slate-400" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="store-container store-section">
         <div className="flex flex-wrap gap-3 justify-center mb-12">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => setActiveCategory(category.id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all whitespace-nowrap ${
-                activeCategory === category.id
-                  ? 'bg-blue-700 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              className={`store-chip whitespace-nowrap ${
+                activeCategory === category.id ? 'store-chip-active' : ''
               }`}
             >
               <i className={`${category.icon} text-lg`}></i>
@@ -186,7 +185,7 @@ export default function FAQsPage() {
             {filteredFAQs.map((faq, index) => (
               <details
                 key={index}
-                className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow"
+                className="store-card-interactive overflow-hidden"
               >
                 <summary className="px-6 py-5 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between">
                   <span className="flex-1 pr-4">{faq.question}</span>
@@ -211,70 +210,68 @@ export default function FAQsPage() {
         )}
       </div>
 
-      <div className="bg-gradient-to-br from-blue-700 to-blue-900 py-16">
+      <div className="bg-gradient-to-br from-brand-primary to-[#050f1f] py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <i className="ri-customer-service-2-line text-3xl text-white"></i>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4">Still Have Questions?</h2>
-          <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-            Our customer service team is ready to help. Contact us and we'll respond within 24 hours.
+          <h2 className="text-3xl font-bold text-white mb-4">Still have questions?</h2>
+          <p className="text-xl text-white/80 mb-8 leading-relaxed">
+            Talk to us. We reply within 24 hours.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 bg-white text-blue-700 px-8 py-4 rounded-full font-medium hover:bg-blue-50 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 bg-white text-brand-primary px-8 py-4 rounded-full font-medium hover:bg-blue-50 transition-colors whitespace-nowrap"
             >
               <i className="ri-mail-line text-lg"></i>
               Contact Support
             </Link>
-            <a
-              href="https://wa.me/233554169992"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-full font-medium hover:bg-blue-500 transition-colors whitespace-nowrap"
+            <Link
+              href="/contact"
+              className="inline-flex items-center gap-2 bg-brand-accent text-white px-8 py-4 rounded-full font-medium hover:bg-[#e85f12] transition-colors whitespace-nowrap"
             >
-              <i className="ri-whatsapp-line text-lg"></i>
-              Chat on WhatsApp
-            </a>
+              <i className="ri-customer-service-2-line text-lg"></i>
+              More help
+            </Link>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Quick Links</h2>
-          <p className="text-gray-600">Explore more helpful resources</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Helpful links</h2>
+          <p className="text-gray-600">More answers when you need them</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
           <Link href="/shipping" className="bg-gray-50 p-8 rounded-2xl hover:shadow-lg transition-all cursor-pointer">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <i className="ri-truck-line text-2xl text-blue-700"></i>
+            <div className="w-12 h-12 bg-brand-light rounded-full flex items-center justify-center mb-4">
+              <i className="ri-truck-line text-2xl text-brand-primary"></i>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Shipping Policy</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Shipping</h3>
             <p className="text-gray-600 leading-relaxed">
-              Learn about delivery times, costs, and tracking your orders
+              How your import travels from China to your door
             </p>
           </Link>
 
           <Link href="/returns" className="bg-gray-50 p-8 rounded-2xl hover:shadow-lg transition-all cursor-pointer">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <i className="ri-arrow-go-back-line text-2xl text-blue-700"></i>
+            <div className="w-12 h-12 bg-brand-light rounded-full flex items-center justify-center mb-4">
+              <i className="ri-arrow-go-back-line text-2xl text-brand-primary"></i>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Returns Policy</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Returns</h3>
             <p className="text-gray-600 leading-relaxed">
-              Understand our return process, timeframes, and refund policy
+              How to return an item and get your money back
             </p>
           </Link>
 
           <Link href="/privacy" className="bg-gray-50 p-8 rounded-2xl hover:shadow-lg transition-all cursor-pointer">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <i className="ri-shield-check-line text-2xl text-blue-700"></i>
+            <div className="w-12 h-12 bg-brand-light rounded-full flex items-center justify-center mb-4">
+              <i className="ri-shield-check-line text-2xl text-brand-primary"></i>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Privacy & Security</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Privacy</h3>
             <p className="text-gray-600 leading-relaxed">
-              See how we protect your personal information and data
+              How we keep your information safe
             </p>
           </Link>
         </div>

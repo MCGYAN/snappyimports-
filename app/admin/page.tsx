@@ -3,21 +3,32 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import ChartContainer from '@/components/admin/ChartContainer';
+import { BRAND_ACCENT, type AdminStatTone } from '@/lib/brand';
+
+type StatItem = {
+  title: string;
+  value: string;
+  change: string;
+  trend: string;
+  icon: string;
+  tone: AdminStatTone;
+};
 
 export default function AdminDashboard() {
   const [dateRange, setDateRange] = useState('7days'); // logic not implemented for this demo, just UI
   const [loading, setLoading] = useState(true);
 
   // Real Stats
-  const [stats, setStats] = useState([
+  const [stats, setStats] = useState<StatItem[]>([
     {
       title: 'Total Revenue',
-      value: 'GH₵ 0.00',
-      change: '0%', // Placeholder trend
+      value: '$ 0.00',
+      change: '0%',
       trend: 'up',
       icon: 'ri-money-dollar-circle-line',
-      color: 'blue'
+      tone: 'accent',
     },
     {
       title: 'Orders',
@@ -25,24 +36,24 @@ export default function AdminDashboard() {
       change: '0%',
       trend: 'up',
       icon: 'ri-shopping-bag-line',
-      color: 'blue'
+      tone: 'primary',
     },
     {
-      title: 'Customers', // This is total active users for us currently
+      title: 'Customers',
       value: '0',
       change: '0%',
       trend: 'up',
       icon: 'ri-group-line',
-      color: 'purple'
+      tone: 'accent',
     },
     {
       title: 'Avg Order Value',
-      value: 'GH₵ 0.00',
+      value: '$ 0.00',
       change: '0%',
       trend: 'up',
       icon: 'ri-line-chart-line',
-      color: 'amber'
-    }
+      tone: 'primary',
+    },
   ]);
 
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -112,11 +123,11 @@ export default function AdminDashboard() {
         setStats([
           {
             title: 'Total Revenue',
-            value: `GH₵ ${totalRevenue.toFixed(2)}`,
-            change: '+0%', // Dynamic change requires date filtering logic which is complex
+            value: `$ ${totalRevenue.toFixed(2)}`,
+            change: '+0%',
             trend: 'up',
             icon: 'ri-money-dollar-circle-line',
-            color: 'blue'
+            tone: 'accent',
           },
           {
             title: 'Orders',
@@ -124,24 +135,24 @@ export default function AdminDashboard() {
             change: '+0%',
             trend: 'up',
             icon: 'ri-shopping-bag-line',
-            color: 'blue'
+            tone: 'primary',
           },
           {
             title: 'Customers (Active)',
-            value: uniqueCustomers.toString(), // Proxy
+            value: uniqueCustomers.toString(),
             change: '+0%',
             trend: 'up',
             icon: 'ri-group-line',
-            color: 'purple'
+            tone: 'accent',
           },
           {
             title: 'Avg Order Value',
-            value: `GH₵ ${avgOrderValue.toFixed(2)}`,
+            value: `$ ${avgOrderValue.toFixed(2)}`,
             change: '+0%',
             trend: 'up',
             icon: 'ri-line-chart-line',
-            color: 'amber'
-          }
+            tone: 'primary',
+          },
         ]);
 
         // 3. Fetch Recent Orders (only paid orders)
@@ -218,50 +229,52 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const statusColors: any = {
-    'pending': 'bg-amber-100 text-amber-700',
-    'processing': 'bg-blue-100 text-blue-700',
-    'shipped': 'bg-purple-100 text-purple-700',
-    'delivered': 'bg-blue-100 text-blue-700',
-    'cancelled': 'bg-red-100 text-red-700'
+  const statusColors: Record<string, string> = {
+    pending: 'bg-brand-accent/15 text-brand-accent',
+    processing: 'bg-brand-primary/10 text-brand-primary',
+    shipped: 'bg-brand-primary/15 text-brand-primary',
+    delivered: 'bg-emerald-100 text-emerald-700',
+    cancelled: 'bg-red-100 text-red-700',
   };
 
   const quickActions = [
     {
-      title: 'Feature Modules',
-      description: 'Manage 40+ store features',
-      icon: 'ri-puzzle-line',
-      color: 'purple',
-      link: '/admin/modules',
-      badge: '40 Features'
+      title: 'Add Product',
+      icon: 'ri-add-line',
+      tone: 'accent' as AdminStatTone,
+      link: '/admin/products/new',
     },
     {
-      title: 'Inventory Management',
-      description: 'Track stock & manage reorders',
-      icon: 'ri-stack-line',
-      color: 'amber',
-      link: '/admin/inventory'
+      title: 'Open POS',
+      icon: 'ri-computer-line',
+      tone: 'primary' as AdminStatTone,
+      link: '/admin/pos',
     },
-    // ... reduced list for brevity or keep all if desired
+    {
+      title: 'Manage Orders',
+      icon: 'ri-file-list-line',
+      tone: 'accent' as AdminStatTone,
+      link: '/admin/orders',
+    },
   ];
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading Dashboard...</div>;
+    return <div className="p-8 text-center text-brand-primary/60">Loading Dashboard...</div>;
   }
 
   if (dashboardError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+      <div className="flex min-h-[60vh] items-center justify-center p-8">
+        <div className="admin-card w-full max-w-md p-6 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
             <i className="ri-error-warning-line text-2xl" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Error loading dashboard</h2>
-          <p className="text-gray-600 text-sm mb-4">{dashboardError}</p>
+          <h2 className="mb-2 font-heading text-lg font-semibold text-brand-primary">Error loading dashboard</h2>
+          <p className="mb-4 text-sm text-slate-600">{dashboardError}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+            className="btn-primary rounded-xl bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-accent"
           >
             Retry
           </button>
@@ -271,39 +284,36 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your store.</p>
-          </div>
+    <div className="mx-auto max-w-7xl">
+        <div className="mb-5 md:mb-8">
+          <h1 className="font-heading text-2xl font-bold text-brand-primary md:text-3xl">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-600 md:text-base">Welcome back! Here&apos;s what&apos;s happening with your store.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="mb-5 grid grid-cols-2 gap-3 md:mb-8 md:gap-6 lg:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.title} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 flex items-center justify-center bg-${stat.color}-100 text-${stat.color}-700 rounded-lg`}>
-                  <i className={`${stat.icon} text-2xl`}></i>
+            <div key={stat.title} className="admin-card">
+              <div className="mb-2 flex items-center justify-between md:mb-4">
+                <div className={stat.tone === 'accent' ? 'admin-stat-icon-accent' : 'admin-stat-icon-primary'}>
+                  <i className={`${stat.icon} text-2xl`} />
                 </div>
-                <span className={`text-sm font-semibold text-blue-700`}>
+                <span className="text-[11px] font-semibold text-brand-accent md:text-sm">
                   {stat.change}
                 </span>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-              <p className="text-gray-600 text-sm">{stat.title}</p>
+              <h3 className="mb-0.5 font-heading text-lg font-bold leading-tight text-brand-primary md:mb-1 md:text-2xl">{stat.value}</h3>
+              <p className="text-[11px] leading-snug text-slate-600 md:text-sm">{stat.title}</p>
             </div>
           ))}
         </div>
 
         {/* Revenue Chart & Quick Actions */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Revenue Trend</h2>
+        <div className="mb-5 grid gap-4 md:mb-8 md:gap-6 lg:grid-cols-3">
+          <div className="admin-card lg:col-span-2">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between md:mb-4">
+              <h2 className="font-heading text-lg font-bold text-brand-primary md:text-xl">Revenue Trend</h2>
               <select
-                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
+                className="store-input w-full py-2 text-sm sm:w-auto"
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
               >
@@ -311,166 +321,175 @@ export default function AdminDashboard() {
                 <option value="30days">Last 30 Days</option>
               </select>
             </div>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `GH₵${value}`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value) => [`GH₵${(value as number)?.toFixed(2) ?? '0.00'}`, 'Revenue']}
-                  />
-                  <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer>
+              <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={BRAND_ACCENT} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={BRAND_ACCENT} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(11,31,58,0.06)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={8} interval="preserveStartEnd" />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(value) => `$${value}`} width={42} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 8px 32px rgba(11,31,58,0.08)', backdropFilter: 'blur(12px)' }}
+                  formatter={(value) => [`$${(value as number)?.toFixed(2) ?? '0.00'}`, 'Revenue']}
+                />
+                <Area type="monotone" dataKey="revenue" stroke={BRAND_ACCENT} strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
+              </AreaChart>
+            </ChartContainer>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="space-y-3">
-              <Link href="/admin/products/new" className="flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 rounded-lg transition-colors group">
-                <div className="flex items-center font-medium">
-                  <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center mr-3 group-hover:bg-blue-100 transition-colors shadow-sm">
-                    <i className="ri-add-line"></i>
-                  </span>
-                  Add Product
-                </div>
-                <i className="ri-arrow-right-line"></i>
-              </Link>
-              <Link href="/admin/pos" className="flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 rounded-lg transition-colors group">
-                <div className="flex items-center font-medium">
-                  <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center mr-3 group-hover:bg-blue-100 transition-colors shadow-sm">
-                    <i className="ri-computer-line"></i>
-                  </span>
-                  Open POS
-                </div>
-                <i className="ri-arrow-right-line"></i>
-              </Link>
-              <Link href="/admin/orders" className="flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 rounded-lg transition-colors group">
-                <div className="flex items-center font-medium">
-                  <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center mr-3 group-hover:bg-blue-100 transition-colors shadow-sm">
-                    <i className="ri-file-list-line"></i>
-                  </span>
-                  Manage Orders
-                </div>
-                <i className="ri-arrow-right-line"></i>
-              </Link>
+          <div className="admin-card">
+            <h2 className="mb-3 font-heading text-lg font-bold text-brand-primary md:mb-4 md:text-xl">Quick Actions</h2>
+            <div className="grid grid-cols-1 gap-2 md:space-y-3 md:gap-0">
+              {quickActions.map((action) => (
+                <Link key={action.link} href={action.link} className="admin-quick-action group min-h-[44px]">
+                  <div className="flex min-w-0 items-center font-medium">
+                    <span className={`mr-2.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors md:mr-3 ${action.tone === 'accent' ? 'bg-brand-accent/10 text-brand-accent group-hover:bg-brand-accent group-hover:text-white' : 'bg-brand-primary/10 text-brand-primary group-hover:bg-brand-primary group-hover:text-white'}`}>
+                      <i className={action.icon} />
+                    </span>
+                    <span className="truncate text-sm md:text-base">{action.title}</span>
+                  </div>
+                  <i className="ri-arrow-right-s-line shrink-0 text-brand-accent md:hidden" />
+                  <i className="ri-arrow-right-line hidden shrink-0 text-brand-accent md:inline" />
+                </Link>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Recent Orders</h2>
-              <Link href="/admin/orders" className="text-blue-700 hover:text-blue-800 font-medium text-sm whitespace-nowrap cursor-pointer">
-                View All <i className="ri-arrow-right-line ml-1"></i>
+        <div className="mb-5 grid gap-4 md:mb-8 md:gap-6 lg:grid-cols-3">
+          <div className="admin-card overflow-hidden lg:col-span-2">
+            <div className="mb-4 flex items-center justify-between md:mb-6">
+              <h2 className="font-heading text-lg font-bold text-brand-primary md:text-xl">Recent Orders</h2>
+              <Link href="/admin/orders" className="admin-link text-xs whitespace-nowrap md:text-sm">
+                View All <i className="ri-arrow-right-line ml-0.5 md:ml-1" />
               </Link>
             </div>
 
-            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              {recentOrders.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No recent orders.</p>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Order ID</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Customer</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Total</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentOrders.map((order) => (
-                      <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4">
-                          <Link href={`/admin/orders/${order.id}`} className="text-blue-700 hover:text-blue-800 font-medium whitespace-nowrap cursor-pointer">
-                            {order.displayId}
-                          </Link>
-                        </td>
-                        <td className="py-4 px-4">
-                          <p className="font-medium text-gray-900 whitespace-nowrap">{order.customer}</p>
-                          <p className="text-sm text-gray-500">{order.email}</p>
-                        </td>
-                        <td className="py-4 px-4 text-gray-700 whitespace-nowrap">{order.date}</td>
-                        <td className="py-4 px-4 font-semibold text-gray-900 whitespace-nowrap">GH₵ {order.total.toFixed(2)}</td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusColors[order.status] || 'bg-gray-100'}`}>
+            {recentOrders.length === 0 ? (
+              <p className="py-4 text-center text-sm text-slate-500">No recent orders.</p>
+            ) : (
+              <>
+                {/* Mobile — compact cards */}
+                <div className="space-y-2.5 md:hidden">
+                  {recentOrders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href={`/admin/orders/${order.id}`}
+                      className="block rounded-xl liquid-glass-well p-3 active:scale-[0.99]"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-brand-primary">{order.displayId}</p>
+                          <p className="mt-0.5 truncate text-xs font-medium text-slate-700">{order.customer}</p>
+                          <p className="text-[11px] text-slate-500">{order.date}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-bold text-brand-primary">$ {order.total.toFixed(2)}</p>
+                          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColors[order.status] || 'bg-slate-100 text-slate-700'}`}>
                             {order.status === 'shipped' ? 'Packaged' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
-                        </td>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Desktop — table */}
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full">
+                    <thead className="border-b border-white/50 bg-brand-primary/[0.04]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-brand-primary">Order ID</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-brand-primary">Customer</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-brand-primary">Date</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-brand-primary">Total</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-brand-primary">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                    </thead>
+                    <tbody>
+                      {recentOrders.map((order) => (
+                        <tr key={order.id} className="border-b border-white/40 transition-colors hover:bg-brand-primary/[0.03]">
+                          <td className="px-4 py-4">
+                            <Link href={`/admin/orders/${order.id}`} className="admin-link whitespace-nowrap font-medium">
+                              {order.displayId}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-4">
+                            <p className="whitespace-nowrap font-medium text-brand-primary">{order.customer}</p>
+                            <p className="text-sm text-slate-500">{order.email}</p>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-slate-700">{order.date}</td>
+                          <td className="whitespace-nowrap px-4 py-4 font-semibold text-brand-primary">$ {order.total.toFixed(2)}</td>
+                          <td className="px-4 py-4">
+                            <span className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${statusColors[order.status] || 'bg-slate-100 text-slate-700'}`}>
+                              {order.status === 'shipped' ? 'Packaged' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Low Stock Alert</h2>
+          <div className="space-y-4 md:space-y-6">
+            <div className="admin-card">
+              <h2 className="mb-3 font-heading text-lg font-bold text-brand-primary md:mb-4 md:text-xl">Low Stock Alert</h2>
               {lowStockProducts.length === 0 ? (
-                <p className="text-gray-500">Inventory looks good!</p>
+                <p className="text-sm text-slate-500">Inventory looks good!</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 md:space-y-3">
                   {lowStockProducts.map((product, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm truncate pr-2">{product.name}</p>
-                        <p className="text-xs text-gray-600 mt-1">Stock: {product.stock} units</p>
+                    <div key={index} className="flex items-center justify-between gap-2 rounded-xl liquid-glass-well p-2.5 md:p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-brand-primary md:text-sm">{product.name}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-600 md:text-xs">Stock: {product.stock}</p>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${product.status === 'critical' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold md:text-xs ${product.status === 'critical' ? 'bg-red-100 text-red-700' : 'bg-brand-accent/15 text-brand-accent'}`}>
                         {product.status === 'critical' ? 'Critical' : 'Low'}
                       </span>
                     </div>
                   ))}
                 </div>
               )}
-              <Link href="/admin/products?filter=low-stock" className="block text-center mt-4 text-blue-700 hover:text-blue-800 font-medium text-sm whitespace-nowrap cursor-pointer">
-                View All Products <i className="ri-arrow-right-line ml-1"></i>
+              <Link href="/admin/products?filter=low-stock" className="admin-link mt-3 block text-center text-xs whitespace-nowrap md:mt-4 md:text-sm">
+                View All Products <i className="ri-arrow-right-line ml-0.5 md:ml-1" />
               </Link>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 overflow-hidden">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Products</h2>
-            <Link href="/admin/products" className="text-blue-700 hover:text-blue-800 font-medium text-sm whitespace-nowrap cursor-pointer">
-              View All <i className="ri-arrow-right-line ml-1"></i>
+        <div className="admin-card overflow-hidden">
+          <div className="mb-4 flex items-center justify-between md:mb-6">
+            <h2 className="font-heading text-lg font-bold text-brand-primary md:text-xl">Products</h2>
+            <Link href="/admin/products" className="admin-link text-xs whitespace-nowrap md:text-sm">
+              View All <i className="ri-arrow-right-line ml-0.5 md:ml-1" />
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
             {topProducts.map((product) => (
-              <div key={product.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-3">
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+              <div key={product.id} className="admin-product-tile liquid-glass-card overflow-hidden transition-shadow hover:shadow-[0_12px_32px_rgba(11,31,58,0.08)] md:p-4">
+                <div className="mb-2 aspect-square overflow-hidden rounded-lg liquid-glass-well md:mb-3">
+                  <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Stock: {product.stock}</span>
-                  <Link href={`/admin/products/${product.id}`} className="text-blue-700 hover:text-blue-800 text-sm font-medium whitespace-nowrap cursor-pointer">
-                    Edit <i className="ri-arrow-right-line ml-1"></i>
+                <h3 className="line-clamp-2 text-[11px] font-semibold leading-snug text-brand-primary md:mb-2 md:text-base">{product.name}</h3>
+                <div className="mt-2 flex items-center justify-between gap-1 border-t border-white/50 pt-2 md:mt-3 md:pt-3">
+                  <span className="text-[10px] text-slate-600 md:text-sm">Stock: {product.stock}</span>
+                  <Link href={`/admin/products/${product.id}`} className="admin-link text-[10px] font-semibold whitespace-nowrap md:text-sm">
+                    Edit <i className="ri-arrow-right-line ml-0.5" />
                   </Link>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
     </div>
   );
 }

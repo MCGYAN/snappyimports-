@@ -71,7 +71,7 @@ export default function PWASettingsPage() {
       <div className="max-w-4xl mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-blue-700 hover:text-blue-800 mb-6 whitespace-nowrap"
+          className="inline-flex items-center gap-2 text-brand-primary hover:text-blue-800 mb-6 whitespace-nowrap"
         >
           <i className="ri-arrow-left-line"></i>
           Back to Home
@@ -85,8 +85,8 @@ export default function PWASettingsPage() {
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <i className="ri-smartphone-line text-blue-700"></i>
+              <div className="w-10 h-10 bg-brand-light rounded-full flex items-center justify-center">
+                <i className="ri-smartphone-line text-brand-primary"></i>
               </div>
               Installation Status
             </h2>
@@ -141,9 +141,9 @@ export default function PWASettingsPage() {
               </div>
 
               {notificationPermission === 'granted' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="border border-brand-accent/20 bg-brand-light rounded-xl p-4">
                   <p className="text-sm text-blue-800 font-medium mb-2">You will receive notifications for:</p>
-                  <ul className="space-y-1 text-sm text-blue-700">
+                  <ul className="space-y-1 text-sm text-brand-primary">
                     <li className="flex items-center gap-2">
                       <i className="ri-check-line"></i>
                       <span>Order confirmations and updates</span>
@@ -231,8 +231,8 @@ export default function PWASettingsPage() {
               </div>
               <div className="p-4 bg-blue-50 rounded-xl">
                 <div className="flex items-center gap-3 mb-2">
-                  <i className="ri-rocket-line text-blue-700 text-xl"></i>
-                  <span className="font-semibold text-blue-900">Fast Loading</span>
+                  <i className="ri-rocket-line text-brand-primary text-xl"></i>
+                  <span className="font-semibold text-brand-primary">Fast Loading</span>
                 </div>
                 <p className="text-sm text-blue-800">Instant page loads with smart caching</p>
               </div>

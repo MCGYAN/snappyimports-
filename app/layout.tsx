@@ -1,20 +1,34 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Inter, Poppins } from "next/font/google";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { SEO } from "@/lib/seo";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-poppins",
+  display: "swap",
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#002B5E',
+  themeColor: '#0B1F3A',
 };
 
 const siteUrl = SEO.siteUrl;
 
-// God-level SEO: Sambatek — overrides CMS. OG/twitter images from app/opengraph-image.tsx & twitter-image.tsx
+// Site-wide SEO defaults from lib/seo.ts. OG/twitter images: app/opengraph-image.tsx & twitter-image.tsx
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -40,13 +54,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [
-      { url: '/favicon.ico', type: 'image/x-icon', sizes: 'any' },
-      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
-      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
-    ],
-    shortcut: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
+    icon: [{ url: '/icon', type: 'image/png' }],
+    apple: [{ url: '/favicon/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -69,42 +78,22 @@ export const metadata: Metadata = {
     title: SEO.defaultTitle,
     description: SEO.defaultDescription,
     siteName: SEO.siteName,
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: SEO.taglineLong,
-        type: "image/png",
-      },
-      {
-        url: "/social-square.png",
-        width: 1080,
-        height: 1080,
-        alt: SEO.taglineLong,
-        type: "image/png",
-      },
-    ],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: SEO.taglineLong }],
   },
   twitter: {
     card: "summary_large_image",
     title: SEO.defaultTitle,
     description: SEO.defaultDescription,
-    images: ["/og-image.png"],
+    images: ['/opengraph-image'],
     creator: SEO.social.twitter || undefined,
   },
   alternates: {
     canonical: siteUrl,
   },
   category: "shopping",
-  other: {
-    "geo.region": "GH",
-  },
 };
 
-// Google Analytics Measurement ID
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-// Google reCAPTCHA v3 Site Key
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
 export default function RootLayout({
@@ -112,87 +101,77 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const organizationNode: Record<string, unknown> = {
+    "@type": "Organization",
+    "@id": `${siteUrl}/#organization`,
+    name: SEO.siteName,
+    url: siteUrl,
+    description: SEO.defaultDescription,
+    areaServed: "Worldwide",
+    knowsAbout: ["E-commerce", "Online retail"],
+  };
+  if (SEO.logoUrl) {
+    organizationNode.logo = { "@type": "ImageObject", url: SEO.logoUrl };
+  }
+  if (SEO.contact.phone) organizationNode.telephone = SEO.contact.phone;
+  if (SEO.contact.email) organizationNode.email = SEO.contact.email;
+  const sameAs = Object.values(SEO.social).filter(Boolean);
+  if (sameAs.length) organizationNode.sameAs = sameAs;
+  if (SEO.contact.phone) {
+    organizationNode.contactPoint = {
+      "@type": "ContactPoint",
+      contactType: "customer service",
+      telephone: SEO.contact.phone,
+      areaServed: "Worldwide",
+      availableLanguage: "English",
+    };
+  }
+
+  const websiteNode = {
+    "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
+    url: siteUrl,
+    name: SEO.siteName,
+    description: SEO.defaultDescription,
+    publisher: { "@id": `${siteUrl}/#organization` },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${siteUrl}/shop?search={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
-        {/* PWA Meta Tags */}
-        <meta name="theme-color" content="#002B5E" />
+        <meta name="theme-color" content="#0B1F3A" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Sambatek" />
+        <meta name="apple-mobile-web-app-title" content={SEO.siteName} />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#002B5E" />
+        <meta name="msapplication-TileColor" content="#0B1F3A" />
         <meta name="msapplication-tap-highlight" content="no" />
 
-        {/* Favicon set from public (favicon/ assets) */}
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="any" />
-        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
-        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
-        <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-        <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/icon" type="image/png" sizes="any" />
 
         <link
           href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css"
           rel="stylesheet"
         />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font -- App Router: fonts loaded in root layout apply to all pages */}
-        <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
-        {/* Structured Data - Organization/LocalBusiness + WebSite (God-level SEO) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@graph": [
-                {
-                  "@type": ["Organization", "LocalBusiness"],
-                  "@id": `${siteUrl}/#organization`,
-                  "name": SEO.siteName,
-                  "url": siteUrl,
-                  "logo": { "@type": "ImageObject", "url": SEO.logoUrl },
-                  "description": SEO.defaultDescription,
-                  "areaServed": ["Accra", "Tarkwa", "Ghana"],
-                  "knowsAbout": [
-                    "Security doors",
-                    "CCTV surveillance",
-                    "Smart locks",
-                    "Access control systems"
-                  ],
-                  "telephone": SEO.contact.phone,
-                  "email": SEO.contact.email,
-                  "sameAs": Object.values(SEO.social).filter(Boolean),
-                  "contactPoint": {
-                    "@type": "ContactPoint",
-                    "contactType": "customer service",
-                    "telephone": SEO.contact.phone,
-                    "areaServed": "GH",
-                    "availableLanguage": "English",
-                  },
-                },
-                {
-                  "@type": "WebSite",
-                  "@id": `${siteUrl}/#website`,
-                  "url": siteUrl,
-                  "name": SEO.siteName,
-                  "description": SEO.defaultDescription,
-                  "publisher": { "@id": `${siteUrl}/#organization` },
-                  "potentialAction": {
-                    "@type": "SearchAction",
-                    "target": { "@type": "EntryPoint", "urlTemplate": `${siteUrl}/shop?search={search_term_string}` },
-                    "query-input": "required name=search_term_string",
-                  },
-                },
-              ],
-            })
+              "@graph": [organizationNode, websiteNode],
+            }),
           }}
         />
       </head>
 
-      {/* Google Analytics */}
       {GA_MEASUREMENT_ID && (
         <>
           <Script
@@ -212,7 +191,6 @@ export default function RootLayout({
         </>
       )}
 
-      {/* Google reCAPTCHA v3 */}
       {RECAPTCHA_SITE_KEY && (
         <Script
           src={`https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`}
@@ -220,10 +198,10 @@ export default function RootLayout({
         />
       )}
 
-      <body className="antialiased font-sans overflow-x-hidden pwa-body" suppressHydrationWarning>
+      <body className="antialiased font-sans overflow-x-hidden pwa-body bg-brand-surface text-brand-foreground [scrollbar-gutter:stable]" suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[10000] focus:px-6 focus:py-3 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:font-semibold focus:shadow-lg"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[10000] focus:px-6 focus:py-3 focus:bg-brand-primary focus:text-white focus:rounded-lg focus:font-semibold focus:shadow-lg"
         >
           Skip to main content
         </a>

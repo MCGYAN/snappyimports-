@@ -77,7 +77,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+    <div className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
       
       <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[90vh] flex flex-col">
@@ -135,8 +135,8 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
               />
               <div className="flex items-center justify-between text-sm text-gray-700">
-                <span>GH₵{priceRange[0]}</span>
-                <span>GH₵{priceRange[1]}</span>
+                <span>${priceRange[0]}</span>
+                <span>${priceRange[1]}</span>
               </div>
             </div>
           </div>

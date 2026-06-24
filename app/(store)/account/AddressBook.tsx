@@ -37,7 +37,7 @@ export default function AddressBook() {
         <h2 className="text-2xl font-bold text-gray-900">Address Book</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-blue-700 text-white rounded-lg font-semibold hover:bg-blue-800 transition-colors whitespace-nowrap"
+          className="px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
           Add New Address
@@ -45,7 +45,7 @@ export default function AddressBook() {
       </div>
 
       {showForm && (
-        <div className="bg-white border-2 border-blue-700 rounded-lg p-6 mb-6">
+        <div className="bg-white border-2 border-brand-primary rounded-lg p-6 mb-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4">
             {editingId ? 'Edit Address' : 'New Address'}
           </h3>
@@ -63,7 +63,7 @@ export default function AddressBook() {
               <input
                 type="tel"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent"
-                placeholder="+233 24 123 4567"
+                placeholder="+1 555 000 0000"
               />
             </div>
             <div className="md:col-span-2">
@@ -79,7 +79,7 @@ export default function AddressBook() {
               <input
                 type="text"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent"
-                placeholder="Accra"
+                placeholder="City"
               />
             </div>
             <div>
@@ -87,7 +87,7 @@ export default function AddressBook() {
               <input
                 type="text"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent"
-                placeholder="Greater Accra"
+                placeholder="State / region"
               />
             </div>
             <div>
@@ -95,7 +95,7 @@ export default function AddressBook() {
               <input
                 type="text"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent"
-                placeholder="00233"
+                placeholder="12345"
               />
             </div>
             <div>
@@ -103,19 +103,19 @@ export default function AddressBook() {
               <input
                 type="text"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent"
-                placeholder="Ghana"
+                placeholder="Country"
               />
             </div>
             <div className="md:col-span-2">
               <label className="flex items-center">
-                <input type="checkbox" className="w-4 h-4 text-blue-700 border-gray-300 rounded focus:ring-blue-700" />
+                <input type="checkbox" className="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-blue-700" />
                 <span className="ml-2 text-sm text-gray-700">Set as default address</span>
               </label>
             </div>
             <div className="md:col-span-2 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
               <button
                 type="submit"
-                className="flex-1 py-3 bg-blue-700 text-white rounded-lg font-semibold hover:bg-blue-800 transition-colors whitespace-nowrap"
+                className="flex-1 py-3 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
               >
                 Save Address
               </button>
@@ -138,12 +138,12 @@ export default function AddressBook() {
         {addresses.map((address) => (
           <div
             key={address.id}
-            className={`bg-white border-2 rounded-lg p-6 relative ${address.isDefault ? 'border-blue-700' : 'border-gray-200'
+            className={`bg-white border-2 rounded-lg p-6 relative ${address.isDefault ? 'border-brand-primary' : 'border-gray-200'
               }`}
           >
             {address.isDefault && (
               <div className="absolute top-4 right-4">
-                <span className="px-3 py-1 bg-blue-700 text-white text-xs font-semibold rounded-full whitespace-nowrap">
+                <span className="px-3 py-1 bg-brand-primary text-white text-xs font-semibold rounded-full whitespace-nowrap">
                   Default
                 </span>
               </div>
@@ -173,7 +173,7 @@ export default function AddressBook() {
               {!address.isDefault && (
                 <button
                   onClick={() => setDefault(address.id)}
-                  className="flex-1 py-2 border border-blue-700 text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition-colors whitespace-nowrap"
+                  className="flex-1 py-2 border border-brand-primary text-brand-primary rounded-lg font-semibold hover:bg-blue-50 transition-colors whitespace-nowrap"
                 >
                   Set Default
                 </button>

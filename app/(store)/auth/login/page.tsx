@@ -73,14 +73,15 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-gray-50 flex items-center justify-center py-12 px-4 sm:px-6">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-gray-900 mb-2">Welcome back</h1>
-          <p className="text-gray-500 font-light">Sign in to your account to continue</p>
+    <main className="store-page flex min-h-screen items-center justify-center px-4 py-12 sm:px-6">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <p className="store-eyebrow mb-2">Account</p>
+          <h1 className="font-heading text-3xl font-bold text-brand-primary sm:text-4xl">Welcome back</h1>
+          <p className="mt-2 text-slate-500">Track your imports and manage your account</p>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8 md:p-10">
+        <div className="store-card p-8 md:p-10">
           {authError && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
               {authError}
@@ -96,7 +97,7 @@ export default function LoginPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
+                className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'
                   }`}
                 placeholder="you@example.com"
               />
@@ -137,11 +138,11 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={formData.rememberMe}
                   onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  className="w-4 h-4 text-brand-accent rounded focus:ring-brand-accent"
                 />
                 <span className="text-sm text-gray-700">Remember me</span>
               </label>
-              <Link href="/auth/forgot-password" className="text-sm text-blue-700 hover:text-blue-900 font-medium whitespace-nowrap">
+              <Link href="/auth/forgot-password" className="text-sm text-brand-primary hover:text-brand-primary font-medium whitespace-nowrap">
                 Forgot password?
               </Link>
             </div>
@@ -181,7 +182,7 @@ export default function LoginPage() {
                 disabled
                 className="flex items-center justify-center space-x-2 border-2 border-gray-200 bg-gray-50 py-3 rounded-lg cursor-not-allowed opacity-60"
               >
-                <i className="ri-facebook-fill text-xl text-blue-600 grayscale opacity-50"></i>
+                <i className="ri-facebook-fill text-xl text-brand-accent grayscale opacity-50"></i>
                 <span className="font-medium text-gray-400">Facebook</span>
               </button>
             </div>
@@ -189,7 +190,7 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-gray-600">
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-blue-700 hover:text-blue-900 font-semibold whitespace-nowrap">
+            <Link href="/auth/signup" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
               Create one now
             </Link>
           </p>

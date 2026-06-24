@@ -27,7 +27,7 @@ export default function FraudDetectionAlert({ riskLevel, reasons, orderId }: Fra
     switch (riskLevel) {
       case 'low': return 'Low Risk';
       case 'medium': return 'Medium Risk';
-      case 'high': return 'High Risk - Review Required';
+      case 'high': return 'High risk. Review required';
     }
   };
 

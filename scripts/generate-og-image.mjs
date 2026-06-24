@@ -25,13 +25,13 @@ async function generateOG() {
   const taglineSvg = Buffer.from(`
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <text x="${width / 2}" y="410" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#F59E0B">
-        Advanced Security Solutions
+        Your Store
       </text>
       <text x="${width / 2}" y="462" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="500" fill="rgba(255,255,255,0.9)">
-        Security Doors • CCTV • Smart Locks • Access Control
+        Quality products • Secure checkout • Fast support
       </text>
       <text x="${width / 2}" y="520" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="rgba(255,255,255,0.7)">
-        Accra • Tarkwa • Ghana
+        example.com
       </text>
     </svg>
   `);

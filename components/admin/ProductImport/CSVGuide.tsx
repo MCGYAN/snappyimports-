@@ -18,7 +18,7 @@ export default function CSVGuide() {
       {open && (
         <div className="px-4 pb-4 pt-0 text-sm text-gray-600 space-y-3 border-t border-gray-200">
           <p className="pt-3">
-            <strong>Required columns:</strong> name, price (in GH₵). SKU and slug are auto-generated.
+            <strong>Required columns:</strong> name, price (in $). SKU and slug are auto-generated.
           </p>
           <p>
             <strong>Optional:</strong> description (plain text, ~500 chars), category (must match an active category),

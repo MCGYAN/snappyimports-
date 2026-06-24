@@ -25,7 +25,7 @@ export default function StockNotification({ stockCount, threshold = 10, viewCoun
             isVeryLowStock ? 'text-red-700' : 'text-amber-700'
           }`}>
             {isVeryLowStock ? '🔥 ' : '⚠️ '}
-            Only {stockCount} left in stock - Order soon!
+            Only {stockCount} left in stock. Order soon!
           </span>
         </div>
       )}
@@ -47,7 +47,7 @@ export default function StockNotification({ stockCount, threshold = 10, viewCoun
             <i className="ri-fire-fill text-sm"></i>
           </div>
           <span className="text-sm font-bold">
-            🔥 TRENDING NOW - Hot Item!
+            🔥 TRENDING NOW. Hot item!
           </span>
         </div>
       )}

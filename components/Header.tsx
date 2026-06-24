@@ -2,28 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import MiniCart from './MiniCart';
+import StoreLogo from './StoreLogo';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { useCMS } from '@/context/CMSContext';
 import AnnouncementBar from './AnnouncementBar';
-import { Search, User, ShoppingCart, Menu, X } from 'lucide-react';
+import { Search, User, ShoppingCart, Menu, X, MessageCircle } from 'lucide-react';
+import { buildWhatsAppHref } from '@/lib/snappy-import';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
-  const [categories, setCategories] = useState<any[]>([]);
+  const router = useRouter();
 
   const { cartCount, isCartOpen, setIsCartOpen } = useCart();
   const { getSetting } = useCMS();
-
-  const siteName = getSetting('site_name') || 'Sambatek';
-  const headerLogo = getSetting('site_logo') || '/logo.png?v=official';
+  const waRaw = getSetting('contact_whatsapp');
+  const waHref = buildWhatsAppHref(waRaw);
 
   useEffect(() => {
-    // Auth logic
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
@@ -35,219 +36,180 @@ export default function Header() {
       setUser(session?.user ?? null);
     });
 
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch('/api/storefront/categories');
-        if (res.ok) {
-          const data = await res.json();
-          if (data) setCategories(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch categories', err);
-      }
-    };
-    fetchCategories();
-
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/shop?search=${encodeURIComponent(searchQuery)}`;
-    }
-  };
-
   const navLinks = [
     { label: 'Home', href: '/' },
-    { label: 'Shop', href: '/shop' },
-    ...categories.slice(0, 3).map(c => ({ label: c.name, href: `/shop?category=${c.slug}` })),
+    { label: 'Products', href: '/shop' },
+    { label: 'Categories', href: '/categories' },
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },
   ];
 
-  const secondaryChips = [
-    ...categories.map(c => ({ label: c.name, href: `/shop?category=${c.slug}`, active: false })),
-    { label: 'All Categories', href: '/categories', active: false },
-  ];
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    router.push(`/shop?search=${encodeURIComponent(query)}`);
+    setIsSearchOpen(false);
+  };
 
   return (
     <>
       <AnnouncementBar />
 
-      <header className="sticky top-0 z-50 w-full flex flex-col font-sans">
-        {/* TOP HEADER */}
-        <div className="bg-[#002B5E] text-white">
-          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-20 gap-4">
+      <header className="sticky top-0 z-50 w-full flex flex-col font-sans pt-[env(safe-area-inset-top,0px)]">
+        <div className="mobile-nav-bar text-white md:glass-panel-dark md:shadow-store-lg">
+          <div className="store-container">
+            <div className="flex min-h-[3.5rem] items-center justify-between gap-3 py-2 sm:min-h-20 sm:gap-4 sm:py-0">
 
-              {/* Left: Mobile Menu & Logo */}
-              <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                 <button
-                  className="lg:hidden p-2 -ml-2 text-white hover:text-amber-400 transition-colors"
+                  type="button"
+                  className="md:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70"
                   onClick={() => setIsMobileMenuOpen(true)}
                   aria-label="Open menu"
                 >
-                  <Menu className="w-6 h-6" />
+                  <Menu className="h-6 w-6" strokeWidth={1.75} />
                 </button>
-                <Link href="/" className="flex items-center select-none group" aria-label={siteName}>
-                  <Image src={headerLogo} alt={siteName} width={520} height={140} className="h-14 sm:h-14 md:h-20 w-auto max-w-[260px] sm:max-w-[300px] md:max-w-[420px] lg:max-w-[520px] object-contain object-left group-hover:opacity-90 transition-opacity" priority unoptimized={headerLogo.includes('logo.png')} />
-                </Link>
+                <StoreLogo priority className="group" />
               </div>
 
-              {/* Center: Search Bar (Desktop) */}
-              <div className="hidden lg:block flex-1 max-w-2xl mx-8">
-                <form onSubmit={handleSearch}>
-                  <div className="relative group">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search security products..."
-                      className="w-full bg-white text-[#002B5E] rounded-md py-2.5 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all font-medium placeholder-[#002B5E]/60 shadow-inner"
-                    />
-                    <button
-                      type="submit"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-[#002B5E] hover:text-[#001733] transition-colors"
-                      aria-label="Search"
-                    >
-                      <Search className="w-5 h-5" />
-                    </button>
-                  </div>
-                </form>
+              <div className="mx-4 hidden min-w-0 flex-1 items-center justify-center gap-6 md:mx-6 md:flex md:gap-8">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="relative py-2 text-sm font-bold uppercase tracking-wider text-white/80 transition-all after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-0 after:bg-brand-accent after:transition-all hover:text-white hover:after:w-full md:py-2.5"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
 
-              {/* Right: Actions */}
-              <div className="flex items-center gap-2 sm:gap-6">
+              <div className="flex items-center gap-1 sm:gap-4">
+                {waHref && (
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary btn-primary-green hidden sm:inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-green-500 to-green-600 px-5 py-2.5 text-sm font-bold text-white hover:from-green-500 hover:to-green-600"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </a>
+                )}
                 <Link
                   href={user ? "/account" : "/auth/login"}
-                  className="hidden sm:flex items-center gap-2 text-white hover:text-amber-400 transition-colors"
+                  className="hidden sm:flex items-center gap-2 text-white hover:text-brand-accent transition-colors group"
                 >
-                  <User className="w-6 h-6" />
-                  <span className="font-medium text-sm">Your Account</span>
+                  <div className="p-2 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors border border-white/10">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <span className="font-medium text-sm hidden xl:inline">Your Account</span>
                 </Link>
+                <div className="relative hidden sm:block">
+                  <button
+                    type="button"
+                    onClick={() => setIsSearchOpen((prev) => !prev)}
+                    className="flex items-center gap-2 text-white hover:text-brand-accent transition-colors group"
+                    aria-label="Open search"
+                    aria-expanded={isSearchOpen}
+                  >
+                    <div className="p-2 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors border border-white/10">
+                      <Search className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm hidden xl:inline">Search</span>
+                  </button>
+                  {isSearchOpen && (
+                    <form
+                      onSubmit={handleSearchSubmit}
+                      className="absolute right-0 top-full z-20 mt-2 w-[18rem] rounded-xl border border-white/15 bg-brand-primary/95 p-2 shadow-xl backdrop-blur-xl"
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search products..."
+                          className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          className="btn-icon inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                          aria-label="Submit search"
+                        >
+                          <Search className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
 
                 <div className="relative">
                   <button
-                    className="flex items-center gap-2 text-white hover:text-amber-400 transition-colors group"
+                    type="button"
+                    className="group relative flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 xl:h-auto xl:w-auto xl:gap-2"
                     onClick={() => setIsCartOpen(!isCartOpen)}
                     aria-label="Cart"
                   >
-                    <div className="relative">
-                      <ShoppingCart className="w-6 h-6" />
-                      {cartCount > 0 && (
-                        <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-[#002B5E] shadow-sm transform group-hover:scale-110 transition-transform">
-                          {cartCount}
-                        </span>
-                      )}
-                    </div>
-                    <span className="hidden sm:inline font-medium text-sm">My Basket</span>
+                    <ShoppingCart className="w-5 h-5" strokeWidth={1.75} />
+                    {cartCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-accent text-[10px] font-bold text-white">
+                        {cartCount}
+                      </span>
+                    )}
+                    <span className="hidden font-medium text-sm xl:inline">My Basket</span>
                   </button>
                   <MiniCart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
                 </div>
               </div>
             </div>
-
-            {/* Mobile Search Bar */}
-            <div className="pb-4 lg:hidden">
-              <form onSubmit={handleSearch}>
-                <div className="relative flex">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search security products..."
-                    className="w-full bg-white text-[#002B5E] rounded-md py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium placeholder-[#002B5E]/60"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#002B5E]"
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Center Navigation Items (Desktop) */}
-            <div className="hidden lg:flex items-center justify-center space-x-8 pb-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm font-semibold uppercase tracking-wider text-white/90 hover:text-amber-400 transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* SECONDARY BAR */}
-        <div className="bg-[#E6F0FA] shadow-sm border-b border-gray-200">
-          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3 overflow-x-auto scrollbar-hide">
-            <div className="flex space-x-3 whitespace-nowrap">
-              {secondaryChips.map((chip, idx) => (
-                <Link
-                  key={idx}
-                  href={chip.href}
-                  className={`px-5 py-1.5 rounded-full text-sm font-medium transition-all shadow-sm ${chip.active
-                    ? 'bg-white text-[#002B5E] border-2 border-amber-500'
-                    : 'bg-white text-gray-700 border border-transparent hover:border-blue-300 hover:text-[#002B5E]'
-                    }`}
-                >
-                  {chip.label}
-                </Link>
-              ))}
-            </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu Drawer */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] lg:hidden">
+        <div className="fixed inset-0 z-[100] md:hidden">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-brand-primary/40"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute top-0 left-0 bottom-0 w-[85%] max-w-sm bg-white shadow-xl flex flex-col animate-in slide-in-from-left duration-300">
-            <div className="p-4 bg-[#002B5E] flex items-center justify-between">
-              <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center" aria-label={siteName}>
-                <Image src={headerLogo} alt={siteName} width={360} height={108} className="h-16 w-auto max-w-[340px] object-contain object-left" unoptimized={headerLogo.includes('logo.png')} />
-              </Link>
+          <div className="absolute bottom-0 left-0 top-0 flex w-[88%] max-w-sm flex-col liquid-glass animate-in slide-in-from-left duration-300">
+            <div className="flex items-center justify-between border-b border-white/10 glass-panel-dark px-4 py-4">
+              <StoreLogo />
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 -mr-2 text-white/80 hover:text-white"
+                className="inline-flex h-10 w-10 items-center justify-center text-white active:opacity-70"
                 aria-label="Close menu"
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6" strokeWidth={1.75} />
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+            <nav className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-2">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="block px-4 py-3 text-lg font-medium text-gray-800 hover:bg-[#E6F0FA] hover:text-[#002B5E] rounded-lg transition-colors"
+                  className="mobile-editorial-nav-link"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}
                 </Link>
               ))}
-              <div className="h-px bg-gray-200 my-4"></div>
               <Link
                 href="/account"
-                className="flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                className="mobile-editorial-nav-link flex items-center gap-2 border-b-0 pt-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <User className="w-5 h-5 text-gray-500" />
-                My Account
+                <User className="h-5 w-5 text-brand-accent" strokeWidth={1.75} />
+                My account
               </Link>
             </nav>
           </div>

@@ -33,40 +33,65 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
 
-    // Load cart from localStorage on mount, with migration for legacy items
+    // Load cart from localStorage on mount, then drop items no longer in the catalog
     useEffect(() => {
         const savedCart = localStorage.getItem('cart');
+        let initialCart: CartItem[] = [];
+
         if (savedCart) {
             try {
                 const parsed: CartItem[] = JSON.parse(savedCart);
-                // Migrate legacy cart items: if `id` is not a UUID, it's likely a slug
                 const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-                const migratedCart = parsed.filter(item => {
-                    if (!item.id || !item.name || !item.price) return false; // Remove corrupted items
+                initialCart = parsed.filter((item) => {
+                    if (!item.id || !item.name || !item.price) return false;
                     if (!isValidUUID(item.id)) {
-                        // Legacy item with slug as id - ensure slug is set, then clear
-                        // These items will be resolved at checkout via the slug fallback
-                        // But best to remove them so users re-add with correct UUIDs
                         console.warn(`Removing legacy cart item with non-UUID id: ${item.id}`);
                         return false;
                     }
-                    // Ensure slug field exists
-                    if (!item.slug) {
-                        item.slug = item.id;
-                    }
+                    if (!item.slug) item.slug = item.id;
                     return true;
                 });
-                setCart(migratedCart);
-                // If items were removed, update localStorage immediately
-                if (migratedCart.length !== parsed.length) {
-                    localStorage.setItem('cart', JSON.stringify(migratedCart));
-                }
             } catch (e) {
                 console.error('Failed to parse cart:', e);
                 localStorage.removeItem('cart');
             }
         }
-        setIsInitialized(true);
+
+        const validateAgainstCatalog = async () => {
+            if (initialCart.length === 0) {
+                setIsInitialized(true);
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/storefront/products?limit=200');
+                if (!res.ok) {
+                    setCart(initialCart);
+                    setIsInitialized(true);
+                    return;
+                }
+
+                const products: { id: string }[] = await res.json();
+                const activeIds = new Set(products.map((p) => p.id));
+                const validCart = initialCart.filter((item) => activeIds.has(item.id));
+
+                if (validCart.length !== initialCart.length) {
+                    const removed = initialCart.filter((item) => !activeIds.has(item.id));
+                    console.warn(
+                        'Removed stale cart items (no longer in store):',
+                        removed.map((i) => i.name)
+                    );
+                }
+
+                setCart(validCart);
+            } catch {
+                setCart(initialCart);
+            } finally {
+                setIsInitialized(true);
+            }
+        };
+
+        validateAgainstCatalog();
     }, []);
 
     // Save cart to localStorage whenever it changes

@@ -1,12 +1,12 @@
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <div className="bg-gradient-to-br from-blue-50 via-white to-amber-50 py-16">
+    <div className="store-page">
+      <div className="store-page-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-6">Terms & Conditions</h1>
+            <h1 className="text-5xl font-bold text-gray-900 mb-6">Our terms</h1>
             <p className="text-xl text-gray-600 leading-relaxed">
-              Please read these terms carefully before using our website and services.
+              Simple rules for using our site. Read them before you order.
             </p>
             <p className="text-sm text-gray-500 mt-4">Last updated: February 2026</p>
           </div>
@@ -75,23 +75,23 @@ export default function TermsPage() {
 
             <h3 className="text-xl font-bold text-gray-900 mb-4 mt-8">3.2 Pricing</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
-              All prices are listed in Ghana Cedis (GHS) and include VAT where applicable. We reserve the right to:
+              All prices are shown in the currency displayed at checkout and include applicable taxes where stated. We reserve the right to:
             </p>
             <ul className="space-y-2 text-gray-600 mb-6">
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Modify prices at any time without notice</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Correct pricing errors, even after an order is placed</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Limit quantities available for purchase</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Discontinue products at any time</span>
               </li>
             </ul>
@@ -114,19 +114,19 @@ export default function TermsPage() {
             </p>
             <ul className="space-y-2 text-gray-600 mb-6">
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Product unavailability or pricing errors</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Suspected fraudulent or unauthorised transactions</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Inaccuracies in product or pricing information</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-brand-primary mt-1"></i>
                 <span>Failure to meet age or eligibility requirements</span>
               </li>
             </ul>
@@ -138,19 +138,19 @@ export default function TermsPage() {
             <div className="bg-gray-50 p-6 rounded-xl mb-6">
               <ul className="space-y-2 text-gray-600">
                 <li className="flex items-center gap-2">
-                  <i className="ri-smartphone-line text-blue-700"></i>
+                  <i className="ri-smartphone-line text-brand-primary"></i>
                   <span>MOMO (Mobile Money)</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <i className="ri-bank-line text-blue-700"></i>
+                  <i className="ri-bank-line text-brand-primary"></i>
                   <span>Instant Bank Transfer</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <i className="ri-money-cny-circle-line text-blue-700"></i>
+                  <i className="ri-money-cny-circle-line text-brand-primary"></i>
                   <span>Cash (in store only)</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <i className="ri-bank-card-line text-blue-700"></i>
+                  <i className="ri-bank-card-line text-brand-primary"></i>
                   <span>Visa Card Payment</span>
                 </li>
               </ul>
@@ -211,19 +211,19 @@ export default function TermsPage() {
             </p>
             <ul className="space-y-2 text-gray-600 mb-6">
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-brand-primary mt-1"></i>
                 <span>Does not violate any laws or third-party rights</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-brand-primary mt-1"></i>
                 <span>Is not defamatory, offensive, or inappropriate</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-brand-primary mt-1"></i>
                 <span>Does not contain viruses or malicious code</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-brand-primary mt-1"></i>
                 <span>Is truthful and based on your genuine experience</span>
               </li>
             </ul>
@@ -274,7 +274,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">11. Governing Law & Disputes</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              These terms are governed by the laws of Ghana. Any disputes arising from these terms or your use of the website shall be subject to the exclusive jurisdiction of the courts of Ghana.
+              These terms are governed by the laws applicable in the jurisdiction where the Store operates, without regard to conflict-of-law rules. Disputes shall be brought in the courts of that jurisdiction unless mandatory consumer law in your country requires otherwise.
             </p>
             <p className="text-gray-600 leading-relaxed">
               Before initiating any legal action, you agree to first contact us to seek resolution through informal negotiation.
@@ -297,15 +297,15 @@ export default function TermsPage() {
             <div className="bg-gray-50 border border-gray-200 p-8 rounded-xl">
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <i className="ri-mail-line text-blue-700 text-xl mt-1"></i>
+                  <i className="ri-mail-line text-brand-primary text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <a href="mailto:joelyrix52@gmail.com" className="text-blue-700 hover:underline">joelyrix52@gmail.com</a>
+                    <a href="mailto:contact@example.com" className="text-brand-primary hover:underline">contact@example.com</a>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <i className="ri-phone-line text-blue-700 text-xl mt-1"></i>
+                  <i className="ri-phone-line text-brand-primary text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Phone</p>
                     Contact details are available on the Contact page.
@@ -313,7 +313,7 @@ export default function TermsPage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <i className="ri-map-pin-line text-blue-700 text-xl mt-1"></i>
+                  <i className="ri-map-pin-line text-brand-primary text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Address</p>
                     <p className="text-gray-600">See the Contact page for our address.</p>
@@ -323,8 +323,8 @@ export default function TermsPage() {
             </div>
           </section>
 
-          <div className="bg-blue-50 border-2 border-blue-200 p-8 rounded-xl text-center">
-            <i className="ri-checkbox-circle-line text-4xl text-blue-700 mb-4"></i>
+          <div className="store-card border-brand-accent/20 bg-brand-light p-8 rounded-xl text-center">
+            <i className="ri-checkbox-circle-line text-4xl text-brand-primary mb-4"></i>
             <p className="text-gray-600 leading-relaxed">
               By using our website, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
             </p>

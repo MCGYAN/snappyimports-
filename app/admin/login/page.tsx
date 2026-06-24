@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { SITE_LOGO_PATH } from '@/lib/brand';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -17,7 +18,6 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const { getToken, verifying } = useRecaptcha();
 
-  // Show error from redirect (e.g. unauthorized, session_expired)
   useEffect(() => {
     const err = searchParams.get('error');
     if (err === 'unauthorized') setError('You do not have admin access.');
@@ -29,7 +29,6 @@ export default function AdminLoginPage() {
     setError('');
     setIsLoading(true);
 
-    // reCAPTCHA verification
     const isHuman = await getToken('admin_login');
     if (!isHuman) {
       setError('Security verification failed. Please try again.');
@@ -40,13 +39,12 @@ export default function AdminLoginPage() {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) throw error;
 
       if (data.session) {
-        // Set auth cookie so middleware can verify the session server-side
         document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; Secure`;
         document.cookie = `sb-refresh-token=${data.session.refresh_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax; Secure`;
 
@@ -61,65 +59,72 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-stone-50 flex items-center justify-center p-4">
+    <div className="store-site-bg flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
-            <Image src="/logo.png" alt="Sambatek" width={480} height={144} className="h-28 sm:h-32 w-auto max-w-[420px] sm:max-w-[480px] mx-auto object-contain" />
+            <Image
+              src={SITE_LOGO_PATH}
+              alt="Snappy Imports Global"
+              width={280}
+              height={141}
+              priority
+              className="mx-auto h-auto w-[min(280px,85vw)] object-contain"
+            />
           </Link>
-          <h1 className="font-serif text-2xl font-semibold text-gray-900 mt-6 mb-2">Admin</h1>
-          <p className="text-gray-500 text-sm font-light">Sign in to access the dashboard</p>
+          <h1 className="mt-6 font-heading text-2xl font-bold text-brand-primary">Admin</h1>
+          <p className="mt-1 text-sm text-slate-500">Sign in to access the dashboard</p>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8">
+        <div className="liquid-glass-card p-8 shadow-xl shadow-gray-200/40">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-              <i className="ri-error-warning-line text-red-600 text-xl mt-0.5"></i>
+            <div className="mb-6 flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-4">
+              <i className="ri-error-warning-line mt-0.5 text-xl text-red-600" />
               <div>
-                <p className="text-red-800 font-semibold">Login Failed</p>
-                <p className="text-red-700 text-sm mt-1">{error}</p>
+                <p className="font-semibold text-red-800">Login Failed</p>
+                <p className="mt-1 text-sm text-red-700">{error}</p>
               </div>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="mb-2 block text-sm font-semibold text-brand-primary">
                 Email Address
               </label>
               <div className="relative">
-                <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="admin@example.com"
+                  className="store-input pl-12"
+                  placeholder="admin@snappyimports.global"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="mb-2 block text-sm font-semibold text-brand-primary">
                 Password
               </label>
               <div className="relative">
-                <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="store-input pl-12 pr-12"
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 w-5 h-5 flex items-center justify-center"
+                  className="absolute right-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-slate-400 hover:text-slate-600"
                 >
-                  <i className={`${showPassword ? 'ri-eye-off-line' : 'ri-eye-line'} text-lg`}></i>
+                  <i className={`${showPassword ? 'ri-eye-off-line' : 'ri-eye-line'} text-lg`} />
                 </button>
               </div>
             </div>
@@ -127,11 +132,11 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={isLoading || verifying}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="btn-primary btn-interactive w-full rounded-xl bg-brand-primary py-3 font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading || verifying ? (
                 <span className="flex items-center justify-center space-x-2">
-                  <i className="ri-loader-4-line animate-spin"></i>
+                  <i className="ri-loader-4-line animate-spin" />
                   <span>{verifying ? 'Verifying...' : 'Signing in...'}</span>
                 </span>
               ) : (
@@ -139,13 +144,14 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
-
-          {/* Admin access is restricted to users with admin/staff role */}
         </div>
 
         <div className="mt-6 text-center">
-          <Link href="/" className="text-sm text-gray-600 hover:text-blue-700 transition-colors whitespace-nowrap">
-            <i className="ri-arrow-left-line mr-2"></i>
+          <Link
+            href="/"
+            className="text-sm text-slate-600 transition-colors hover:text-brand-accent"
+          >
+            <i className="ri-arrow-left-line mr-2" />
             Back to Store
           </Link>
         </div>

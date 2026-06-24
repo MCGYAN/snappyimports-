@@ -4,114 +4,198 @@ import Link from 'next/link';
 import { useCMS } from '@/context/CMSContext';
 import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { ShieldCheck, Cpu, LockKeyhole, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ArrowRight, MessageCircle } from 'lucide-react';
+import { buildWhatsAppHref } from '@/lib/snappy-import';
+
+const OUTCOMES = [
+  {
+    number: '01',
+    title: 'You feel calm',
+    text: 'You know who you are paying. You know what things cost. No scary surprises.',
+  },
+  {
+    number: '02',
+    title: 'You feel in control',
+    text: 'We tell you when your order moves. China. The ship. Ghana. Your door.',
+  },
+  {
+    number: '03',
+    title: 'You feel proud',
+    text: 'Your car, phone, or machine shows up. You did it. Your family sees it too.',
+  },
+];
+
+const PROMISES = [
+  {
+    title: 'We check first',
+    text: 'We look at the seller before you send money. Bad deals stop early.',
+  },
+  {
+    title: 'We say the full price',
+    text: 'You see the real cost up front. No hidden fees that show up later.',
+  },
+  {
+    title: 'We stay with you',
+    text: 'Call or WhatsApp us. Real people answer. Not a robot. Not silence.',
+  },
+];
 
 export default function AboutPage() {
   usePageTitle('About Us');
   const { getSetting } = useCMS();
-  const siteName = getSetting('site_name') || 'Sambatek';
+  const siteName = getSetting('site_name') || 'Snappy Import';
+  const whatsApp = buildWhatsAppHref(getSetting('contact_whatsapp'));
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-brand-surface">
       <PageHero
-        title="About SaMba TeK"
-        subtitle="Advanced security solutions for homes, offices and businesses across Ghana."
-        backgroundImages={['/hero%201.jpg', '/hero%202.jpg', '/hero%203.jpg', '/hero4.jpg']}
+        size="large"
+        title="We help you bring good things home"
+        subtitle="From China to Ghana. With clear prices, real updates, and people you can talk to."
       />
 
-      {/* Brand Story */}
-      <section className="py-20 md:py-28 bg-white overflow-hidden">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-sm font-bold tracking-[0.2em] text-[#002B5E] uppercase bg-blue-50 px-4 py-2 rounded-full inline-block mb-6">Our Mission</span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#002B5E] mt-3 mb-8 leading-tight">
-            Security you can trust. <span className="text-amber-500">Built for Ghana.</span>
-          </h2>
-          <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-3xl mx-auto font-medium">
-            <strong>{siteName}</strong> is a Ghanaian technology company specializing in advanced security solutions for homes, offices and commercial properties.
-          </p>
-        </div>
-      </section>
-
-      {/* Expertise & Services */}
-      <section className="py-20 md:py-28 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="order-2 lg:order-1 relative">
-              <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl bg-[#002B5E] flex items-center justify-center p-8 border-4 border-white">
-                <ShieldCheck className="w-full h-full text-white/10 absolute inset-0 m-auto scale-150" />
-                <div className="relative z-10 text-center text-white">
-                  <Cpu className="w-20 h-20 mx-auto text-amber-500 mb-6" />
-                  <h3 className="text-3xl font-bold mb-4">Safer Spaces, Smarter Living</h3>
-                  <p className="text-blue-100 text-lg">Durable protection and modern control, installed by professionals.</p>
-                </div>
-              </div>
-            </div>
-            <div className="order-1 lg:order-2">
-              <span className="text-sm font-bold tracking-[0.2em] text-[#002B5E] uppercase">Our Expertise</span>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#002B5E] mb-6 mt-2 leading-tight">
-                Advanced security for homes, offices and commercial properties
-              </h2>
-              <p className="text-gray-500 leading-relaxed mb-6 text-lg">
-                We focus on delivering durable security doors, modern surveillance systems, smart locks and access control technology to improve safety and convenience.
-              </p>
-              <ul className="space-y-4 text-gray-700">
-                <li className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                  <ShieldCheck className="w-6 h-6 text-amber-500 flex-shrink-0" />
-                  <span className="font-semibold">Security Doors & Strong Installations</span>
-                </li>
-                <li className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                  <Cpu className="w-6 h-6 text-[#002B5E] flex-shrink-0" />
-                  <span className="font-semibold">CCTV & Modern Surveillance Systems</span>
-                </li>
-                <li className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                  <LockKeyhole className="w-6 h-6 text-amber-500 flex-shrink-0" />
-                  <span className="font-semibold">Smart Locks & Access Control Systems</span>
-                </li>
-              </ul>
-            </div>
+      {/* Story */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-b from-white via-[#f8fafc] to-[#f1f5f9]">
+        <div className="pointer-events-none absolute -right-24 top-0 h-64 w-64 rounded-full bg-brand-accent/5 blur-3xl" aria-hidden />
+        <div className="store-container relative">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Our story</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              Importing should not keep you up at night
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
+              You see something you want online. Maybe a car. Maybe a phone. Maybe tools for work.
+              You want it here in Ghana. But you also worry. Will the seller disappear? Will the
+              price change? Will your order get stuck?
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
+              <strong className="font-semibold text-brand-primary">{siteName}</strong> exists for
+              that worry. We sit between you and China. We check. We explain. We move your order.
+              We update you along the way. So you feel safe, not scared.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Core Values */}
-      <section className="py-20 md:py-28 bg-[#002B5E] text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-sm font-bold tracking-[0.2em] text-white/50 uppercase">Why Choose Us</span>
-          <h2 className="text-3xl md:text-4xl font-extrabold mt-3 mb-16 leading-tight text-white">
-            Why customers choose {siteName}
-          </h2>
+      {/* Emotional outcomes */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-b from-[#f1f5f9] via-[#eef2f8] to-[#f4f7fb]">
+        <div className="store-container">
+          <div className="max-w-xl">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">The feeling</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              What we want you to feel
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 md:text-base">
+              Snappy means fast updates and clear answers. Global means we reach China for you.
+              The goal is simple: peace of mind from click to delivery.
+            </p>
+          </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:border-amber-500/50 transition-colors">
-              <ShieldCheck className="w-12 h-12 text-amber-500 mx-auto mb-6" />
-              <h3 className="text-xl font-bold mb-4">Durable Solutions</h3>
-              <p className="text-blue-200">We recommend and install security products designed to last and perform reliably.</p>
-            </div>
-            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:border-amber-500/50 transition-colors">
-              <CheckCircle2 className="w-12 h-12 text-amber-500 mx-auto mb-6" />
-              <h3 className="text-xl font-bold mb-4">Professional Installation</h3>
-              <p className="text-blue-200">Our team installs and configures systems properly for safety, performance and peace of mind.</p>
-            </div>
-            <div className="bg-white/5 p-8 rounded-2xl border border-white/10 hover:border-amber-500/50 transition-colors">
-              <LockKeyhole className="w-12 h-12 text-amber-500 mx-auto mb-6" />
-              <h3 className="text-xl font-bold mb-4">Local Coverage</h3>
-              <p className="text-blue-200">Our goal is to provide reliable security solutions for customers in Accra, Tarkwa and across Ghana.</p>
-            </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5 lg:mt-10">
+            {OUTCOMES.map((item) => (
+              <div
+                key={item.number}
+                className="liquid-glass-card p-5 transition-all duration-300 hover:-translate-y-0.5 sm:p-6"
+              >
+                <span className="font-heading text-3xl font-black tabular-nums text-brand-accent/25">
+                  {item.number}
+                </span>
+                <h3 className="mt-3 font-heading text-base font-bold text-brand-primary sm:text-lg">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Promises */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0B1F3A] via-[#0d2747] to-[#061224] py-12 md:py-20">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(242,107,29,0.12),transparent)]" aria-hidden />
+        <div className="store-container relative">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Our promise</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-white md:text-[2.25rem]">
+              Three things you can count on
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-white/70 md:text-base">
+              We keep it simple. No big words. No runaround.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5 lg:mt-10">
+            {PROMISES.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-2xl border border-white/10 bg-white/[0.06] p-5 backdrop-blur-xl sm:p-6"
+              >
+                <h3 className="font-heading text-base font-bold text-white sm:text-lg">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/75">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Who we help */}
+      <section className="store-section border-b border-white/40 bg-white/25 backdrop-blur-sm">
+        <div className="store-container">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Who we help</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              Built for real people in Ghana
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-600">
+              A parent buying a car for the family. A shop owner stocking phones. A builder who
+              needs a machine. One item or many — we treat your order like it matters. Because it
+              does.
+            </p>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-24 bg-gradient-to-br from-gray-50 to-white border-t border-gray-200">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-[#002B5E] mb-6">Upgrade Your Security Today</h2>
-          <p className="text-gray-500 text-lg mb-10">Browse our security products or contact our team for professional installation and support.</p>
-          <Link
-            href="/shop"
-            className="inline-flex items-center gap-3 bg-[#002B5E] hover:bg-amber-500 hover:text-[#002B5E] text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg text-lg group"
-          >
-            Explore Solutions <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
+      <section className="store-section relative overflow-hidden bg-gradient-to-b from-[#f4f7fb] via-white to-[#f8fafc]">
+        <div className="store-container">
+          <div className="liquid-glass-card mx-auto max-w-2xl p-6 text-center sm:p-8 md:p-10">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Next step</p>
+            <h2 className="font-heading mt-2 text-xl font-bold text-brand-primary sm:text-2xl">
+              Ready to start?
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600 sm:text-base">
+              Look around our shop. Or send us a message. We will tell you what happens next. Honest
+              and plain.
+            </p>
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+              <Link
+                href="/shop"
+                className="btn-interactive inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3 text-[15px] font-semibold text-white shadow-[0_4px_16px_rgba(11,31,58,0.2)] hover:bg-[#061224]"
+              >
+                Browse imports
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              {whatsApp ? (
+                <a
+                  href={whatsApp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-interactive inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border border-white/50 liquid-glass px-6 py-3 text-[15px] font-semibold text-brand-primary hover:border-brand-accent/30"
+                >
+                  <MessageCircle className="h-4 w-4 text-brand-accent" />
+                  Talk to us
+                </a>
+              ) : (
+                <Link
+                  href="/contact"
+                  className="btn-interactive inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border border-white/50 liquid-glass px-6 py-3 text-[15px] font-semibold text-brand-primary hover:border-brand-accent/30"
+                >
+                  <MessageCircle className="h-4 w-4 text-brand-accent" />
+                  Talk to us
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </section>
     </div>

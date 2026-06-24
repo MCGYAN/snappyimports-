@@ -1,13 +1,31 @@
 /**
- * Central SEO config for Sambatek — overrides CMS. Single source of truth for
- * site name, descriptions, keywords, and social defaults.
+ * Central SEO config — site name, descriptions, and social defaults.
+ * Override via NEXT_PUBLIC_APP_URL and NEXT_PUBLIC_SITE_NAME.
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.sambatekgh.com';
-const SITE_NAME = 'SaMba TeK';
-const SITE_NAME_FULL = 'SaMba TeK Security';
-const TAGLINE = 'Advanced Security Solutions';
-const TAGLINE_LONG = 'Durable security doors, modern CCTV surveillance, smart locks and access control systems in Ghana.';
+import { SNAPPY_SEO_KEYWORDS } from './snappy-import';
+import { absoluteSiteLogoUrl } from './brand';
+
+/** Valid absolute URL for metadataBase / sitemap; avoids `new URL()` throwing when env omits `https://`. */
+function resolveSiteUrl(raw: string | undefined): string {
+  const fallback = 'https://example.com';
+  const trimmed = raw?.trim();
+  if (!trimmed) return fallback;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const u = new URL(withProtocol);
+    return u.origin;
+  } catch {
+    return fallback;
+  }
+}
+
+const SITE_URL = resolveSiteUrl(process.env.NEXT_PUBLIC_APP_URL);
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'Snappy Imports Global';
+const SITE_NAME_FULL = SITE_NAME;
+const TAGLINE = 'Importing is no longer stressful';
+const TAGLINE_LONG =
+  'We handle the hard part so you do not have to. Cars, gadgets, and equipment from China to Ghana.';
 
 export const SEO = {
   siteUrl: SITE_URL,
@@ -16,37 +34,21 @@ export const SEO = {
   tagline: TAGLINE,
   taglineLong: TAGLINE_LONG,
 
-  defaultTitle: `${SITE_NAME} | Security Doors, CCTV, Smart Locks & Access Control in Ghana`,
+  defaultTitle: `${SITE_NAME} | Import without the stress`,
   defaultDescription:
-    'SaMba TeK delivers advanced security solutions for homes, offices and commercial properties in Ghana — durable security doors, modern CCTV surveillance, smart locks and access control systems. Serving Accra, Tarkwa and across Ghana.',
+    'Import cars, gadgets, and equipment from China to Ghana. We handle the hard part. You stay in the loop.',
 
-  keywords: [
-    'SaMba TeK',
-    'Sambatek',
-    'security doors Ghana',
-    'security doors Accra',
-    'security doors Tarkwa',
-    'CCTV Ghana',
-    'CCTV Accra',
-    'CCTV Tarkwa',
-    'surveillance systems Ghana',
-    'smart locks Ghana',
-    'access control Ghana',
-    'access control systems Accra',
-    'security solutions Ghana',
-    'home security Ghana',
-    'office security Ghana',
-    'commercial security Ghana',
-  ],
+  keywords: [...SNAPPY_SEO_KEYWORDS, SITE_NAME, 'Ghana imports', 'China import'],
 
   /** OG/Twitter default image path (absolute URL). Use /og or dynamic opengraph-image. */
   defaultOgImagePath: `${SITE_URL}/og/default.png`,
-  logoUrl: `${SITE_URL}/logo.png`,
+  /** Organization / JSON-LD logo (absolute URL). Override with CMS `site_logo` in UI only; keep this for schema. */
+  logoUrl: absoluteSiteLogoUrl(SITE_URL),
 
   contact: {
-    phone: '+233593610190',
-    whatsapp: '0593517270',
-    email: 'joelyrix52@gmail.com',
+    phone: '',
+    whatsapp: '',
+    email: 'contact@example.com',
   },
 
   social: {
@@ -58,56 +60,57 @@ export const SEO = {
   /** Per-page meta (override in generateMetadata). */
   pages: {
     home: {
-      title: `${SITE_NAME} | Security Doors, CCTV, Smart Locks & Access Control in Ghana`,
-      description: 'Protect your home, office and business with durable security doors, modern CCTV surveillance, smart locks and access control systems installed by professionals. Serving Accra, Tarkwa and across Ghana.',
+      title: `${SITE_NAME} | Import without the stress`,
+      description:
+        'Import from China to Ghana without guesswork. Trusted suppliers, clear costs, and updates you can count on.',
     },
     shop: {
-      title: `Shop All Products | ${SITE_NAME}`,
-      description: 'Browse security doors, CCTV cameras, smart locks and access control systems. Fast delivery across Ghana.',
+      title: `Browse imports | ${SITE_NAME}`,
+      description: `Find cars, gadgets, and equipment to import. Filter by category and price. ${SITE_NAME} keeps it simple.`,
     },
     categories: {
-      title: `Categories | ${SITE_NAME}`,
-      description: 'Explore security product categories: security doors, CCTV & surveillance, smart locks and access control.',
+      title: `Shop by Category | ${SITE_NAME}`,
+      description: `Browse import categories for China to Ghana. Vehicles, electronics, equipment, and more.`,
     },
     about: {
       title: `About Us | ${SITE_NAME}`,
-      description: 'SaMba TeK is a Ghanaian technology company specializing in advanced security solutions for homes, offices and commercial properties. Serving Accra, Tarkwa and across Ghana.',
+      description: `${SITE_NAME} helps Ghanaian buyers import from China without stress, scams, or guesswork.`,
     },
     contact: {
       title: `Contact Us | ${SITE_NAME}`,
-      description: 'Get in touch with SaMba TeK for quotes, installations and support for security doors, CCTV, smart locks and access control. Phone, WhatsApp, and contact form.',
+      description: `Talk to real people about quotes, orders, or import questions. WhatsApp, phone, or our contact form.`,
     },
     blog: {
       title: `Blog | ${SITE_NAME}`,
-      description: 'Security tips, product guides, and industry insights from Sambatek.',
+      description: 'Tips and updates to help your next import go smoothly.',
     },
     faqs: {
       title: `FAQs | ${SITE_NAME}`,
-      description: 'Frequently asked questions about orders, shipping, returns, and our security products.',
+      description: 'Quick answers about orders, shipping, payments, and returns.',
     },
     privacy: {
       title: `Privacy Policy | ${SITE_NAME}`,
-      description: 'How Sambatek collects, uses, and protects your personal information.',
+      description: `How ${SITE_NAME} collects, uses, and protects your personal information.`,
     },
     terms: {
       title: `Terms of Service | ${SITE_NAME}`,
-      description: 'Terms and conditions for using Sambatek Store and our services.',
+      description: `Terms and conditions for using ${SITE_NAME} and our services.`,
     },
     shipping: {
-      title: `Shipping & Delivery | ${SITE_NAME}`,
-      description: 'Delivery options, areas we serve, and shipping information for Ghana.',
+      title: `Shipping and delivery | ${SITE_NAME}`,
+      description: 'Your import gets home safe. We move it from China to Ghana and keep you updated.',
     },
     cart: {
       title: `Cart | ${SITE_NAME}`,
-      description: 'Your shopping cart at Sambatek Store.',
+      description: 'Your shopping cart.',
     },
     wishlist: {
       title: `Wishlist | ${SITE_NAME}`,
-      description: 'Your saved products at Sambatek Store.',
+      description: 'Your saved products.',
     },
     account: {
       title: `My Account | ${SITE_NAME}`,
-      description: 'Manage your Sambatek account, orders, and profile.',
+      description: 'Manage your account, orders, and profile.',
     },
   } as Record<string, { title: string; description: string }>,
 };

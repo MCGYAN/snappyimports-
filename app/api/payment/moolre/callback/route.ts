@@ -11,7 +11,7 @@ import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-lim
  *   "message": "Transaction Successful",
  *   "data": {
  *     "txtstatus": 1,
- *     "payer": "233535998837",
+ *     "payer": "15550000000",
  *     "terminalid": "",
  *     "accountnumber": "10789906062911",
  *     "name": "",
@@ -30,7 +30,7 @@ import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-lim
 export async function POST(req: Request) {
     console.log('[Callback] POST received at', new Date().toISOString(), '| App URL:', process.env.NEXT_PUBLIC_APP_URL || '(not set, using request origin)');
     if (process.env.NEXT_PUBLIC_APP_URL?.includes('localhost')) {
-        console.warn('[Callback] WARNING: NEXT_PUBLIC_APP_URL contains localhost — Moolre cannot reach this. Set it to your production domain (e.g. https://www.sambatekgh.com) in Vercel.');
+        console.warn('[Callback] WARNING: NEXT_PUBLIC_APP_URL contains localhost — Moolre cannot reach this. Set it to your public HTTPS production domain in your host settings.');
     }
 
     try {

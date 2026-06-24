@@ -53,17 +53,16 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
- * Validate Ghana phone number format
+ * Validate common local phone digit patterns (customize regex for your region).
  */
-export function isValidGhanaPhone(phone: string): boolean {
+export function isValidPhoneNumberFormat(phone: string): boolean {
     if (!phone || typeof phone !== 'string') return false;
     const cleaned = phone.replace(/\D/g, '');
-    // Valid formats: 0XXXXXXXXX (10 digits), 233XXXXXXXXX (12 digits), or 9 digits without prefix
-    return (
-        (cleaned.length === 10 && cleaned.startsWith('0')) ||
-        (cleaned.length === 12 && cleaned.startsWith('233')) ||
-        cleaned.length === 9
-    );
+    const cc = (process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '1').replace(/\D/g, '') || '1';
+    if (cleaned.length === 10 && cleaned.startsWith('0')) return true;
+    if (cleaned.length === 9) return true;
+    if (cleaned.startsWith(cc) && cleaned.length >= cc.length + 7 && cleaned.length <= cc.length + 12) return true;
+    return false;
 }
 
 /**

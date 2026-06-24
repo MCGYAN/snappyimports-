@@ -35,13 +35,14 @@ export async function testSmsAction(phone: string, message: string, authToken: s
             return { success: false, error: 'Invalid or too long message' };
         }
 
-        // Format phone number for Ghana
+        // Format phone number for your SMS provider (example uses a 3-digit country code prefix)
+        const cc = (process.env.MOOLRE_SMS_COUNTRY_CODE || process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '1').replace(/\D/g, '') || '1';
         let cleaned = phone.replace(/\D/g, '');
         if (cleaned.startsWith('0')) {
-            cleaned = '233' + cleaned.slice(1);
+            cleaned = cc + cleaned.slice(1);
         }
-        if (!cleaned.startsWith('233') && cleaned.length === 9) {
-            cleaned = '233' + cleaned;
+        if (!cleaned.startsWith(cc) && cleaned.length === 9) {
+            cleaned = cc + cleaned;
         }
         const recipient = '+' + cleaned;
 

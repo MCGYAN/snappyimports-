@@ -111,7 +111,7 @@ export default function PaymentPage() {
           <p className="text-gray-600 mb-6">{error}</p>
           <Link
             href="/"
-            className="inline-flex items-center px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-brand-primary hover:bg-[#0d2747] text-white rounded-lg font-semibold transition-colors"
           >
             <i className="ri-home-line mr-2"></i>
             Go to Homepage
@@ -130,7 +130,7 @@ export default function PaymentPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-6">
-            <span className="text-2xl font-['Pacifico'] text-blue-700">Store</span>
+            <span className="font-heading text-2xl font-semibold text-brand-primary">Store</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">Complete Your Payment</h1>
           <p className="text-gray-600 mt-2">Hi {customerName}, your order is waiting for payment.</p>
@@ -146,23 +146,23 @@ export default function PaymentPage() {
           <div className="space-y-3 mb-6">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Subtotal</span>
-              <span className="text-gray-900">GH₵ {order?.subtotal?.toFixed(2)}</span>
+              <span className="text-gray-900">$ {order?.subtotal?.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Shipping</span>
-              <span className="text-gray-900">GH₵ {order?.shipping_total?.toFixed(2)}</span>
+              <span className="text-gray-900">$ {order?.shipping_total?.toFixed(2)}</span>
             </div>
             {order?.discount_total > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Discount</span>
-                <span className="text-green-600">-GH₵ {order?.discount_total?.toFixed(2)}</span>
+                <span className="text-green-600">-$ {order?.discount_total?.toFixed(2)}</span>
               </div>
             )}
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">
             <span className="text-lg font-semibold text-gray-900">Total</span>
-            <span className="text-2xl font-bold text-blue-700">GH₵ {order?.total?.toFixed(2)}</span>
+            <span className="text-2xl font-bold text-brand-primary">$ {order?.total?.toFixed(2)}</span>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ export default function PaymentPage() {
         <button
           onClick={handlePayNow}
           disabled={processing}
-          className="w-full bg-blue-700 hover:bg-blue-800 text-white py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer"
+          className="w-full bg-brand-primary hover:bg-[#0d2747] text-white py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer"
         >
           {processing ? (
             <>
@@ -218,7 +218,7 @@ export default function PaymentPage() {
           ) : (
             <>
               <i className="ri-secure-payment-line mr-2"></i>
-              Pay GH₵ {order?.total?.toFixed(2)} with Mobile Money
+              Pay $ {order?.total?.toFixed(2)} with Mobile Money
             </>
           )}
         </button>
@@ -234,7 +234,7 @@ export default function PaymentPage() {
         {/* Help Link */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600">
-            Having issues? <Link href="/contact" className="text-blue-700 hover:underline">Contact Support</Link>
+            Having issues? <Link href="/contact" className="text-brand-primary hover:underline">Contact Support</Link>
           </p>
         </div>
       </div>

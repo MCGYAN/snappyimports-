@@ -8,12 +8,12 @@ import Footer from '@/components/Footer';
 const categories = [
   {
     id: 'orders',
-    title: 'Orders & Delivery',
+    title: 'Orders and delivery',
     icon: 'ri-shopping-bag-line',
     count: 12,
     articles: [
-      { id: 1, title: 'How do I track my order?', views: 1247 },
-      { id: 2, title: 'What are the delivery times?', views: 892 },
+      { id: 1, title: 'Where is my order?', views: 1247 },
+      { id: 2, title: 'How long does delivery take?', views: 892 },
       { id: 3, title: 'Can I change my delivery address?', views: 654 },
       { id: 4, title: 'What if my order is delayed?', views: 543 },
       { id: 5, title: 'Do you offer express delivery?', views: 421 }
@@ -87,7 +87,7 @@ const categories = [
 ];
 
 const popularArticles = [
-  { id: 1, title: 'How do I track my order?', category: 'Orders', views: 1247 },
+  { id: 1, title: 'Where is my order?', category: 'Orders', views: 1247 },
   { id: 6, title: 'How do I return an item?', category: 'Returns', views: 2341 },
   { id: 26, title: 'How do I earn loyalty points?', category: 'Loyalty', views: 2134 },
   { id: 21, title: 'When will items be back in stock?', category: 'Products', views: 1987 },
@@ -114,10 +114,10 @@ export default function HelpCenterPage() {
     <>
       <Header />
       <main className="min-h-screen bg-gray-50">
-        <div className="bg-gradient-to-br from-blue-700 to-blue-900 text-white py-16">
+        <div className="bg-gradient-to-br from-brand-primary to-[#050f1f] text-white py-16">
           <div className="max-w-4xl mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold mb-4">How can we help you?</h1>
-            <p className="text-blue-100 mb-8 text-lg">Search our help center or browse by category</p>
+            <h1 className="text-4xl font-bold mb-4">How can we help?</h1>
+            <p className="text-white/80 mb-8 text-lg">Search for answers or pick a topic below</p>
             
             <div className="relative max-w-2xl mx-auto">
               <input
@@ -171,7 +171,7 @@ export default function HelpCenterPage() {
             {selectedCategory && (
               <button
                 onClick={() => setSelectedCategory(null)}
-                className="text-blue-700 hover:text-blue-900 font-semibold whitespace-nowrap"
+                className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap"
               >
                 <i className="ri-arrow-left-line mr-2"></i>
                 All Categories
@@ -184,10 +184,10 @@ export default function HelpCenterPage() {
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className="bg-white rounded-xl shadow-sm p-6 text-left hover:shadow-lg transition-all border-2 border-transparent hover:border-blue-700"
+                className="bg-white rounded-xl shadow-sm p-6 text-left hover:shadow-lg transition-all border-2 border-transparent hover:border-brand-primary"
               >
-                <div className="w-14 h-14 flex items-center justify-center bg-blue-100 rounded-xl mb-4">
-                  <i className={`${category.icon} text-3xl text-blue-700`}></i>
+                <div className="w-14 h-14 flex items-center justify-center bg-brand-light rounded-xl mb-4">
+                  <i className={`${category.icon} text-3xl text-brand-primary`}></i>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{category.title}</h3>
                 <p className="text-gray-600">{category.count} articles</p>
@@ -198,7 +198,7 @@ export default function HelpCenterPage() {
                       <Link
                         key={article.id}
                         href={`/help/article/${article.id}`}
-                        className="block text-sm text-gray-700 hover:text-blue-700 font-medium"
+                        className="block text-sm text-gray-700 hover:text-brand-primary font-medium"
                       >
                         • {article.title}
                       </Link>
@@ -219,7 +219,7 @@ export default function HelpCenterPage() {
                   className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full font-bold">
+                    <div className="w-10 h-10 flex items-center justify-center bg-brand-light text-brand-primary rounded-full font-bold">
                       {index + 1}
                     </div>
                     <div>
@@ -241,12 +241,12 @@ export default function HelpCenterPage() {
               href="/support/ticket"
               className="bg-white rounded-xl shadow-sm p-6 hover:shadow-lg transition-all text-center"
             >
-              <div className="w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full mx-auto mb-4">
-                <i className="ri-customer-service-2-line text-3xl text-blue-700"></i>
+              <div className="w-16 h-16 flex items-center justify-center bg-brand-light rounded-full mx-auto mb-4">
+                <i className="ri-customer-service-2-line text-3xl text-brand-primary"></i>
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Contact Support</h3>
               <p className="text-gray-600 text-sm mb-4">Get help from our support team</p>
-              <span className="text-blue-700 font-semibold whitespace-nowrap">Create Ticket →</span>
+              <span className="text-brand-primary font-semibold whitespace-nowrap">Create Ticket →</span>
             </Link>
 
             <Link

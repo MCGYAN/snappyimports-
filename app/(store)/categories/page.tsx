@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import PageHero from '@/components/PageHero';
-import { ShieldCheck, Video, Lock, Target, Server, Search, HeadphonesIcon, ArrowRight, Inbox } from 'lucide-react';
+import { Search, HeadphonesIcon, ArrowRight, Inbox } from 'lucide-react';
 import { SEO } from '@/lib/seo';
 
 export const revalidate = 0;
@@ -11,6 +12,13 @@ export const metadata: Metadata = {
   title: SEO.pages.categories.title,
   description: SEO.pages.categories.description,
 };
+
+const PLACEHOLDER_BGS = [
+  'bg-gradient-to-br from-brand-primary via-[#0d2747] to-[#050f1f]',
+  'bg-gradient-to-br from-[#0d2747] via-brand-primary to-[#050f1f]',
+  'bg-gradient-to-br from-[#1a0f08] via-brand-primary to-[#050f1f]',
+  'bg-gradient-to-br from-brand-primary via-slate-900 to-slate-950',
+];
 
 export default async function CategoriesPage() {
   const { data: categoriesData } = await supabase
@@ -26,109 +34,91 @@ export default async function CategoriesPage() {
     .eq('status', 'active')
     .order('position', { ascending: true });
 
-  // Palette to cycle through for visual variety using Sambatek colors
-  const palette = [
-    { bg: 'bg-[#002B5E]', text: 'text-amber-500', Icon: ShieldCheck },
-    { bg: 'bg-[#001733]', text: 'text-amber-500', Icon: Video },
-    { bg: 'bg-amber-500', text: 'text-[#002B5E]', Icon: Lock },
-    { bg: 'bg-[#002B5E]', text: 'text-white', Icon: Target },
-    { bg: 'bg-[#001733]', text: 'text-white', Icon: Server },
-  ];
-
-  const categories = categoriesData?.map((c, i) => {
-    const style = palette[i % palette.length];
-    return {
-      ...c,
-      image: c.image_url || '/hero%205.jpg',
-      bgClass: style.bg,
-      textClass: style.text,
-      Icon: style.Icon,
-      productCount: 'Browse',
-    };
-  }) || [];
+  const categories = categoriesData || [];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-brand-surface">
       <PageHero
-        title="Security Solutions"
-        subtitle="Browse our equipment categories"
-        backgroundImage="/hero%202.jpg"
+        title="Shop by Category"
+        subtitle="Cars, phones, machines, and more. Pick a category and we help you import it."
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="store-container py-12 md:py-16">
         {categories.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {categories.map((category) => {
-              const Icon = category.Icon;
-              return (
-                <Link
-                  key={category.id}
-                  href={`/shop?category=${category.slug}`}
-                  className="group bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-2xl hover:border-amber-200 transition-all cursor-pointer"
-                >
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={category.image}
+          <div className="grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-6">
+            {categories.map((category, index) => (
+              <Link
+                key={category.id}
+                href={`/shop?category=${category.slug}`}
+                className="group liquid-glass-card liquid-glass-card-interactive overflow-hidden"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  {category.image_url ? (
+                    <Image
+                      src={category.image_url}
                       alt={category.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
                     />
-                    <div className={`absolute inset-0 bg-[#001733] opacity-0 group-hover:opacity-40 transition-opacity`}></div>
+                  ) : (
+                    <div
+                      className={`absolute inset-0 ${PLACEHOLDER_BGS[index % PLACEHOLDER_BGS.length]}`}
+                      aria-hidden
+                    />
+                  )}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 via-black/15 to-transparent" aria-hidden />
+                  <h3 className="absolute bottom-4 left-4 right-4 font-heading text-lg font-bold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+                    {category.name}
+                  </h3>
+                </div>
+
+                <div className="p-5">
+                  <p className="line-clamp-2 text-sm leading-relaxed text-slate-600">
+                    {category.description ||
+                      'We help you source it, ship it, and get it home. No surprises.'}
+                  </p>
+                  <div className="mt-4 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider text-brand-accent transition-all group-hover:gap-2">
+                    <span>View category</span>
+                    <ArrowRight className="h-4 w-4" />
                   </div>
-                  <div className="p-6">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className={`w-14 h-14 ${category.bgClass} rounded-xl flex items-center justify-center shadow-inner`}>
-                        <Icon className={`w-7 h-7 ${category.textClass}`} />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-[#002B5E] group-hover:text-amber-500 transition-colors">{category.name}</h3>
-                        <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Equipment</p>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 font-medium leading-relaxed text-sm mb-6 line-clamp-2">
-                      {category.description || 'Explore our comprehensive selection of security technology in this category.'}
-                    </p>
-                    <div className="flex items-center text-[#002B5E] font-bold text-sm uppercase tracking-wider group-hover:text-amber-500 group-hover:gap-2 transition-all">
-                      <span>Browse category</span>
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+                </div>
+              </Link>
+            ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-gray-50 rounded-xl border border-gray-100">
-            <Inbox className="w-16 h-16 text-gray-300 mb-4 mx-auto" />
-            <p className="text-xl text-gray-500 font-medium">No categories found.</p>
+          <div className="liquid-glass-card py-20 text-center">
+            <Inbox className="mx-auto mb-4 h-16 w-16 text-slate-300" />
+            <p className="text-xl font-medium text-brand-foreground/70">
+              No categories yet. Check back soon or browse featured products in the shop.
+            </p>
           </div>
         )}
       </div>
 
-      <div className="bg-[#001733] py-20 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full text-white fill-current">
-            <polygon points="100,0 100,100 0,100" />
-          </svg>
-        </div>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6">Need a Custom Security Setup?</h2>
-          <p className="text-lg text-blue-200 mb-10 leading-relaxed font-medium max-w-2xl mx-auto">
-            Our engineers are ready to design a tailored security architecture for your specific requirements.
+      <div className="relative overflow-hidden bg-brand-primary py-16 md:py-20">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(242,107,29,0.14),transparent)]" aria-hidden />
+        <div className="store-container relative z-10 max-w-3xl text-center">
+          <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
+            Not sure where to start?
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/75 md:text-lg">
+            Tell us what you want to bring in. We walk you through cost and timing so you buy with confidence.
           </p>
-          <div className="flex flex-wrap gap-4 justify-center">
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               href="/shop"
-              className="inline-flex items-center gap-2 bg-amber-500 text-[#001733] px-8 py-4 rounded-xl font-bold hover:bg-amber-400 transition-colors shadow-lg"
+              className="btn-interactive inline-flex items-center gap-2 rounded-xl bg-brand-accent px-8 py-4 font-bold text-white hover:bg-brand-accent/90"
             >
-              <Search className="w-5 h-5" />
-              Search All Products
+              <Search className="h-5 w-5" />
+              Browse featured products
             </Link>
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 bg-[#002B5E] text-white px-8 py-4 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-lg border border-blue-800"
+              className="btn-interactive inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-8 py-4 font-bold text-white hover:bg-white/15"
             >
-              <HeadphonesIcon className="w-5 h-5" />
-              Contact Technical Support
+              <HeadphonesIcon className="h-5 w-5" />
+              Talk to Snappy Import
             </Link>
           </div>
         </div>

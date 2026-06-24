@@ -57,7 +57,7 @@ export default function OfflineIndicator() {
           </span>
           {!isOnline && (
             <span className="text-xs opacity-70 ml-1">
-              - browsing cached content
+              browsing cached content
             </span>
           )}
         </div>

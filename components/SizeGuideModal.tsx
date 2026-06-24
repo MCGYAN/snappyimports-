@@ -69,7 +69,7 @@ export default function SizeGuideModal({ isOpen, onClose, category = 'General' }
 
         <div className="relative bg-white rounded-lg w-full max-w-4xl">
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900">Size Guide - {category}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Size guide for {category}</h2>
             <button
               onClick={onClose}
               className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"

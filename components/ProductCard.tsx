@@ -5,7 +5,9 @@ import Link from 'next/link';
 import LazyImage from './LazyImage';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
-import { ShoppingCart, Heart } from 'lucide-react';
+import { useCMS } from '@/context/CMSContext';
+import { getImportProductMode, type ImportProductMode } from '@/lib/snappy-import';
+import { ShoppingCart, Heart, MessageCircle } from 'lucide-react';
 
 const COLOR_MAP: Record<string, string> = {
   black: '#000000', white: '#FFFFFF', red: '#EF4444', blue: '#3B82F6',
@@ -45,6 +47,10 @@ interface ProductCardProps {
   minVariantPrice?: number;
   colorVariants?: ColorVariant[];
   shortDescription?: string;
+  categoryName?: string;
+  categorySlug?: string;
+  /** Tighter layout for homepage 2×2 mobile grid */
+  compact?: boolean;
 }
 
 export default function ProductCard({
@@ -63,18 +69,35 @@ export default function ProductCard({
   hasVariants = false,
   minVariantPrice,
   colorVariants = [],
-  shortDescription
+  shortDescription,
+  categoryName,
+  categorySlug,
+  compact = false,
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const wishlist = useWishlist();
+  const { getSetting } = useCMS();
   const [activeColor, setActiveColor] = useState<string | null>(null);
 
+  const sym = getSetting('currency_symbol') || '$';
   const displayPrice = hasVariants && minVariantPrice ? minVariantPrice : price;
   const discount = originalPrice ? Math.round((1 - displayPrice / originalPrice) * 100) : 0;
   const isWishlisted = wishlist?.isInWishlist(id) ?? false;
   const MAX_SWATCHES = 4;
+  const mode: ImportProductMode = getImportProductMode(categoryName, categorySlug);
 
-  const formatPrice = (val: number) => `GH\u20B5${val.toFixed(2)}`;
+  const formatPrice = (val: number) => `${sym}${val.toFixed(2)}`;
+
+  const priceLabel = () => {
+    if (mode === 'equipment') return 'Request quote';
+    if (mode === 'vehicles') {
+      return hasVariants && minVariantPrice
+        ? `From ${formatPrice(minVariantPrice)}, deposit`
+        : `${formatPrice(price)}, deposit`;
+    }
+    if (hasVariants && minVariantPrice) return `From ${formatPrice(minVariantPrice)}`;
+    return formatPrice(price);
+  };
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -90,83 +113,91 @@ export default function ProductCard({
   };
 
   return (
-    <div className="group bg-white rounded-xl h-full flex flex-col border border-gray-100 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-300 overflow-hidden relative">
-
-      {/* Product Image Section */}
-      <Link href={`/product/${slug}`} className="relative block aspect-[4/5] overflow-hidden bg-gray-50/50 p-2 sm:p-4">
+    <div className={`group liquid-glass-card liquid-glass-card-interactive flex h-full flex-col overflow-hidden ${compact ? 'max-lg:rounded-xl' : ''}`}>
+      {/* Product Image */}
+      <Link
+        href={`/product/${slug}`}
+        className={`relative block w-full shrink-0 overflow-hidden liquid-glass-well ${
+          compact
+            ? 'aspect-square max-lg:p-2.5 lg:aspect-[4/3] lg:p-6'
+            : 'aspect-[4/3] p-5 sm:p-6'
+        }`}
+      >
         <LazyImage
           src={image}
           alt={name}
-          className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500 ease-out drop-shadow-sm"
+          fit="contain"
+          className="h-full w-full object-contain transition-transform duration-500 ease-out mix-blend-multiply md:group-hover:scale-[1.05]"
+          sizes={compact ? '(max-width: 1024px) 45vw, 25vw' : '(max-width: 640px) 72vw, 260px'}
         />
 
-        {/* Badges */}
-        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1.5 sm:gap-2 z-10">
+        <div className={`absolute left-3 top-3 z-10 flex flex-col gap-1.5 ${compact ? 'max-lg:left-2 max-lg:top-2' : ''}`}>
           {badge && (
-            <span className="bg-[#002B5E] text-white text-[9px] sm:text-[10px] uppercase tracking-wider font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-md shadow-sm">
+            <span className="rounded-full bg-brand-primary/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
               {badge}
             </span>
           )}
           {discount > 0 && (
-            <span className="bg-amber-500 text-[#001733] text-[9px] sm:text-[10px] uppercase tracking-wider font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-md shadow-sm">
+            <span className="rounded-full bg-brand-accent/95 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-sm">
               -{discount}%
             </span>
           )}
         </div>
 
-        {/* Wishlist Button */}
         <button
           type="button"
           onClick={handleWishlistToggle}
-          className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white flex items-center justify-center shadow-md border border-gray-100/50 text-gray-400 hover:text-red-500 hover:scale-110 transition-all duration-200"
+          className={`absolute right-3 top-3 z-20 flex items-center justify-center rounded-full bg-white/80 text-slate-400 shadow-sm backdrop-blur-sm ring-1 ring-slate-200 transition-all duration-300 hover:scale-110 hover:bg-white hover:text-red-500 hover:shadow-md ${
+            compact ? 'h-7 w-7 max-lg:right-2 max-lg:top-2 lg:h-8 lg:w-8' : 'h-8 w-8'
+          }`}
           aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isWishlisted ? 'fill-red-500 text-red-500' : ''}`} />
+          <Heart className={`transition-colors ${compact ? 'h-3.5 w-3.5 lg:h-4 lg:w-4' : 'h-4 w-4'} ${isWishlisted ? 'fill-red-500 text-red-500' : ''}`} />
         </button>
 
-        {/* Out of stock overlay */}
         {!inStock && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10">
-            <span className="bg-gray-900 text-white px-4 py-2 rounded-md justify-center text-xs font-bold uppercase tracking-wider">Out of Stock</span>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+            <span className="liquid-glass-inset rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white">
+              Out of Stock
+            </span>
           </div>
         )}
       </Link>
 
-      {/* Product Info Section */}
-      <div className="flex flex-col flex-grow p-3 sm:p-5 text-left bg-white">
-
-        {/* Rating */}
-        {(rating > 0 || reviewCount > 0) && (
-          <div className="flex items-center gap-1 mb-1.5 sm:mb-2">
-            {[...Array(5)].map((_, i) => (
-              <svg key={i} className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${i < Math.floor(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+      <div className={`flex flex-1 flex-col ${compact ? 'p-3 max-lg:pt-2.5 lg:p-6' : 'p-5 sm:p-6'}`}>
+        <div className={`mb-1.5 flex items-center justify-between gap-2 ${compact ? 'max-lg:mb-1' : ''}`}>
+          {categoryName ? (
+            <span className={`truncate font-bold uppercase tracking-widest text-brand-accent ${compact ? 'max-lg:hidden text-[10px] lg:text-[10px]' : 'text-[9px] sm:text-[10px]'}`}>
+              {categoryName}
+            </span>
+          ) : (
+            <span />
+          )}
+          {(rating > 0 || reviewCount > 0) && (
+            <div className={`flex shrink-0 items-center gap-0.5 ${compact ? 'max-lg:ml-auto' : ''}`}>
+              <svg className="h-3 w-3 text-brand-accent" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
-            ))}
-            {reviewCount > 0 && <span className="text-[10px] sm:text-xs text-gray-500 ml-1">({reviewCount})</span>}
-          </div>
-        )}
+              <span className="text-[10px] font-semibold text-slate-600 sm:text-[11px]">
+                {rating.toFixed(1)}
+                {reviewCount > 0 && <span className="text-slate-400"> ({reviewCount})</span>}
+              </span>
+            </div>
+          )}
+        </div>
 
         <Link href={`/product/${slug}`}>
-          <h3 className="font-bold text-[#002B5E] text-sm sm:text-[15px] leading-snug mb-1.5 sm:mb-2 group-hover:text-amber-500 transition-colors line-clamp-2">
+          <h3 className={`font-heading line-clamp-2 font-bold leading-snug text-brand-primary transition-colors group-hover:text-brand-accent ${compact ? 'text-[12px] max-lg:line-clamp-2 lg:text-[15px]' : 'text-[14px] sm:text-[15px]'}`}>
             {name}
           </h3>
         </Link>
 
-        {/* Short Description */}
-        {shortDescription ? (
-          <p className="hidden sm:block text-[11px] sm:text-xs text-gray-500 line-clamp-2 mb-2 sm:mb-3 leading-relaxed">
-            {shortDescription}
-          </p>
-        ) : (
-          <p className="hidden sm:block text-[11px] sm:text-xs text-gray-500 line-clamp-2 mb-2 sm:mb-3 leading-relaxed">
-            Premium security and reliability for modern requirements.
-          </p>
+        {shortDescription && (
+          <p className="mt-1 hidden line-clamp-1 text-xs text-slate-500 sm:block">{shortDescription}</p>
         )}
 
-        {/* Colors */}
         {colorVariants.length > 0 && (
-          <div className="flex items-center gap-1 sm:gap-1.5 mb-2 sm:mb-3 mt-auto pt-2">
+          <div className={`mt-2 flex items-center gap-1 ${compact ? 'max-lg:hidden' : ''}`}>
             {colorVariants.slice(0, MAX_SWATCHES).map((color) => (
               <button
                 key={color.name}
@@ -175,49 +206,59 @@ export default function ProductCard({
                   e.preventDefault();
                   setActiveColor(activeColor === color.name ? null : color.name);
                 }}
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-gray-200 transition-all ${activeColor === color.name ? 'ring-2 ring-offset-1 ring-amber-400 scale-110' : 'hover:scale-110'}`}
+                className={`h-3.5 w-3.5 rounded-full border border-white shadow-sm transition-all sm:h-4 sm:w-4 ${activeColor === color.name ? 'ring-2 ring-brand-accent ring-offset-1' : 'hover:scale-110'}`}
                 style={{ backgroundColor: color.hex }}
               />
             ))}
             {colorVariants.length > MAX_SWATCHES && (
-              <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium">+{colorVariants.length - MAX_SWATCHES}</span>
+              <span className="ml-0.5 text-[9px] font-bold text-slate-400">
+                +{colorVariants.length - MAX_SWATCHES}
+              </span>
             )}
           </div>
         )}
 
-        {/* Price & Action Row */}
-        <div className="flex items-center justify-between mt-auto border-t border-gray-50 pt-2 sm:pt-3">
-          <div className="flex flex-col">
-            {originalPrice && (
-              <span className="text-[10px] sm:text-[11px] text-gray-400 line-through mb-0.5">{formatPrice(originalPrice)}</span>
+        <div className={`mt-auto flex items-end justify-between gap-2 border-t border-slate-100 ${compact ? 'max-lg:pt-2.5 lg:gap-3 lg:pt-5' : 'gap-3 pt-4 sm:pt-5'}`}>
+          <div className="min-w-0 flex-1">
+            {originalPrice && originalPrice > displayPrice && (
+              <span className={`block font-medium text-slate-400 line-through ${compact ? 'text-[10px] lg:text-xs' : 'text-[11px] sm:text-xs'}`}>
+                {formatPrice(originalPrice)}
+              </span>
             )}
-            <span className="text-[#002B5E] font-extrabold text-sm sm:text-base flex flex-wrap">
-              {hasVariants && minVariantPrice ? `From ${formatPrice(minVariantPrice)}` : formatPrice(price)}
+            <span className={`font-heading block font-black leading-tight text-brand-primary ${compact ? 'text-[13px] line-clamp-2 lg:text-lg' : 'text-base line-clamp-2 sm:text-lg'}`}>
+              {priceLabel()}
             </span>
           </div>
 
-          <div className="flex-shrink-0 ml-1.5 sm:ml-2">
-            {hasVariants ? (
+          <div className="shrink-0">
+            {mode === 'vehicles' || mode === 'equipment' ? (
               <Link
                 href={`/product/${slug}`}
-                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-[#f4f7fa] text-[#002B5E] rounded-full hover:bg-amber-500 hover:text-white transition-colors"
-                aria-label="Select Options"
+                className={`btn-interactive flex items-center justify-center rounded-xl bg-brand-primary text-white shadow-[0_4px_12px_rgba(11,31,58,0.2)] ${compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'}`}
+                aria-label="View details"
               >
-                <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <MessageCircle className={compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]'} />
+              </Link>
+            ) : hasVariants ? (
+              <Link
+                href={`/product/${slug}`}
+                className={`btn-interactive flex items-center justify-center rounded-xl liquid-glass text-brand-primary ${compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'}`}
+                aria-label="Select options"
+              >
+                <ShoppingCart className={compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]'} />
               </Link>
             ) : (
               <button
                 onClick={handleAddToCart}
                 disabled={!inStock}
-                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-[#002B5E] text-white rounded-full hover:bg-amber-500 hover:text-white transition-colors shadow-sm shadow-[#002B5E]/20 disabled:opacity-50 disabled:cursor-not-allowed group-hover:scale-105"
-                aria-label={moq > 1 ? `Add ${moq} to Cart` : 'Add to Cart'}
+                className={`btn-interactive flex items-center justify-center rounded-xl bg-brand-accent text-white shadow-[0_6px_16px_rgba(242,107,29,0.35)] disabled:pointer-events-none disabled:opacity-50 ${compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'}`}
+                aria-label={moq > 1 ? `Add ${moq} to cart` : 'Add to cart'}
               >
-                <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <ShoppingCart className={compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]'} />
               </button>
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

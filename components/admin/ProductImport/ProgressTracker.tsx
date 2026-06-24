@@ -85,7 +85,7 @@ export default function ProgressTracker({ progress, productLog, summary }: Progr
                   className="flex items-center gap-2 py-1 px-2 rounded"
                 >
                   <span className="text-gray-500 shrink-0">Row {entry.row}</span>
-                  <span className="truncate flex-1">{entry.name || '—'}</span>
+                  <span className="truncate flex-1">{entry.name || 'Untitled'}</span>
                   {entry.status === 'success' && (
                     <span className="text-green-600 shrink-0" title="Success">✓</span>
                   )}

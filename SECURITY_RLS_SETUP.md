@@ -1,4 +1,4 @@
-# Supabase Row Level Security (RLS) — SAMBATEK
+# Supabase Row Level Security (RLS)
 
 ## Why This Matters
 
@@ -127,6 +127,6 @@ Both should be empty arrays (or an error), not real data.
 ```
 MOOLRE_CALLBACK_SECRET=<generate a strong random string from your Moolre dashboard>
 SUPABASE_DB_PASSWORD=<your Supabase project DB password>
-NEXT_PUBLIC_APP_URL=https://sambatek.com
-NEXT_PUBLIC_SITE_NAME=Sambatek
+NEXT_PUBLIC_APP_URL=https://example.com
+NEXT_PUBLIC_SITE_NAME=Store
 ```

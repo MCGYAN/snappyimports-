@@ -53,17 +53,17 @@ export default function PWAPrompt() {
           <div className="px-6 pb-8">
             {/* App icon and info */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-40 h-40 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-white flex items-center justify-center p-2">
-                <img src="/logo.png" alt="Sambatek" className="w-full h-full object-contain" />
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-light/90 p-2 shadow-md ring-1 ring-slate-200/80 sm:h-28 sm:w-28">
+                <i className="ri-store-2-line text-4xl text-brand-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900 text-lg truncate">Sambatek</h3>
-                <p className="text-sm text-gray-500">Shop online</p>
+                <h3 className="font-bold text-gray-900 text-lg truncate">Snappy Import Ghana</h3>
+                <p className="text-sm text-gray-500">Imports from China on your home screen</p>
                 <div className="flex items-center gap-1 mt-1">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <i key={star} className="ri-star-fill text-amber-400 text-xs" />
+                    <i key={star} className="ri-star-fill text-brand-accent text-xs" />
                   ))}
-                  <span className="text-xs text-gray-400 ml-1">Shopping</span>
+                  <span className="text-xs text-gray-400 ml-1">Trusted importer</span>
                 </div>
               </div>
             </div>
@@ -71,16 +71,16 @@ export default function PWAPrompt() {
             {/* Features */}
             <div className="grid grid-cols-3 gap-3 mb-6">
               {[
-                { icon: 'ri-flashlight-line', label: 'Lightning Fast' },
-                { icon: 'ri-wifi-off-line', label: 'Works Offline' },
-                { icon: 'ri-notification-3-line', label: 'Get Notified' },
+                { icon: 'ri-ship-line', label: 'Track imports' },
+                { icon: 'ri-wifi-off-line', label: 'Works offline' },
+                { icon: 'ri-notification-3-line', label: 'Shipment alerts' },
               ].map((feature) => (
                 <div
                   key={feature.label}
                   className="bg-gray-50 rounded-xl p-3 text-center"
                 >
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <i className={`${feature.icon} text-blue-700 text-lg`} />
+                  <div className="w-10 h-10 bg-brand-light rounded-full flex items-center justify-center mx-auto mb-2 ring-1 ring-brand-primary/10">
+                    <i className={`${feature.icon} text-brand-primary text-lg`} />
                   </div>
                   <span className="text-xs font-medium text-gray-600">{feature.label}</span>
                 </div>
@@ -90,7 +90,7 @@ export default function PWAPrompt() {
             {/* CTA */}
             <button
               onClick={handleInstall}
-              className="w-full bg-blue-700 hover:bg-blue-800 text-white py-4 px-6 rounded-2xl font-semibold text-base transition-all active:scale-[0.98] shadow-lg shadow-blue-700/20 flex items-center justify-center gap-2"
+              className="btn-primary flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-4 text-base font-semibold text-white hover:bg-brand-accent active:scale-[0.98]"
             >
               <i className="ri-download-2-line text-xl" />
               Add to Home Screen

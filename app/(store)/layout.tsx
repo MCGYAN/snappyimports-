@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import StickyConversionDock from '@/components/snappy/StickyConversionDock';
 import ScrollToTop from '@/components/ScrollToTop';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import NavigationProgress from '@/components/NavigationProgress';
@@ -33,16 +34,17 @@ export default function StoreLayout({
         <NavigationProgress />
       </Suspense>
       <ScrollToTop />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen store-site-bg">
         <PWASplash />
         <PWAInstaller />
         <Header />
         <ErrorBoundary>
-          <div className="pwa-page-enter">
+          <main className="pwa-page-enter pb-[max(5.25rem,env(safe-area-inset-bottom,0px)+4.5rem)] md:pb-0">
             {children}
-          </div>
+          </main>
         </ErrorBoundary>
         <Footer />
+        <StickyConversionDock />
         <MobileBottomNav />
         <SessionTimeoutWarning />
         <PWAPrompt />

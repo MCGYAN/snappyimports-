@@ -35,11 +35,11 @@ export default function NewsletterSection() {
 
           <div className="text-center lg:text-left max-w-md">
             <span className="text-[10px] font-semibold tracking-[0.25em] text-white/50 uppercase">Newsletter</span>
-            <h3 className="text-2xl md:text-3xl font-serif text-white mt-3 mb-4 leading-tight">
-              Stay in the <span className="italic text-white/80">loop</span>
+            <h3 className="text-2xl md:text-3xl text-white mt-3 mb-4 leading-tight">
+              Stay in the loop
             </h3>
             <p className="text-white/60 text-sm leading-relaxed font-light">
-              New arrivals, exclusive offers and updates. No spam — just the good stuff.
+              Get tips and updates that help your next import go smoothly.
             </p>
           </div>
 

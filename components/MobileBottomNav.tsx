@@ -2,17 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCart } from '@/context/CartContext';
-import { useWishlist } from '@/context/WishlistContext';
 import { useState, useEffect } from 'react';
+import { useCMS } from '@/context/CMSContext';
+import { buildTelHref, buildWhatsAppHref } from '@/lib/snappy-import';
+import type { LucideIcon } from 'lucide-react';
+import { Home, LayoutGrid, Phone, User, MessageCircle } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { cartCount } = useCart();
-  const { wishlistCount } = useWishlist();
+  const { getSetting } = useCMS();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const [isStandalone, setIsStandalone] = useState(false);
+
+  const waHref = buildWhatsAppHref(getSetting('contact_whatsapp'));
+  const telHref = buildTelHref(getSetting('contact_phone'));
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
@@ -20,120 +23,91 @@ export default function MobileBottomNav() {
   };
 
   useEffect(() => {
-    // Detect standalone PWA mode
-    const standalone = window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as any).standalone === true;
-    setIsStandalone(standalone);
-  }, []);
-
-  useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      // Hide on scroll down, show on scroll up (only when scrolled far enough)
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false);
-      } else {
-        setIsVisible(true);
-      }
+      if (currentScrollY > lastScrollY && currentScrollY > 100) setIsVisible(false);
+      else setIsVisible(true);
       setLastScrollY(currentScrollY);
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  const navItems = [
-    {
-      href: '/',
-      label: 'Home',
-      iconActive: 'ri-home-5-fill',
-      iconInactive: 'ri-home-5-line',
-    },
-    {
-      href: '/shop',
-      label: 'Shop',
-      iconActive: 'ri-store-3-fill',
-      iconInactive: 'ri-store-3-line',
-    },
-    {
-      href: '/cart',
-      label: 'Cart',
-      iconActive: 'ri-shopping-cart-fill',
-      iconInactive: 'ri-shopping-cart-line',
-      badge: cartCount,
-    },
-    {
-      href: '/wishlist',
-      label: 'Wishlist',
-      iconActive: 'ri-heart-3-fill',
-      iconInactive: 'ri-heart-3-line',
-      badge: wishlistCount,
-    },
-    {
-      href: '/account',
-      label: 'Account',
-      iconActive: 'ri-user-3-fill',
-      iconInactive: 'ri-user-3-line',
-    },
-  ];
-
   return (
     <nav
-      className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ease-out ${
+      className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ease-out md:hidden ${
         isVisible ? 'translate-y-0' : 'translate-y-full'
       }`}
       aria-label="Mobile navigation"
     >
-      {/* Frosted glass background */}
-      <div className="relative">
-        {/* Top shadow gradient */}
-        <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
-        
-        <div className="bg-white/90 backdrop-blur-xl border-t border-gray-200/60 shadow-[0_-4px_30px_rgba(0,0,0,0.08)]">
-          <div className={`grid grid-cols-5 ${isStandalone ? 'pb-6' : 'pb-1'} pt-1`}>
-            {navItems.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex flex-col items-center justify-center py-2 transition-all duration-200 relative group active:scale-90 ${
-                    active ? 'text-blue-700' : 'text-gray-400'
-                  }`}
-                  aria-label={item.label}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  {/* Active indicator pill */}
-                  {active && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-600 rounded-full transition-all duration-300" />
-                  )}
-                  
-                  <div className="relative w-7 h-7 flex items-center justify-center">
-                    <i
-                      className={`${active ? item.iconActive : item.iconInactive} text-[22px] transition-all duration-200 ${
-                        active ? 'scale-110' : 'group-hover:scale-105'
-                      }`}
-                    />
-                    
-                    {/* Badge */}
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm animate-scale-in">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <span className={`text-[10px] font-semibold mt-0.5 transition-all duration-200 ${
-                    active ? 'opacity-100' : 'opacity-70'
-                  }`}>
-                    {item.label}
-                  </span>
-                </Link>
-              );
-            })}
+      <div className="mobile-bottom-bar">
+        <div
+          className="grid grid-cols-5 items-end pt-0.5"
+          style={{ paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom))' }}
+        >
+          <MobileItem href="/" label="Home" active={isActive('/')} icon={Home} />
+          <MobileItem href="/shop" label="Shop" active={isActive('/shop')} icon={LayoutGrid} />
+          <div className="relative flex flex-col items-center justify-end pb-1">
+            {waHref ? (
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="-mt-5 mb-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-[#25D366] text-white active:scale-95"
+                aria-label="Chat on WhatsApp"
+              >
+                <MessageCircle className="h-5 w-5" strokeWidth={2} />
+              </a>
+            ) : (
+              <Link
+                href="/contact"
+                className="-mt-5 mb-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-brand-accent text-white active:scale-95"
+                aria-label="Contact"
+              >
+                <MessageCircle className="h-5 w-5" strokeWidth={2} />
+              </Link>
+            )}
+            <span className="text-[10px] font-medium text-slate-500">WhatsApp</span>
           </div>
+          {telHref ? (
+            <a href={telHref} className="flex flex-col items-center justify-center py-2 text-slate-500 active:opacity-70" aria-label="Call">
+              <Phone className="h-5 w-5" strokeWidth={1.75} />
+              <span className="mt-0.5 text-[10px] font-medium">Call</span>
+            </a>
+          ) : (
+            <Link href="/contact" className="flex flex-col items-center justify-center py-2 text-slate-500">
+              <Phone className="h-5 w-5" strokeWidth={1.75} />
+              <span className="mt-0.5 text-[10px] font-medium">Call</span>
+            </Link>
+          )}
+          <MobileItem href="/account" label="Account" active={isActive('/account')} icon={User} />
         </div>
       </div>
     </nav>
+  );
+}
+
+function MobileItem({
+  href,
+  label,
+  active,
+  icon: Icon,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  icon: LucideIcon;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`relative flex flex-col items-center justify-center border-t-2 py-2 transition-colors ${
+        active ? 'border-brand-accent text-brand-primary' : 'border-transparent text-slate-400'
+      }`}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.75} />
+      <span className="mt-0.5 text-[10px] font-medium">{label}</span>
+    </Link>
   );
 }

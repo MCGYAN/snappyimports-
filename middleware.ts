@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function middleware(request: NextRequest) {
@@ -72,7 +72,7 @@ export async function middleware(request: NextRequest) {
         }
 
         // Verify the token is valid and user has admin/staff role
-        if (supabaseServiceKey) {
+        if (supabaseUrl && supabaseServiceKey) {
             try {
                 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
                     auth: { autoRefreshToken: false, persistSession: false }

@@ -25,9 +25,9 @@ export default function FreeShippingBar({ currentAmount, threshold = 200 }: Free
           </div>
           <span className={`font-semibold ${isQualified ? 'text-white' : 'text-gray-900'}`}>
             {isQualified ? (
-              <>🎉 You've qualified for FREE shipping!</>
+              <>You qualify for free delivery</>
             ) : (
-              <>Add GH₵{remaining.toFixed(2)} more for FREE shipping</>
+              <>Add ${remaining.toFixed(2)} more for free delivery</>
             )}
           </span>
         </div>

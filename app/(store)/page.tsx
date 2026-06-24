@@ -3,362 +3,404 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
+import { motion } from 'framer-motion';
 import ProductCard, { type ColorVariant, getColorHex } from '@/components/ProductCard';
+import CategoryCard from '@/components/CategoryCard';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
-import AnimatedSection from '@/components/AnimatedSection';
+import TrustSection from '@/components/snappy/TrustSection';
+import ProcessSteps from '@/components/snappy/ProcessSteps';
+import ImportJourneyTimeline from '@/components/snappy/ImportJourneyTimeline';
+import ImportCta from '@/components/snappy/ImportCta';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { ShieldCheck, Video, Lock, Wrench, ArrowRight, Shield, Phone, PhoneCall, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { useCMS } from '@/context/CMSContext';
+import { buildWhatsAppHref, buildTelHref } from '@/lib/snappy-import';
+import {
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+
+const FALLBACK_CATEGORIES = [
+  { slug: 'vehicles', name: 'Vehicles' },
+  { slug: 'electronics', name: 'Electronics' },
+  { slug: 'appliances', name: 'Appliances' },
+  { slug: 'equipment', name: 'Equipment' },
+  { slug: 'spare-parts', name: 'Spare Parts' },
+];
 
 export default function Home() {
-  usePageTitle('Sambatek | Security Solutions');
+  usePageTitle('Snappy Import Ghana | Home');
+  const { getSetting } = useCMS();
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [promoIndex, setPromoIndex] = useState(0);
-
-  const heroImages = ['/hero%201.jpg', '/hero%202.jpg', '/hero%203.jpg', '/hero4.jpg'];
-  const promoImages = ['/hero4.jpg', '/hero%201.jpg', '/hero%203.jpg', '/hero%202.jpg'];
-
   const sliderRef = useRef<HTMLDivElement>(null);
   const categorySliderRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+
+  const waHero = buildWhatsAppHref(getSetting('contact_whatsapp'));
+  const telHero = buildTelHref(getSetting('contact_phone'));
+  const waHeroPrefilled = waHero
+    ? `${waHero}${waHero.includes('?') ? '&' : '?'}text=${encodeURIComponent('Hi Snappy Import, I want to import from China.')}`
+    : '';
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*, product_variants(*), product_images(*)')
-          .eq('status', 'active')
-          .eq('featured', true)
-          .order('created_at', { ascending: false })
-          .limit(8);
+        const [productsRes, categoriesRes] = await Promise.all([
+          fetch('/api/storefront/products?featured=true&limit=4'),
+          fetch('/api/storefront/categories'),
+        ]);
 
-        const { data: categoriesData } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('status', 'active');
+        if (productsRes.ok) {
+          const productsData = await productsRes.json();
+          if (Array.isArray(productsData)) {
+            setFeaturedProducts(productsData);
+          }
+        }
 
-        if (productsError) throw productsError;
-        setFeaturedProducts(productsData || []);
-        setCategories(categoriesData || []);
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          if (Array.isArray(categoriesData)) {
+            setCategories(categoriesData);
+          }
+        }
       } catch (error: unknown) {
-        console.error('Error fetching data:', error);
+        if (process.env.NODE_ENV === 'development') {
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn('[Home] Storefront data unavailable:', message);
+        }
       } finally {
         setLoading(false);
       }
     }
-
     fetchData();
   }, []);
 
   const scrollSlider = (direction: 'left' | 'right') => {
     if (sliderRef.current) {
-      const scrollAmount = 350;
       sliderRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
+        left: direction === 'left' ? -350 : 350,
+        behavior: 'smooth',
       });
     }
   };
 
   const scrollCategorySlider = (direction: 'left' | 'right') => {
     if (categorySliderRef.current) {
-      const scrollAmount = 400;
       categorySliderRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
+        left: direction === 'left' ? -400 : 400,
+        behavior: 'smooth',
       });
     }
   };
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % heroImages.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [heroImages.length]);
+  const contactPhone = getSetting('contact_phone') || '';
 
-  useEffect(() => {
-    const promoInterval = setInterval(() => {
-      setPromoIndex((prev) => (prev + 1) % promoImages.length);
-    }, 2000);
-    return () => clearInterval(promoInterval);
-  }, [promoImages.length]);
+  const displayCategories =
+    categories.length > 0
+      ? categories.filter((c: any) => !c.parent_id).slice(0, 8)
+      : FALLBACK_CATEGORIES;
+
+  const showCategoryFallback = !loading && featuredProducts.length === 0;
+
+  const renderProductCard = (product: any) => {
+    const variants = product.product_variants || [];
+    const hasVariants = variants.length > 0;
+    const minVariantPrice = hasVariants
+      ? Math.min(...variants.map((v: any) => v.price || product.price))
+      : undefined;
+    const totalVariantStock = hasVariants
+      ? variants.reduce((sum: number, v: any) => sum + (v.quantity || 0), 0)
+      : 0;
+    const effectiveStock = hasVariants ? totalVariantStock : product.quantity;
+
+    const colorVariants: ColorVariant[] = [];
+    const seenColors = new Set<string>();
+    for (const v of variants) {
+      const colorName = (v as any).option2;
+      if (colorName && !seenColors.has(colorName.toLowerCase().trim())) {
+        const hex = getColorHex(colorName);
+        if (hex) {
+          seenColors.add(colorName.toLowerCase().trim());
+          colorVariants.push({ name: colorName.trim(), hex });
+        }
+      }
+    }
+
+    const imageUrl =
+      product.product_images?.find((img: any) => img.url)?.url ||
+      product.product_images?.[0]?.url ||
+      'https://via.placeholder.com/400x500';
+
+    return (
+      <div key={product.id} className="min-w-0 w-full">
+        <ProductCard
+            id={product.id}
+            slug={product.slug}
+            name={product.name}
+            price={product.price}
+            originalPrice={product.compare_at_price}
+            image={imageUrl}
+            rating={product.rating_avg || 5}
+            reviewCount={product.review_count || 0}
+            badge={product.featured ? 'Featured' : undefined}
+            inStock={effectiveStock > 0}
+            maxStock={effectiveStock || 50}
+            moq={product.moq || 1}
+            hasVariants={hasVariants}
+            minVariantPrice={minVariantPrice}
+            colorVariants={colorVariants}
+            categoryName={product.categories?.name}
+            categorySlug={product.categories?.slug}
+            compact
+        />
+      </div>
+    );
+  };
 
   return (
-    <main className="flex-col items-center justify-between min-h-screen bg-white">
-
-      {/* 1. HERO SECTION */}
-      <section className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden bg-[#001733]">
-        <div className="absolute inset-0 z-0">
-          {heroImages.map((src, idx) => (
-            <div
-              key={src}
-              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${idx === heroIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
-            >
-              <Image
-                src={src}
-                alt={`Secure Home ${idx + 1}`}
-                fill
-                className="object-cover object-center"
-                priority={idx === 0}
-              />
-            </div>
-          ))}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#002B5E] via-[#002B5E]/80 to-black/30"></div>
+    <main className="min-h-screen">
+      {/* Hero: image on mobile and desktop */}
+      <section className="relative isolate w-full overflow-hidden bg-[#0a1628]">
+        {/* Mobile */}
+        <div className="pointer-events-none absolute inset-0 lg:hidden" aria-hidden>
+          <Image
+            src="/hero-mobile.png"
+            alt=""
+            fill
+            priority
+            quality={95}
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628]/92 via-[#0B1F3A]/40 to-[#0B1F3A]/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/55 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-10 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col justify-center">
-          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 font-semibold text-xs sm:text-sm tracking-widest uppercase mb-4 sm:mb-6 border border-amber-500/30 shadow-sm">
-              <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Trusted Security Experts
-            </span>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 leading-[1.15] tracking-tight">
-              Advanced Security Doors <br />
-              <span className="text-amber-400 drop-shadow-sm">
-                Smart Protection Systems
-              </span>
-              <br />
-              <span className="text-white/95">in Ghana</span>
-            </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-blue-50 mb-8 sm:mb-10 font-medium max-w-2xl leading-relaxed opacity-95">
-              Protect your home, office and business with high quality security Doors, CCTV cameras, smart locks and access control system installed by professionals.
+        {/* Desktop landscape */}
+        <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden>
+          <Image
+            src="/hero-desktop.png"
+            alt=""
+            fill
+            priority
+            quality={95}
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/85 via-[#0B1F3A]/45 via-40% to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628]/50 via-transparent to-transparent" />
+        </div>
+
+        <div className="relative aspect-[4/5] w-full max-h-[90svh] sm:aspect-[5/4] lg:aspect-auto lg:h-[56.25vw] lg:max-h-[100svh]">
+          <div className="absolute inset-0 z-10 mx-auto flex w-full max-w-[1440px] flex-col justify-end px-4 pb-20 pt-8 sm:px-6 sm:pb-28 sm:pt-10 md:px-8 lg:justify-center lg:px-10 lg:py-0 lg:pb-28 xl:px-14">
+            <motion.div
+              initial={isMobile ? false : { opacity: 0, y: 20 }}
+              animate={isMobile ? false : { opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="max-w-xl text-white max-md:text-left lg:max-w-2xl"
+            >
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/80 sm:mb-4 sm:text-sm sm:font-medium sm:normal-case sm:tracking-normal">
+              China to Ghana
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12 sm:mb-16 w-full sm:w-auto">
+            <h1 className="font-heading text-[2rem] font-bold leading-[1.12] tracking-[-0.02em] text-white sm:text-[2.75rem] md:text-[3.5rem] lg:text-[4rem] lg:leading-[1.05]">
+              Import what you need without the stress.
+            </h1>
+
+            <p className="mt-4 max-w-lg text-[15px] font-medium leading-relaxed text-white/90 sm:mt-6 sm:text-lg md:text-xl">
+              We handle the hard part. You stay in the loop from start to finish.
+            </p>
+
+            <motion.div
+              initial={isMobile ? false : { opacity: 0, y: 10 }}
+              animate={isMobile ? false : { opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.45 }}
+              className="mt-6 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:gap-4"
+            >
               <Link
                 href="/shop"
-                className="group flex items-center justify-center gap-2 bg-amber-500 text-[#002B5E] px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-amber-400 transition-all shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 w-full sm:w-auto"
+                className="btn-interactive glass-panel-dark inline-flex min-h-[50px] items-center justify-center rounded-2xl px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-white/20"
               >
-                Start Shopping <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                Browse imports
               </Link>
-              <Link
-                href="/contact"
-                className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white border-2 border-white/20 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-white/20 hover:border-white/40 transition-all w-full sm:w-auto"
-              >
-                Contact Us
-              </Link>
-            </div>
+              {waHeroPrefilled ? (
+                <a
+                  href={waHeroPrefilled}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-interactive inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-brand-accent px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-transparent shadow-[0_8px_20px_rgba(242,107,29,0.3)]"
+                >
+                  Talk to us on WhatsApp
+                </a>
+              ) : (
+                <Link
+                  href="/contact"
+                  className="btn-interactive inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-brand-accent px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-transparent shadow-[0_8px_20px_rgba(242,107,29,0.3)]"
+                >
+                  Talk to us on WhatsApp
+                </Link>
+              )}
+            </motion.div>
 
-            {/* Trust Badges */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-white/10">
-              {[
-                { icon: <ShieldCheck />, text: "Secure Products" },
-                { icon: <Wrench />, text: "Professional Installation" },
-                { icon: <PhoneCall />, text: "Reliable Support" }
-              ].map((badge, idx) => (
-                <div key={idx} className="flex items-center gap-3 text-white/90">
-                  <div className="text-amber-400 bg-white/5 p-2 rounded-lg backdrop-blur-sm border border-white/10">
-                    {badge.icon}
-                  </div>
-                  <span className="font-semibold">{badge.text}</span>
-                </div>
+            <p className="mt-5 hidden text-sm leading-relaxed text-white/90 sm:mt-8 sm:block">
+              Suppliers you can trust. China to Tema port. Updates you can count on.
+            </p>
+          </motion.div>
+          </div>
+
+          {/* Category strip */}
+          <motion.div
+            initial={isMobile ? false : { opacity: 0, y: 12 }}
+            animate={isMobile ? false : { opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.5 }}
+            className="absolute inset-x-0 bottom-0 z-10 glass-panel-dark border-b-0 border-x-0 rounded-none lg:rounded-t-3xl mx-auto lg:max-w-[1440px] lg:bottom-4 lg:inset-x-10 xl:inset-x-14 lg:border lg:border-white/15"
+          >
+            <div className="flex items-center gap-6 overflow-x-auto px-6 py-4 scrollbar-hide sm:gap-10 sm:px-8 sm:py-5 md:px-10 lg:justify-center">
+              {['Vehicles', 'Electronics', 'Appliances', 'Equipment', 'Spare parts'].map((label) => (
+                <span key={label} className="shrink-0 whitespace-nowrap text-sm font-semibold tracking-wide text-white/90 sm:text-[15px]">
+                  {label}
+                </span>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* 2. CATEGORY SHOWCASE */}
-      <section className="py-16 md:py-24 bg-gray-50">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+      {/* Categories */}
+      <section className="store-section relative overflow-hidden border-b border-white/30 bg-gradient-to-b from-white/45 via-[#eef2f8]/55 to-[#f8fafc]/35">
+        <div className="pointer-events-none absolute -left-32 top-0 h-64 w-64 rounded-full bg-brand-accent/5 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-48 w-48 rounded-full bg-brand-primary/5 blur-3xl" aria-hidden />
+        <div className="store-container relative">
+          <div className="mb-5 flex flex-col items-start justify-between gap-4 md:mb-7 md:flex-row md:items-end">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#002B5E] mb-3">Browse Categories</h2>
-              <p className="text-gray-600 text-lg font-medium">Find the perfect security solution for your needs.</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-brand-accent">Browse</p>
+              <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+                Shop by Category
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 md:text-base">
+                Pick a category. We help you import it.
+              </p>
             </div>
-            <div className="flex items-center gap-6">
-              <Link href="/categories" className="hidden md:flex text-[#002B5E] font-bold items-center hover:text-amber-500 transition-colors gap-1">
-                View All <ArrowRight className="w-5 h-5" />
-              </Link>
-              <div className="hidden md:flex gap-3">
-                <button onClick={() => scrollCategorySlider('left')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button onClick={() => scrollCategorySlider('right')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+            <div className="hidden gap-3 md:flex lg:hidden">
+              <button
+                type="button"
+                onClick={() => scrollCategorySlider('left')}
+                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+                aria-label="Scroll categories left"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollCategorySlider('right')}
+                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
             </div>
           </div>
-
-          {/* Horizontal Slider */}
           <div
             ref={categorySliderRef}
-            className="flex overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide gap-6 md:gap-8 pt-4"
-            style={{ scrollBehavior: 'smooth' }}
+            className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 pt-1 scrollbar-hide sm:mx-0 sm:gap-4 sm:px-0 lg:grid lg:snap-none lg:grid-cols-4 lg:gap-4 lg:overflow-visible lg:pb-0 xl:gap-5"
           >
-            {categories.map((cat, idx) => (
-              <Link
-                href={`/shop?category=${cat.slug}`}
-                key={cat.id}
-                className="group relative flex-none w-[280px] sm:w-[320px] md:w-[400px] h-[320px] rounded-2xl overflow-hidden snap-start shadow-md hover:shadow-xl transition-shadow"
-              >
-                <Image src={cat.image_url || '/hero%202.jpg'} alt={cat.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#001733]/90 via-[#001733]/40 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <p className="text-amber-400 text-sm font-bold tracking-wider uppercase mb-1">Explore</p>
-                  <h3 className="text-white text-2xl font-bold group-hover:text-amber-400 transition-colors">{cat.name}</h3>
-                </div>
-              </Link>
+            {displayCategories.map((cat: any, idx: number) => (
+              <CategoryCard
+                key={cat.id || cat.slug}
+                slug={cat.slug}
+                name={cat.name}
+                image={cat.image_url || cat.image}
+                index={idx}
+              />
             ))}
+          </div>
+          <div className="mt-5 md:mt-8 md:hidden">
+            <Link href="/categories" className="text-sm font-semibold text-brand-primary active:text-brand-accent">
+              View all categories
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* 3. FEATURED PRODUCTS SLIDER */}
-      <section className="py-16 md:py-24 bg-white border-y border-gray-100">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
-            <div className="text-left w-full md:w-auto">
-              <span className="text-sm font-bold tracking-widest text-amber-500 uppercase mb-2 block">Top Rated</span>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#002B5E] mb-2">Featured Products</h2>
+      {/* Featured */}
+      <section className="store-section relative overflow-hidden border-b border-white/30 bg-gradient-to-b from-[#f8fafc]/50 via-[#f1f5f9]/55 to-[#eef2f7]/40">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-white/60 blur-3xl" aria-hidden />
+        <div className="store-container relative">
+          <div className="mb-5 flex flex-col justify-between gap-4 md:mb-7 md:flex-row md:items-end">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-brand-accent">Discover</p>
+              <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem] lg:text-[2.5rem]">
+                {showCategoryFallback ? 'Popular imports' : 'Featured products'}
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 md:mt-3 md:text-base">
+                {showCategoryFallback
+                  ? 'Pick a category and start browsing.'
+                  : 'Hand picked for you. See the price up front. Or ask for a quote.'}
+              </p>
             </div>
-            <div className="hidden md:flex gap-3">
-              <button onClick={() => scrollSlider('left')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
-                <ChevronLeft className="w-5 h-5" />
+            {showCategoryFallback && (
+            <div className="hidden gap-3 md:flex lg:hidden">
+              <button
+                type="button"
+                onClick={() => scrollSlider('left')}
+                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+              >
+                <ChevronLeft className="h-6 w-6" />
               </button>
-              <button onClick={() => scrollSlider('right')} className="p-3 rounded-full border border-gray-200 text-[#002B5E] hover:bg-[#002B5E] hover:text-white transition-colors">
-                <ChevronRight className="w-5 h-5" />
+              <button
+                type="button"
+                onClick={() => scrollSlider('right')}
+                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+              >
+                <ChevronRight className="h-6 w-6" />
               </button>
             </div>
+            )}
           </div>
 
           {loading ? (
-            <div className="flex gap-6 overflow-hidden">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-5 xl:gap-6">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="min-w-[280px] w-[280px]"><ProductCardSkeleton /></div>
+                <div key={i} className="min-w-0">
+                  <ProductCardSkeleton />
+                </div>
+              ))}
+            </div>
+          ) : showCategoryFallback ? (
+            <div
+              ref={sliderRef}
+              className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 pt-1 scrollbar-hide sm:mx-0 sm:gap-4 sm:px-0 lg:grid lg:snap-none lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:pb-0 xl:gap-6"
+            >
+              {displayCategories.slice(0, 6).map((cat: any, idx: number) => (
+                <CategoryCard
+                  key={cat.id || cat.slug}
+                  slug={cat.slug}
+                  name={cat.name}
+                  image={cat.image_url || cat.image}
+                  index={idx}
+                />
               ))}
             </div>
           ) : (
-            <div
-              ref={sliderRef}
-              className="flex overflow-x-auto gap-6 sm:gap-8 pb-10 snap-x snap-mandatory scrollbar-hide pt-4"
-              style={{ scrollBehavior: 'smooth' }}
-            >
-              {featuredProducts.map((product) => {
-                const variants = product.product_variants || [];
-                const hasVariants = variants.length > 0;
-                const minVariantPrice = hasVariants ? Math.min(...variants.map((v: any) => v.price || product.price)) : undefined;
-                const totalVariantStock = hasVariants ? variants.reduce((sum: number, v: any) => sum + (v.quantity || 0), 0) : 0;
-                const effectiveStock = hasVariants ? totalVariantStock : product.quantity;
-
-                const colorVariants: ColorVariant[] = [];
-                const seenColors = new Set<string>();
-                for (const v of variants) {
-                  const colorName = (v as any).option2;
-                  if (colorName && !seenColors.has(colorName.toLowerCase().trim())) {
-                    const hex = getColorHex(colorName);
-                    if (hex) {
-                      seenColors.add(colorName.toLowerCase().trim());
-                      colorVariants.push({ name: colorName.trim(), hex });
-                    }
-                  }
-                }
-
-                return (
-                  <div key={product.id} className="min-w-[280px] w-[280px] sm:min-w-[320px] sm:w-[320px] snap-start">
-                    <ProductCard
-                      id={product.id}
-                      slug={product.slug}
-                      name={product.name}
-                      price={product.price}
-                      originalPrice={product.compare_at_price}
-                      image={product.product_images?.[0]?.url || 'https://via.placeholder.com/400x500'}
-                      rating={product.rating_avg || 5}
-                      reviewCount={product.review_count || 0}
-                      badge={product.featured ? 'Featured' : undefined}
-                      inStock={effectiveStock > 0}
-                      maxStock={effectiveStock || 50}
-                      moq={product.moq || 1}
-                      hasVariants={hasVariants}
-                      minVariantPrice={minVariantPrice}
-                      colorVariants={colorVariants}
-                    />
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-5 xl:gap-6">
+              {featuredProducts.map(renderProductCard)}
             </div>
           )}
         </div>
       </section>
 
-      {/* 4. PROMO SECTION 1 */}
-      <section className="relative py-24 bg-[#001733] overflow-hidden">
-        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full text-white fill-current">
-            <polygon points="100,0 100,100 0,100" />
-          </svg>
-        </div>
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1 text-white z-10 text-center md:text-left">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight">
-              Protect What <br /><span className="text-amber-400 drop-shadow-md">Matters Most</span>
-            </h2>
-            <p className="text-base sm:text-lg text-blue-50 font-medium mb-6 sm:mb-8 max-w-xl mx-auto md:mx-0 leading-relaxed text-opacity-90">
-              Reliable Security Solutions for Homes and Businesses. From high-grade steel doors to intelligent surveillance systems, we provide the ultimate peace of mind.
-            </p>
-            <ul className="space-y-3 sm:space-y-4 mb-8 sm:mb-10 text-left w-max mx-auto md:mx-0">
-              {['24/7 Protection Capabilities', 'Weather-resistant Materials', 'Smart Home Integration', 'Vandal-proof Designs'].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-blue-50 font-medium">
-                  <CheckCircle2 className="text-amber-400 w-6 h-6" /> {item}
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-center md:justify-start">
-              <Link href="/shop" className="inline-flex items-center justify-center gap-2 bg-amber-500 text-[#002B5E] px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-amber-400 transition-colors shadow-xl shadow-amber-500/20 w-full sm:w-auto">
-                Explore Solutions
-              </Link>
-            </div>
-          </div>
-          <div className="flex-1 w-full relative">
-            <div className="aspect-square w-full max-w-lg mx-auto relative rounded-3xl overflow-hidden shadow-2xl shadow-black/50 border-8 border-[#002B5E]">
-              {promoImages.map((src, idx) => (
-                <div
-                  key={src}
-                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === promoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-                >
-                  <Image
-                    src={src}
-                    fill
-                    alt={`Security Control ${idx + 1}`}
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <TrustSection />
+      <ProcessSteps />
+      <ImportJourneyTimeline />
 
-
-      {/* 5. FOOTER CTA */}
-      <section className="py-16 bg-white border-b border-gray-100">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-[#0b1c3c] rounded-3xl p-8 sm:p-12 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl shrink-0 pointer-events-none"></div>
-
-            <div className="relative z-10 text-center md:text-left">
-              <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Need Security Advice?</h3>
-              <p className="text-blue-200 text-lg font-medium max-w-xl">
-                Not sure which products fit your building? Our experts are ready to guide you.
-              </p>
-            </div>
-
-            <div className="relative z-10 flex flex-col sm:flex-row gap-4 shrink-0">
-              <a href="tel:0593610190" className="flex items-center justify-center gap-3 bg-white text-[#002B5E] px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg">
-                <PhoneCall className="w-6 h-6" /> Call 059 361 0190
-              </a>
-              <a href="https://wa.me/233593517270" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-3 bg-green-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-500 transition-colors shadow-lg">
-                WhatsApp Us
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <ImportCta
+        whatsAppHref={waHeroPrefilled || undefined}
+        telHref={telHero || undefined}
+        contactPhone={contactPhone || undefined}
+      />
     </main>
   );
 }
+
+
