@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useCMS } from '@/context/CMSContext';
-import { buildTelHref, buildWhatsAppHref } from '@/lib/snappy-import';
+import {
+  buildTelHref,
+  buildWhatsAppHref,
+  resolveContactPhone,
+  resolveContactWhatsApp,
+} from '@/lib/snappy-import';
 import type { LucideIcon } from 'lucide-react';
 import { Home, LayoutGrid, Phone, User, MessageCircle } from 'lucide-react';
 
@@ -14,8 +19,8 @@ export default function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  const waHref = buildWhatsAppHref(getSetting('contact_whatsapp'));
-  const telHref = buildTelHref(getSetting('contact_phone'));
+  const waHref = buildWhatsAppHref(resolveContactWhatsApp(getSetting('contact_whatsapp')));
+  const telHref = buildTelHref(resolveContactPhone(getSetting('contact_phone')));
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
@@ -48,38 +53,25 @@ export default function MobileBottomNav() {
           <MobileItem href="/" label="Home" active={isActive('/')} icon={Home} />
           <MobileItem href="/shop" label="Shop" active={isActive('/shop')} icon={LayoutGrid} />
           <div className="relative flex flex-col items-center justify-end pb-1">
-            {waHref ? (
-              <a
-                href={waHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="-mt-5 mb-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-[#25D366] text-white active:scale-95"
-                aria-label="Chat on WhatsApp"
-              >
-                <MessageCircle className="h-5 w-5" strokeWidth={2} />
-              </a>
-            ) : (
-              <Link
-                href="/contact"
-                className="-mt-5 mb-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-brand-accent text-white active:scale-95"
-                aria-label="Contact"
-              >
-                <MessageCircle className="h-5 w-5" strokeWidth={2} />
-              </Link>
-            )}
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="-mt-5 mb-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-brand-accent text-white shadow-md shadow-brand-accent/30 active:scale-95"
+              aria-label="Chat on WhatsApp"
+            >
+              <MessageCircle className="h-5 w-5" strokeWidth={2} />
+            </a>
             <span className="text-[10px] font-medium text-slate-500">WhatsApp</span>
           </div>
-          {telHref ? (
-            <a href={telHref} className="flex flex-col items-center justify-center py-2 text-slate-500 active:opacity-70" aria-label="Call">
-              <Phone className="h-5 w-5" strokeWidth={1.75} />
-              <span className="mt-0.5 text-[10px] font-medium">Call</span>
-            </a>
-          ) : (
-            <Link href="/contact" className="flex flex-col items-center justify-center py-2 text-slate-500">
-              <Phone className="h-5 w-5" strokeWidth={1.75} />
-              <span className="mt-0.5 text-[10px] font-medium">Call</span>
-            </Link>
-          )}
+          <a
+            href={telHref}
+            className="flex flex-col items-center justify-center py-2 text-slate-500 active:opacity-70"
+            aria-label="Call"
+          >
+            <Phone className="h-5 w-5" strokeWidth={1.75} />
+            <span className="mt-0.5 text-[10px] font-medium">Call</span>
+          </a>
           <MobileItem href="/account" label="Account" active={isActive('/account')} icon={User} />
         </div>
       </div>

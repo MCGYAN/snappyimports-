@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_LOGO_PATH } from '@/lib/brand';
+import { DEFAULT_CONTACT_PHONE, DEFAULT_CONTACT_WHATSAPP } from '@/lib/snappy-import';
 
 interface SiteSettings {
     site_name: string;
@@ -72,8 +73,8 @@ const defaultSettings: SiteSettings = {
     site_tagline: 'Importing is no longer stressful. We handle the hard part so you do not have to.',
     site_logo: SITE_LOGO_PATH,
     contact_email: 'contact@example.com',
-    contact_phone: '',
-    contact_whatsapp: '',
+    contact_phone: DEFAULT_CONTACT_PHONE,
+    contact_whatsapp: DEFAULT_CONTACT_WHATSAPP,
     contact_address: '',
     social_facebook: '',
     social_instagram: '',
@@ -104,8 +105,8 @@ export function CMSProvider({ children }: { children: ReactNode }) {
         site_tagline: 'Importing is no longer stressful. We handle the hard part so you do not have to.',
         site_logo: SITE_LOGO_PATH,
         contact_email: 'contact@example.com',
-        contact_phone: '',
-        contact_whatsapp: '',
+        contact_phone: DEFAULT_CONTACT_PHONE,
+        contact_whatsapp: DEFAULT_CONTACT_WHATSAPP,
         contact_address: '',
         social_facebook: '',
         social_instagram: '',

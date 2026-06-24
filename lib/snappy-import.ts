@@ -21,6 +21,27 @@ export function getDefaultPhoneCountryCode(): string {
   return (process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '233').replace(/\D/g, '') || '233';
 }
 
+/** Store defaults when CMS / env contact fields are unset. */
+export const DEFAULT_CONTACT_PHONE = '0593610190';
+export const DEFAULT_CONTACT_WHATSAPP = '0593517270';
+
+export function resolveContactPhone(cmsValue?: string | null): string {
+  return (
+    cmsValue?.trim() ||
+    process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim() ||
+    DEFAULT_CONTACT_PHONE
+  );
+}
+
+export function resolveContactWhatsApp(cmsValue?: string | null): string {
+  return (
+    cmsValue?.trim() ||
+    process.env.NEXT_PUBLIC_CONTACT_WHATSAPP?.trim() ||
+    process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim() ||
+    DEFAULT_CONTACT_WHATSAPP
+  );
+}
+
 /** Build WhatsApp link from raw number in CMS (supports local leading 0). */
 export function buildWhatsAppHref(raw: string | undefined | null): string {
   if (!raw?.trim()) return '';
@@ -37,6 +58,8 @@ export function buildTelHref(raw: string | undefined | null): string {
   const t = raw.replace(/\s/g, '');
   if (t.startsWith('+')) return `tel:${t}`;
   if (t.startsWith('0')) return `tel:+${cc}${t.slice(1)}`;
+  const digits = t.replace(/\D/g, '');
+  if (digits.length >= 10) return `tel:+${digits}`;
   return `tel:${t}`;
 }
 
