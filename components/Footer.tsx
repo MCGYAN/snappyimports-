@@ -33,7 +33,6 @@ export default function Footer() {
 
   const siteName = getSetting('site_name') || 'Store';
   const siteTagline = getSetting('site_tagline') || 'Importing is no longer stressful. We handle the hard part so you do not have to.';
-  const contactPhone = getSetting('contact_phone') || '';
   const contactAddress = getSetting('contact_address') || '';
   const socialFacebook = getSetting('social_facebook') || '';
   const socialInstagram = getSetting('social_instagram') || '';
@@ -60,16 +59,9 @@ export default function Footer() {
               {siteTagline}
             </p>
 
-            {(contactPhone || contactAddress) && (
-              <div className="mt-3 space-y-0.5 text-xs lg:hidden">
-                {contactPhone ? (
-                  <a href={`tel:${contactPhone}`} className="block font-semibold text-white active:text-brand-accent">
-                    {contactPhone}
-                  </a>
-                ) : null}
-                {contactAddress ? <p className="line-clamp-2 text-white/55">{contactAddress}</p> : null}
-              </div>
-            )}
+            {contactAddress ? (
+              <p className="mt-3 line-clamp-2 text-xs text-white/55 lg:hidden">{contactAddress}</p>
+            ) : null}
           </div>
 
           {socials.length > 0 ? (
@@ -92,18 +84,11 @@ export default function Footer() {
 
         {/* Links — 2 columns on mobile, 4 on desktop */}
         <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-5 sm:gap-x-8 lg:mt-12 lg:grid-cols-4 lg:gap-12">
-          <div className="hidden lg:block">
-            {(contactAddress || contactPhone) && (
-              <div className="space-y-1">
-                {contactAddress ? <p className="text-sm text-white/60">{contactAddress}</p> : null}
-                {contactPhone ? (
-                  <a href={`tel:${contactPhone}`} className="block text-sm font-bold text-white/90 hover:text-brand-accent">
-                    {contactPhone}
-                  </a>
-                ) : null}
-              </div>
-            )}
-          </div>
+          {contactAddress ? (
+            <div className="hidden lg:block">
+              <p className="text-sm text-white/60">{contactAddress}</p>
+            </div>
+          ) : null}
 
           <div>
             <h4 className={mobileHeadingClass}>Browse</h4>

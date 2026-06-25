@@ -7,7 +7,7 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCMS } from '@/context/CMSContext';
 import { getImportProductMode, type ImportProductMode } from '@/lib/snappy-import';
-import { ShoppingCart, Heart, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Heart } from 'lucide-react';
 
 const COLOR_MAP: Record<string, string> = {
   black: '#000000', white: '#FFFFFF', red: '#EF4444', blue: '#3B82F6',
@@ -111,6 +111,13 @@ export default function ProductCard({
     e.stopPropagation();
     addToCart({ id, name, price, image, quantity: moq, slug, maxStock, moq });
   };
+
+  const cartButtonClass = `btn-interactive flex items-center justify-center rounded-xl bg-brand-accent text-white shadow-[0_6px_16px_rgba(242,107,29,0.35)] disabled:pointer-events-none disabled:opacity-50 ${
+    compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'
+  }`;
+  const cartIconClass = compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]';
+  const openProductForOptions =
+    mode === 'vehicles' || mode === 'equipment' || hasVariants;
 
   return (
     <div className={`group liquid-glass-card liquid-glass-card-interactive flex h-full flex-col overflow-hidden ${compact ? 'max-lg:rounded-xl' : ''}`}>
@@ -231,30 +238,22 @@ export default function ProductCard({
           </div>
 
           <div className="shrink-0">
-            {mode === 'vehicles' || mode === 'equipment' ? (
+            {openProductForOptions ? (
               <Link
                 href={`/product/${slug}`}
-                className={`btn-interactive flex items-center justify-center rounded-xl bg-brand-primary text-white shadow-[0_4px_12px_rgba(11,31,58,0.2)] ${compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'}`}
-                aria-label="View details"
+                className={cartButtonClass}
+                aria-label="View product options"
               >
-                <MessageCircle className={compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]'} />
-              </Link>
-            ) : hasVariants ? (
-              <Link
-                href={`/product/${slug}`}
-                className={`btn-interactive flex items-center justify-center rounded-xl liquid-glass text-brand-primary ${compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'}`}
-                aria-label="Select options"
-              >
-                <ShoppingCart className={compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]'} />
+                <ShoppingCart className={cartIconClass} />
               </Link>
             ) : (
               <button
                 onClick={handleAddToCart}
                 disabled={!inStock}
-                className={`btn-interactive flex items-center justify-center rounded-xl bg-brand-accent text-white shadow-[0_6px_16px_rgba(242,107,29,0.35)] disabled:pointer-events-none disabled:opacity-50 ${compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'}`}
+                className={cartButtonClass}
                 aria-label={moq > 1 ? `Add ${moq} to cart` : 'Add to cart'}
               >
-                <ShoppingCart className={compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]'} />
+                <ShoppingCart className={cartIconClass} />
               </button>
             )}
           </div>

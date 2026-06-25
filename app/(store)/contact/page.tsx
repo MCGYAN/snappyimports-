@@ -159,17 +159,6 @@ export default function ContactPage() {
           },
         ]
       : []),
-    ...(addressParts.length
-      ? [
-          {
-            icon: 'ri-map-pin-line',
-            title: 'Visit Us',
-            value: locationDescription,
-            link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressParts.join(', '))}`,
-            description: locationDescription,
-          },
-        ]
-      : []),
     ...(socialFacebook
       ? [
           {
@@ -405,28 +394,6 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <div className="bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Visit us</h2>
-            <p className="text-gray-600 mb-6 leading-relaxed">
-              Prefer to talk in person? Come see us. We help you pick the right import.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4 text-gray-600">
-              {locationDescription ? (
-                <div className="flex items-center gap-2">
-                  <i className="ri-map-pin-2-line text-brand-primary"></i>
-                  <span>{locationDescription}</span>
-                </div>
-              ) : null}
-              <div className="flex items-center gap-2">
-                <i className="ri-time-line text-brand-primary"></i>
-                <span>Mon-Sat: 9am-6pm</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

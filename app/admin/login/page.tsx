@@ -66,9 +66,10 @@ export default function AdminLoginPage() {
             <Image
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt="Snappy Imports Global"
-              width={575}
-              height={292}
+              width={1024}
+              height={517}
               priority
+              unoptimized
               className="mx-auto h-auto w-[min(280px,85vw)] object-contain"
             />
           </Link>

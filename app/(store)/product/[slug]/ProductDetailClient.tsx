@@ -12,8 +12,26 @@ import { notFound } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useCMS } from '@/context/CMSContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { buildTelHref, buildWhatsAppHref, getImportProductMode } from '@/lib/snappy-import';
-import { ChevronRight, Heart, Star, Minus, Plus, ShoppingCart, ShieldCheck, RefreshCcw, Info, CheckCircle, AlertTriangle, XCircle, Store, Barcode, CheckCircle2, MessageCircle, Phone } from 'lucide-react';
+import { buildTelHref, buildWhatsAppHref, getImportProductMode, resolveContactWhatsApp } from '@/lib/snappy-import';
+import {
+  buildAvailabilityWhatsAppText,
+  buildProductInquiryWhatsAppText,
+  getProductShareUrl,
+  parseProductCommerce,
+  resolveDirectPayment,
+} from '@/lib/product-commerce';
+import {
+  getProductColorOptions,
+  getSizeOptionsForColor,
+  getVariantColor,
+  getVariantSizeLabel,
+  inferVariantSizeName,
+  isColorOnlyCatalog,
+  variantsForColor,
+} from '@/lib/product-variants';
+import SocialShareButtons from '@/components/SocialShareButtons';
+import ImportDetailsCard from '@/components/snappy/ImportDetailsCard';
+import { ChevronRight, Heart, Star, Minus, Plus, ShoppingCart, ShieldCheck, RefreshCcw, Info, CheckCircle, AlertTriangle, XCircle, Store, Barcode, CheckCircle2, MessageCircle } from 'lucide-react';
 
 // Map common color names to hex values for the swatch preview
 function colorNameToHex(name: string): string {
@@ -109,14 +127,15 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           reviewCount: 0,
           stockCount: productData.quantity,
           moq: productData.moq || 1,
-          colors: [...new Set(rawVariants.map((v: any) => v.color).filter(Boolean))],
+          colors: getProductColorOptions(rawVariants),
           colorHexMap,
           variants: rawVariants,
           sizes: rawVariants.map((v: any) => v.name) || [],
           features: ['Premium Quality', 'Authentic Design'],
           featured: ['Premium Quality', 'Authentic Design'],
           care: 'Handle with care.',
-          preorderShipping: productData.metadata?.preorder_shipping || null
+          preorderShipping: productData.metadata?.preorder_shipping || null,
+          commerce: parseProductCommerce(productData.metadata),
         };
 
         // Ensure at least one image/placeholder
@@ -188,9 +207,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   }, [slug]);
 
   const hasVariants = product?.variants?.length > 0;
-  const hasColors = product?.colors?.length > 0;
-  const needsVariantSelection = hasVariants && !selectedVariant;
+  const hasColors = (product?.colors?.length ?? 0) > 0;
+  const colorOnlyCatalog = hasVariants && isColorOnlyCatalog(product?.variants || []);
   const needsColorSelection = hasColors && !selectedColor;
+  const needsVariantSelection =
+    hasVariants &&
+    !selectedVariant &&
+    (!hasColors || (Boolean(selectedColor) && !colorOnlyCatalog && getSizeOptionsForColor(product.variants, selectedColor, product.colors || []).length > 0));
 
   // Determine the active price: variant price if selected, otherwise base price
   const activePrice = selectedVariant?.price ?? product?.price ?? 0;
@@ -277,12 +300,29 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   ]);
 
   const importMode = getImportProductMode(product.category, product.categorySlug);
-  const waBase = buildWhatsAppHref(getSetting('contact_whatsapp'));
+  const shareUrl = getProductShareUrl(product.slug || slug);
+  const waBase = buildWhatsAppHref(resolveContactWhatsApp(getSetting('contact_whatsapp')));
   const waInquiry = waBase
-    ? `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Hi, I'm interested in: ${product.name}`)}`
+    ? `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(buildProductInquiryWhatsAppText(product.name, shareUrl))}`
+    : '';
+  const waAvailability = waBase
+    ? `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(buildAvailabilityWhatsAppText(product.name, shareUrl))}`
     : '';
   const telDirect = buildTelHref(getSetting('contact_phone'));
-  const allowOnlineCheckout = importMode === 'gadgets' || importMode === 'default';
+  const allowOnlineCheckout = resolveDirectPayment(product.commerce?.directPayment ?? null, importMode);
+  const showImportDetails = Boolean(product.commerce?.importType || product.commerce?.importNotes);
+  const variantsForSelectedColor = selectedColor
+    ? variantsForColor(product.variants, selectedColor)
+    : [];
+  const sizeOptionsForColor = selectedColor
+    ? getSizeOptionsForColor(product.variants, selectedColor, product.colors || [])
+    : [];
+  const showSizeSelector =
+    hasColors &&
+    Boolean(selectedColor) &&
+    !colorOnlyCatalog &&
+    sizeOptionsForColor.length > 0;
+  const variantsWithoutColors = hasVariants && !hasColors ? product.variants : [];
 
   return (
     <>
@@ -354,17 +394,26 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               </div>
 
               <div>
-                <div className="flex items-start justify-between mb-4">
-                  <div>
+                <div className="flex items-start justify-between mb-4 gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm text-brand-primary font-semibold mb-2">{product.category}</p>
                     <h1 className="text-3xl lg:text-4xl font-extrabold text-brand-primary mb-3">{product.name}</h1>
                   </div>
-                  <button
-                    onClick={() => setIsWishlisted(!isWishlisted)}
-                    className="w-12 h-12 flex items-center justify-center border border-gray-200 hover:border-brand-accent rounded-full transition-all hover:shadow-md cursor-pointer"
-                  >
-                    <Heart className={`w-6 h-6 transition-colors ${isWishlisted ? 'fill-brand-accent text-brand-accent' : 'text-gray-700'}`} />
-                  </button>
+                  <div className="flex shrink-0 items-start gap-2">
+                    <SocialShareButtons
+                      url={shareUrl}
+                      title={product.name}
+                      description={product.description}
+                      image={product.images[0]}
+                    />
+                    <button
+                      onClick={() => setIsWishlisted(!isWishlisted)}
+                      className="w-12 h-12 flex items-center justify-center border border-gray-200 hover:border-brand-accent rounded-full transition-all hover:shadow-md cursor-pointer"
+                      aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    >
+                      <Heart className={`w-6 h-6 transition-colors ${isWishlisted ? 'fill-brand-accent text-brand-accent' : 'text-gray-700'}`} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center mb-6">
@@ -381,18 +430,31 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
                 <div className="flex items-baseline space-x-4 mb-6">
                   {hasVariants && !selectedVariant ? (
-                    <span className="text-3xl lg:text-4xl font-bold text-gray-900">
-                      From ${minVariantPrice.toFixed(2)}
-                    </span>
+                    <div>
+                      <span className="text-3xl lg:text-4xl font-bold text-gray-900">
+                        From ${minVariantPrice.toFixed(2)}
+                      </span>
+                      <p className="text-sm text-gray-500 mt-1">Select options to see final price</p>
+                    </div>
                   ) : (
-                    <span className="text-3xl lg:text-4xl font-bold text-gray-900">${activePrice.toFixed(2)}</span>
-                  )}
-                  {product.compare_at_price && product.compare_at_price > activePrice && (
-                    <span className="text-xl text-gray-400 line-through">${product.compare_at_price.toFixed(2)}</span>
+                    <>
+                      <span className="text-3xl lg:text-4xl font-bold text-gray-900">${activePrice.toFixed(2)}</span>
+                      {product.compare_at_price && product.compare_at_price > activePrice && (
+                        <span className="text-xl text-gray-400 line-through ml-2">${product.compare_at_price.toFixed(2)}</span>
+                      )}
+                    </>
                   )}
                 </div>
 
-                <p className="text-gray-700 leading-relaxed mb-8 text-lg">{product.description}</p>
+                <p className="text-gray-700 leading-relaxed mb-6 text-lg">{product.description}</p>
+
+                {showImportDetails ? (
+                  <ImportDetailsCard
+                    importType={product.commerce.importType}
+                    importNotes={product.commerce.importNotes}
+                    priceLabel={product.commerce.importType ? undefined : 'as shown'}
+                  />
+                ) : null}
 
                 {/* Color Selector */}
                 {hasVariants && product.colors.length > 0 && (
@@ -407,21 +469,29 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <div className="flex flex-wrap gap-3">
                       {product.colors.map((color: string) => {
                         const isSelected = selectedColor === color;
-                        const colorVariants = product.variants.filter((v: any) => v.color === color);
-                        const colorStock = colorVariants.reduce((sum: number, v: any) => sum + (v.stock ?? v.quantity ?? 0), 0);
+                        const colorVariants = variantsForColor(product.variants, color);
+                        const colorStock = colorVariants.reduce(
+                          (sum: number, v: any) => sum + (v.stock ?? v.quantity ?? 0),
+                          0,
+                        );
                         const isOutOfStock = colorStock === 0 && product.stockCount === 0;
                         return (
                           <button
                             key={color}
                             onClick={() => {
                               setSelectedColor(color);
-                              // If only one variant for this color, auto-select it
-                              const matching = product.variants.filter((v: any) => v.color === color);
-                              if (matching.length === 1) {
+                              const matching = variantsForColor(product.variants, color);
+                              const colorOnlyMatch = matching.find(
+                                (v: any) =>
+                                  inferVariantSizeName(getVariantColor(v), v.name || '') === '',
+                              );
+                              if (colorOnlyMatch) {
+                                setSelectedVariant(colorOnlyMatch);
+                                setSelectedSize(getVariantSizeLabel(colorOnlyMatch));
+                              } else if (matching.length === 1) {
                                 setSelectedVariant(matching[0]);
-                                setSelectedSize(matching[0].name);
+                                setSelectedSize(getVariantSizeLabel(matching[0]));
                               } else {
-                                // Reset variant selection so user picks a size too
                                 setSelectedVariant(null);
                                 setSelectedSize('');
                               }
@@ -443,219 +513,244 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   </div>
                 )}
 
-                {/* Size / Name Variant Selector */}
-                {hasVariants && (() => {
-                  // Filter variants: if colors exist and one is selected, show only matching; otherwise show all
-                  const hasColors = product.colors.length > 0;
-                  const visibleVariants = hasColors && selectedColor
-                    ? product.variants.filter((v: any) => v.color === selectedColor)
-                    : hasColors
-                      ? [] // Don't show name variants until a color is picked
-                      : product.variants;
+                {/* Size / Type — only options for the selected color */}
+                {showSizeSelector && (
+                  <div className="mb-8">
+                    <label className="block font-semibold text-gray-900 mb-3">
+                      Size / Type: {selectedVariant ? (
+                        <span className="text-brand-primary font-normal">
+                          {getVariantSizeLabel(selectedVariant)}: ${selectedVariant.price?.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-red-500 font-normal text-sm">Please select</span>
+                      )}
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      {variantsForSelectedColor
+                        .filter((variant: any) => {
+                          const label = getVariantSizeLabel(variant);
+                          return label && label.toLowerCase() !== selectedColor.trim().toLowerCase();
+                        })
+                        .map((variant: any) => {
+                          const isSelected = selectedVariant?.id === variant.id;
+                          const variantStock = variant.stock ?? variant.quantity ?? 0;
+                          const isOutOfStock = variantStock === 0 && product.stockCount === 0;
+                          const sizeLabel = getVariantSizeLabel(variant);
+                          return (
+                            <button
+                              key={variant.id || `${getVariantColor(variant)}-${sizeLabel}`}
+                              onClick={() => {
+                                setSelectedVariant(variant);
+                                setSelectedSize(sizeLabel);
+                              }}
+                              disabled={isOutOfStock}
+                              className={`px-6 py-3 rounded-lg border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex flex-col items-center ${isSelected
+                                ? 'border-brand-primary bg-brand-light text-brand-primary shadow-sm'
+                                : isOutOfStock
+                                  ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
+                                  : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                }`}
+                            >
+                              <span>{sizeLabel}</span>
+                              <span className={`text-xs mt-0.5 ${isSelected ? 'text-brand-accent' : 'text-gray-500'}`}>
+                                ${(variant.price || product.price).toFixed(2)}
+                              </span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
 
-                  // Check if we need to show the name selector (skip if all visible variants have the same name or only 1)
-                  const uniqueNames = [...new Set(visibleVariants.map((v: any) => v.name).filter(Boolean))];
-                  const showNameSelector = visibleVariants.length > 1 || (!hasColors && visibleVariants.length > 0);
+                {/* Products without colors — pick variant directly */}
+                {variantsWithoutColors.length > 0 && (
+                  <div className="mb-8">
+                    <label className="block font-semibold text-gray-900 mb-3">
+                      Variant: {selectedVariant ? (
+                        <span className="text-brand-primary font-normal">
+                          {getVariantSizeLabel(selectedVariant)}: ${selectedVariant.price?.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-red-500 font-normal text-sm">Please select a variant</span>
+                      )}
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      {variantsWithoutColors.map((variant: any) => {
+                        const isSelected = selectedVariant?.id === variant.id;
+                        const variantStock = variant.stock ?? variant.quantity ?? 0;
+                        const isOutOfStock = variantStock === 0 && product.stockCount === 0;
+                        const label = getVariantSizeLabel(variant) || 'Default';
+                        return (
+                          <button
+                            key={variant.id || label}
+                            onClick={() => {
+                              setSelectedVariant(variant);
+                              setSelectedSize(label);
+                            }}
+                            disabled={isOutOfStock}
+                            className={`px-6 py-3 rounded-lg border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex flex-col items-center ${isSelected
+                              ? 'border-brand-primary bg-brand-light text-brand-primary shadow-sm'
+                              : isOutOfStock
+                                ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
+                                : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                              }`}
+                          >
+                            <span>{label}</span>
+                            <span className={`text-xs mt-0.5 ${isSelected ? 'text-brand-accent' : 'text-gray-500'}`}>
+                              ${(variant.price || product.price).toFixed(2)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-                  if (!showNameSelector && !hasColors) {
-                    // Single variant with no colors: show standard picker
-                    return (
-                      <div className="mb-8">
-                        <label className="block font-semibold text-gray-900 mb-3">
-                          Variant: {selectedVariant ? (
-                            <span className="text-brand-primary font-normal">{selectedVariant.name}: ${selectedVariant.price?.toFixed(2)}</span>
-                          ) : (
-                            <span className="text-red-500 font-normal text-sm">Please select a variant</span>
-                          )}
-                        </label>
-                        <div className="flex flex-wrap gap-3">
-                          {product.variants.map((variant: any) => {
-                            const isSelected = selectedVariant?.id === variant.id || selectedVariant?.name === variant.name;
-                            const variantStock = variant.stock ?? variant.quantity ?? 0;
-                            const isOutOfStock = variantStock === 0 && product.stockCount === 0;
-                            return (
-                              <button
-                                key={variant.id || variant.name}
-                                onClick={() => {
-                                  setSelectedVariant(variant);
-                                  setSelectedSize(variant.name);
-                                }}
-                                disabled={isOutOfStock}
-                                className={`px-6 py-3 rounded-lg border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex flex-col items-center ${isSelected
-                                  ? 'border-brand-primary bg-brand-light text-brand-primary shadow-sm'
-                                  : isOutOfStock
-                                    ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
-                                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                  }`}
-                              >
-                                <span>{variant.name}</span>
-                                <span className={`text-xs mt-0.5 ${isSelected ? 'text-brand-accent' : 'text-gray-500'}`}>
-                                  ${(variant.price || product.price).toFixed(2)}
-                                </span>
-                              </button>
-                            );
-                          })}
+                {/* Combined Purchase Actions Panel */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm mb-8">
+                  {allowOnlineCheckout && (
+                    <div className="mb-5 flex flex-col sm:flex-row sm:items-end gap-4">
+                      <div className="flex-1">
+                        <label className="block font-semibold text-gray-900 mb-2">Quantity</label>
+                        <div className="flex items-center border-2 border-gray-300 rounded-xl max-w-[140px] bg-white">
+                          <button
+                            onClick={() => setQuantity(Math.max(product.moq || 1, quantity - 1))}
+                            className="w-12 h-12 flex items-center justify-center text-gray-600 hover:text-brand-primary transition-colors cursor-pointer disabled:opacity-50"
+                            disabled={activeStock === 0 || quantity <= (product.moq || 1)}
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus className="w-5 h-5" />
+                          </button>
+                          <input
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => setQuantity(Math.max(product.moq || 1, Math.min(activeStock, parseInt(e.target.value) || (product.moq || 1))))}
+                            className="w-full h-12 text-center border-x-2 border-gray-300 focus:outline-none text-lg font-bold text-gray-900"
+                            min={product.moq || 1}
+                            max={activeStock}
+                            disabled={activeStock === 0}
+                          />
+                          <button
+                            onClick={() => setQuantity(Math.min(activeStock, quantity + 1))}
+                            className="w-12 h-12 flex items-center justify-center text-gray-600 hover:text-brand-primary transition-colors cursor-pointer disabled:opacity-50"
+                            disabled={activeStock === 0}
+                            aria-label="Increase quantity"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
                         </div>
                       </div>
-                    );
-                  }
-
-                  if (visibleVariants.length > 1) {
-                    return (
-                      <div className="mb-8">
-                        <label className="block font-semibold text-gray-900 mb-3">
-                          Size / Type: {selectedVariant ? (
-                            <span className="text-brand-primary font-normal">{selectedVariant.name}: ${selectedVariant.price?.toFixed(2)}</span>
-                          ) : (
-                            <span className="text-red-500 font-normal text-sm">Please select</span>
-                          )}
-                        </label>
-                        <div className="flex flex-wrap gap-3">
-                          {visibleVariants.map((variant: any) => {
-                            const isSelected = selectedVariant?.id === variant.id;
-                            const variantStock = variant.stock ?? variant.quantity ?? 0;
-                            const isOutOfStock = variantStock === 0 && product.stockCount === 0;
-                            return (
-                              <button
-                                key={variant.id || variant.name}
-                                onClick={() => {
-                                  setSelectedVariant(variant);
-                                  setSelectedSize(variant.name);
-                                }}
-                                disabled={isOutOfStock}
-                                className={`px-6 py-3 rounded-lg border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex flex-col items-center ${isSelected
-                                  ? 'border-brand-primary bg-brand-light text-brand-primary shadow-sm'
-                                  : isOutOfStock
-                                    ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
-                                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                  }`}
-                              >
-                                <span>{variant.name}</span>
-                                <span className={`text-xs mt-0.5 ${isSelected ? 'text-brand-accent' : 'text-gray-500'}`}>
-                                  ${(variant.price || product.price).toFixed(2)}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                      
+                      <div className="flex flex-col gap-1 text-sm pt-1">
+                        {product.moq > 1 && (
+                          <span className="text-brand-primary font-medium flex items-center">
+                            <Info className="w-4 h-4 mr-1.5" />
+                            Min. order: {product.moq} units
+                          </span>
+                        )}
+                        {activeStock > 10 && (
+                          <span className="text-gray-600 font-medium flex items-center">
+                            <CheckCircle className="w-4 h-4 text-green-600 mr-1.5" />
+                            {activeStock} in stock
+                          </span>
+                        )}
+                        {activeStock > 0 && activeStock <= 10 && (
+                          <span className="text-brand-accent font-medium flex items-center">
+                            <AlertTriangle className="w-4 h-4 mr-1.5" />
+                            Only {activeStock} left
+                          </span>
+                        )}
+                        {activeStock === 0 && (
+                          <span className="text-red-600 font-bold flex items-center">
+                            <XCircle className="w-4 h-4 mr-1.5" />
+                            Out of Stock
+                          </span>
+                        )}
                       </div>
-                    );
-                  }
-
-                  return null;
-                })()}
-
-                <div className="mb-8 flex flex-col gap-3 sm:flex-row">
-                  {waInquiry && (
-                    <a
-                      href={waInquiry}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-base font-bold text-white shadow-md transition hover:bg-[#20bd5a]"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                      WhatsApp
-                    </a>
+                    </div>
                   )}
-                  {telDirect && (
-                    <a
-                      href={telDirect}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-brand-primary/15 bg-brand-light px-5 py-3.5 text-base font-bold text-brand-primary transition hover:bg-brand-light/80"
-                    >
-                      <Phone className="h-5 w-5" />
-                      Call
-                    </a>
-                  )}
+
+                  <div className="flex flex-col gap-3">
+                    {allowOnlineCheckout && (
+                      <>
+                        <button
+                          disabled={activeStock === 0 || needsVariantSelection || needsColorSelection}
+                          className={`w-full flex items-center justify-center gap-2 rounded-xl py-4 text-lg font-bold text-white transition-all shadow-sm ${
+                            activeStock === 0 || needsVariantSelection || needsColorSelection 
+                              ? 'bg-brand-primary/50 cursor-not-allowed' 
+                              : 'bg-brand-primary hover:bg-brand-primary/90 hover:shadow-md hover:-translate-y-0.5'
+                          }`}
+                          onClick={handleAddToCart}
+                        >
+                          <ShoppingCart className="w-5 h-5" />
+                          <span>
+                            {activeStock === 0 
+                              ? 'Out of Stock' 
+                              : needsColorSelection 
+                                ? 'Select a Color' 
+                                : needsVariantSelection 
+                                  ? 'Select a Variant' 
+                                  : 'Add to Cart'}
+                          </span>
+                        </button>
+                        
+                        {activeStock > 0 && !needsVariantSelection && !needsColorSelection && (
+                          <button
+                            onClick={handleBuyNow}
+                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-accent px-5 py-4 text-lg font-bold text-white transition-all shadow-sm hover:bg-brand-accent/90 hover:shadow-md hover:-translate-y-0.5"
+                          >
+                            Buy It Now
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                      {waInquiry && (
+                        <a
+                          href={waInquiry}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-base font-bold text-white shadow-sm transition-all hover:bg-[#20bd5a] hover:shadow-md"
+                        >
+                          <MessageCircle className="h-5 w-5" />
+                          Chat on WhatsApp
+                        </a>
+                      )}
+                      {!allowOnlineCheckout && waAvailability && (
+                        <a
+                          href={waAvailability}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-brand-primary bg-white px-5 py-3 text-base font-bold text-brand-primary transition-colors hover:bg-brand-light"
+                        >
+                          <MessageCircle className="h-5 w-5 text-brand-accent" />
+                          Request Availability
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {!allowOnlineCheckout && (
-                  <div className="mb-8 rounded-xl border border-brand-accent/25 bg-brand-accent/10 px-4 py-3 text-sm text-brand-primary">
-                    {importMode === 'vehicles' &&
-                      'Want this vehicle? Message us to reserve it. We walk you through every step.'}
-                    {importMode === 'equipment' &&
-                      'Need a quote first? We confirm specs and full cost before you pay.'}
+                  <div className="mb-8 rounded-xl border border-brand-accent/25 bg-brand-accent/10 px-4 py-3 text-sm text-brand-primary flex items-start gap-3">
+                    <Info className="w-5 h-5 shrink-0 text-brand-accent mt-0.5" />
+                    <p>
+                      {importMode === 'vehicles' && 'Want this vehicle? Message us to reserve it. We walk you through every step.'}
+                      {importMode === 'equipment' && 'Need a quote first? We confirm specs and full cost before you pay.'}
+                      {importMode !== 'vehicles' && importMode !== 'equipment' && 'Online checkout is not enabled for this item. Chat with us or request availability first.'}
+                    </p>
                   </div>
                 )}
 
-                {allowOnlineCheckout && (
-                <div className="mb-8">
-                  <label className="block font-semibold text-gray-900 mb-3">Quantity</label>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center border-2 border-gray-300 rounded-lg">
-                      <button
-                        onClick={() => setQuantity(Math.max(product.moq || 1, quantity - 1))}
-                        className="w-12 h-12 flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                        disabled={activeStock === 0 || quantity <= (product.moq || 1)}
-                      >
-                        <Minus className="w-5 h-5" />
-                      </button>
-                      <input
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.max(product.moq || 1, Math.min(activeStock, parseInt(e.target.value) || (product.moq || 1))))}
-                        className="w-16 h-12 text-center border-x-2 border-gray-300 focus:outline-none text-lg font-semibold"
-                        min={product.moq || 1}
-                        max={activeStock}
-                        disabled={activeStock === 0}
-                      />
-                      <button
-                        onClick={() => setQuantity(Math.min(activeStock, quantity + 1))}
-                        className="w-12 h-12 flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                        disabled={activeStock === 0}
-                      >
-                        <Plus className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <div className="flex flex-col">
-                      {product.moq > 1 && (
-                        <span className="text-brand-primary font-medium text-sm flex items-center">
-                          <Info className="w-4 h-4 mr-1" />
-                          Min. order: {product.moq} units
-                        </span>
-                      )}
-                      {activeStock > 10 && (
-                        <span className="text-gray-600 font-medium text-sm flex items-center">
-                          <CheckCircle className="w-4 h-4 text-green-600 mr-1" />
-                          {activeStock} in stock
-                        </span>
-                      )}
-                      {activeStock > 0 && activeStock <= 10 && (
-                        <span className="text-brand-accent font-medium text-sm flex items-center">
-                          <AlertTriangle className="w-4 h-4 mr-1" />
-                          Only {activeStock} left in stock
-                        </span>
-                      )}
-                      {activeStock === 0 && (
-                        <span className="text-red-600 font-medium flex items-center">
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Out of Stock
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                )}
-
-                {allowOnlineCheckout && (
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                  <button
-                    disabled={activeStock === 0 || needsVariantSelection || needsColorSelection}
-                    className={`btn-primary flex flex-1 cursor-pointer items-center justify-center space-x-2 whitespace-nowrap rounded-lg bg-brand-primary py-4 text-lg font-bold text-white hover:bg-brand-accent ${activeStock === 0 || needsVariantSelection || needsColorSelection ? 'opacity-50 cursor-not-allowed hover:translate-y-0 hover:bg-brand-primary hover:text-white hover:shadow-none' : ''}`}
-                    onClick={handleAddToCart}
-                  >
-                    <ShoppingCart className="w-5 h-5" />
-                    <span>{activeStock === 0 ? 'Out of Stock' : needsColorSelection ? 'Select a Color' : needsVariantSelection ? 'Select a Variant' : 'Add to Cart'}</span>
-                  </button>
-                  {activeStock > 0 && !needsVariantSelection && !needsColorSelection && (
-                    <button
-                      onClick={handleBuyNow}
-                      className="btn-primary sm:w-auto cursor-pointer whitespace-nowrap rounded-lg bg-brand-accent px-8 py-4 font-bold text-white hover:bg-brand-accent/92"
-                    >
-                      Buy Now
-                    </button>
-                  )}
-                </div>
-                )}
+                {telDirect ? (
+                  <p className="mb-6 text-sm text-gray-500">
+                    Prefer a call?{' '}
+                    <a href={telDirect} className="font-semibold text-brand-primary hover:text-brand-accent">
+                      Phone us
+                    </a>
+                  </p>
+                ) : null}
 
                 <div className="border-t border-gray-200 pt-6 space-y-4">
                   <div className="flex items-center text-gray-700">

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { AlertCircle, ChevronDown, ChevronUp, Tag, X } from 'lucide-react';
+
 interface Coupon {
   code: string;
   discount: number;
@@ -106,18 +108,18 @@ export default function AdvancedCouponSystem({
                   setError('');
                 }}
                 placeholder="Enter code"
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
               />
               <button
                 onClick={handleApply}
-                className="bg-gray-900 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+                className="bg-brand-primary hover:bg-[#0d2747] text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
               >
                 Apply
               </button>
             </div>
             {error && (
               <p className="text-sm text-red-600 mt-2 flex items-center">
-                <i className="ri-error-warning-line mr-1"></i>
+                <AlertCircle className="w-4 h-4 mr-1" />
                 {error}
               </p>
             )}
@@ -125,9 +127,9 @@ export default function AdvancedCouponSystem({
 
           <button
             onClick={() => setShowAvailable(!showAvailable)}
-            className="text-sm text-blue-700 hover:text-blue-900 font-medium flex items-center whitespace-nowrap"
+            className="text-sm text-brand-primary hover:text-brand-accent font-medium flex items-center whitespace-nowrap cursor-pointer"
           >
-            <i className={`ri-arrow-${showAvailable ? 'up' : 'down'}-s-line mr-1`}></i>
+            {showAvailable ? <ChevronUp className="w-4 h-4 mr-1" /> : <ChevronDown className="w-4 h-4 mr-1" />}
             {showAvailable ? 'Hide' : 'View'} available coupons
           </button>
 
@@ -142,13 +144,13 @@ export default function AdvancedCouponSystem({
                     key={coupon.code}
                     className={`bg-white rounded-lg p-4 border-2 transition-all ${
                       isEligible
-                        ? 'border-blue-200 hover:border-blue-300'
+                        ? 'border-brand-accent/30 hover:border-brand-accent/60'
                         : 'border-gray-200 opacity-60'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-bold text-sm">
+                        <span className="bg-brand-light text-brand-primary px-3 py-1 rounded-lg font-bold text-sm">
                           {coupon.code}
                         </span>
                         {!isEligible && (
@@ -160,7 +162,7 @@ export default function AdvancedCouponSystem({
                       {isEligible && (
                         <button
                           onClick={() => handleQuickApply(coupon)}
-                          className="text-blue-700 hover:text-blue-900 font-semibold text-sm whitespace-nowrap"
+                          className="text-brand-primary hover:text-brand-accent font-semibold text-sm whitespace-nowrap cursor-pointer"
                         >
                           Apply
                         </button>
@@ -174,20 +176,20 @@ export default function AdvancedCouponSystem({
           )}
         </>
       ) : (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+        <div className="bg-brand-light border-2 border-brand-accent/30 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2 mb-1">
-                <i className="ri-price-tag-3-fill text-blue-700"></i>
-                <span className="font-bold text-blue-800">{appliedCoupon.code}</span>
+                <Tag className="w-4 h-4 text-brand-primary" />
+                <span className="font-bold text-brand-primary">{appliedCoupon.code}</span>
               </div>
-              <p className="text-sm text-blue-700">{appliedCoupon.description}</p>
+              <p className="text-sm text-brand-primary/80">{appliedCoupon.description}</p>
             </div>
             <button
               onClick={onRemove}
-              className="w-8 h-8 flex items-center justify-center text-blue-700 hover:text-blue-900 transition-colors"
+              className="w-8 h-8 flex items-center justify-center text-brand-primary hover:text-brand-accent transition-colors cursor-pointer"
             >
-              <i className="ri-close-line text-xl"></i>
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>

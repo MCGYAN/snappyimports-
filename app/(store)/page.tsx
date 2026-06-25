@@ -14,7 +14,7 @@ import ImportCta from '@/components/snappy/ImportCta';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useCMS } from '@/context/CMSContext';
-import { buildWhatsAppHref, buildTelHref } from '@/lib/snappy-import';
+import { buildWhatsAppHref } from '@/lib/snappy-import';
 import {
   ChevronLeft,
   ChevronRight,
@@ -39,7 +39,6 @@ export default function Home() {
   const isMobile = useIsMobile();
 
   const waHero = buildWhatsAppHref(getSetting('contact_whatsapp'));
-  const telHero = buildTelHref(getSetting('contact_phone'));
   const waHeroPrefilled = waHero
     ? `${waHero}${waHero.includes('?') ? '&' : '?'}text=${encodeURIComponent('Hi Snappy Import, I want to import from China.')}`
     : '';
@@ -95,7 +94,6 @@ export default function Home() {
     }
   };
 
-  const contactPhone = getSetting('contact_phone') || '';
 
   const displayCategories =
     categories.length > 0
@@ -394,11 +392,7 @@ export default function Home() {
       <ProcessSteps />
       <ImportJourneyTimeline />
 
-      <ImportCta
-        whatsAppHref={waHeroPrefilled || undefined}
-        telHref={telHero || undefined}
-        contactPhone={contactPhone || undefined}
-      />
+      <ImportCta whatsAppHref={waHeroPrefilled || undefined} />
     </main>
   );
 }

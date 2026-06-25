@@ -1,15 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageCircle, ArrowUpRight, Phone } from 'lucide-react';
+import { MessageCircle, ArrowUpRight } from 'lucide-react';
 
 interface ImportCtaProps {
   whatsAppHref?: string;
-  telHref?: string;
-  contactPhone?: string;
 }
 
-export default function ImportCta({ whatsAppHref, telHref, contactPhone }: ImportCtaProps) {
+export default function ImportCta({ whatsAppHref }: ImportCtaProps) {
   return (
     <section className="relative overflow-hidden border-t border-white/30 bg-gradient-to-b from-[#f4f7fb]/45 via-white/35 to-[#f8fafc]/50 py-8 md:store-section md:py-16 lg:py-20">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(242,107,29,0.06),transparent)]" aria-hidden />
@@ -42,24 +40,6 @@ export default function ImportCta({ whatsAppHref, telHref, contactPhone }: Impor
               >
                 <MessageCircle className="h-5 w-5 shrink-0" />
                 Message on WhatsApp
-              </Link>
-            )}
-
-            {telHref && contactPhone ? (
-              <a
-                href={telHref}
-                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/50 liquid-glass text-[14px] font-semibold text-brand-primary"
-              >
-                <Phone className="h-4 w-4 text-brand-accent" />
-                Call {contactPhone}
-              </a>
-            ) : (
-              <Link
-                href="/contact"
-                className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-white/50 liquid-glass text-[14px] font-semibold text-brand-primary"
-              >
-                Or send us a message
-                <ArrowUpRight className="h-3.5 w-3.5 text-brand-accent" />
               </Link>
             )}
           </div>
@@ -99,31 +79,6 @@ export default function ImportCta({ whatsAppHref, telHref, contactPhone }: Impor
                 <ArrowUpRight className="h-4 w-4 opacity-80" />
               </Link>
             )}
-
-            <p className="text-sm text-slate-500">
-              {telHref && contactPhone ? (
-                <>
-                  Or call{' '}
-                  <a
-                    href={telHref}
-                    className="font-semibold text-brand-primary underline-offset-2 transition-colors hover:text-brand-accent hover:underline"
-                  >
-                    {contactPhone}
-                  </a>
-                </>
-              ) : (
-                <>
-                  Or{' '}
-                  <Link
-                    href="/contact"
-                    className="inline-flex items-center gap-0.5 font-semibold text-brand-primary underline-offset-2 transition-colors hover:text-brand-accent hover:underline"
-                  >
-                    send us a message
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
-                </>
-              )}
-            </p>
           </div>
         </div>
       </div>

@@ -16,7 +16,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           .from('products')
           .select(`
             *,
-            categories(id, name),
+            categories(id, name, slug),
             product_variants(*),
             product_images(*)
           `)

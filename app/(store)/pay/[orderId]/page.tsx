@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
+import { ShieldCheck, AlertTriangle, Home, Clock, Lock } from 'lucide-react';
+
 export default function PaymentPage() {
   usePageTitle('Complete Payment');
   const params = useParams();
@@ -105,7 +107,7 @@ export default function PaymentPage() {
       <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <div className="w-20 h-20 mx-auto mb-6 bg-red-50 rounded-full flex items-center justify-center">
-            <i className="ri-error-warning-line text-4xl text-red-500"></i>
+            <AlertTriangle className="w-10 h-10 text-red-500" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Order Not Found</h1>
           <p className="text-gray-600 mb-6">{error}</p>
@@ -113,7 +115,7 @@ export default function PaymentPage() {
             href="/"
             className="inline-flex items-center px-6 py-3 bg-brand-primary hover:bg-[#0d2747] text-white rounded-lg font-semibold transition-colors"
           >
-            <i className="ri-home-line mr-2"></i>
+            <Home className="w-5 h-5 mr-2" />
             Go to Homepage
           </Link>
         </div>
@@ -170,7 +172,7 @@ export default function PaymentPage() {
         {order?.payment_status === 'pending' && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <i className="ri-time-line text-xl text-yellow-600 mt-0.5"></i>
+              <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-yellow-800">Payment Pending</p>
                 <p className="text-sm text-yellow-700 mt-1">
@@ -184,7 +186,7 @@ export default function PaymentPage() {
         {order?.payment_status === 'failed' && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <i className="ri-error-warning-line text-xl text-red-600 mt-0.5"></i>
+              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-red-800">Payment Failed</p>
                 <p className="text-sm text-red-700 mt-1">
@@ -217,7 +219,7 @@ export default function PaymentPage() {
             </>
           ) : (
             <>
-              <i className="ri-secure-payment-line mr-2"></i>
+              <ShieldCheck className="w-5 h-5 mr-2" />
               Pay $ {order?.total?.toFixed(2)} with Mobile Money
             </>
           )}
@@ -226,7 +228,7 @@ export default function PaymentPage() {
         {/* Security Note */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 flex items-center justify-center">
-            <i className="ri-lock-line mr-1"></i>
+            <Lock className="w-3.5 h-3.5 mr-1" />
             Secure payment powered by Moolre
           </p>
         </div>

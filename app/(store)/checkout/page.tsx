@@ -9,6 +9,7 @@ import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { executeRecaptcha } from '@/lib/recaptcha';
+import { ShoppingCart, ArrowLeft, User, Check, UserCircle } from 'lucide-react';
 
 export default function CheckoutPage() {
   usePageTitle('Checkout');
@@ -229,7 +230,7 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-gray-50 py-20">
         <div className="max-w-md mx-auto text-center px-4">
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-            <i className="ri-shopping-cart-line text-4xl text-gray-300"></i>
+            <ShoppingCart className="w-10 h-10 text-gray-300" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
           <p className="text-gray-600 mb-8">Add some items to start the checkout process.</p>
@@ -246,7 +247,7 @@ export default function CheckoutPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <Link href="/cart" className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center whitespace-nowrap">
-            <i className="ri-arrow-left-line mr-2"></i>
+            <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Cart
           </Link>
         </div>
@@ -266,10 +267,10 @@ export default function CheckoutPage() {
                 disabled={!!user}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <i className="ri-user-line text-3xl text-brand-primary"></i>
+                  <User className="w-8 h-8 text-brand-primary" />
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkoutType === 'guest' ? 'border-brand-primary bg-brand-primary' : 'border-gray-300'
                     }`}>
-                    {checkoutType === 'guest' && <i className="ri-check-line text-white text-sm"></i>}
+                    {checkoutType === 'guest' && <Check className="w-4 h-4 text-white" />}
                   </div>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">Guest Checkout</h3>
@@ -285,10 +286,10 @@ export default function CheckoutPage() {
                   }`}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <i className="ri-account-circle-line text-3xl text-brand-primary"></i>
+                  <UserCircle className="w-8 h-8 text-brand-primary" />
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkoutType === 'account' ? 'border-brand-primary bg-brand-primary' : 'border-gray-300'
                     }`}>
-                    {checkoutType === 'account' && <i className="ri-check-line text-white text-sm"></i>}
+                    {checkoutType === 'account' && <Check className="w-4 h-4 text-white" />}
                   </div>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{user ? 'My Account' : 'Create Account'}</h3>

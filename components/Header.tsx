@@ -7,10 +7,8 @@ import MiniCart from './MiniCart';
 import StoreLogo from './StoreLogo';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
-import { useCMS } from '@/context/CMSContext';
 import AnnouncementBar from './AnnouncementBar';
-import { Search, User, ShoppingCart, Menu, X, MessageCircle } from 'lucide-react';
-import { buildWhatsAppHref } from '@/lib/snappy-import';
+import { Search, User, ShoppingCart, Menu, X } from 'lucide-react';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -20,9 +18,6 @@ export default function Header() {
   const router = useRouter();
 
   const { cartCount, isCartOpen, setIsCartOpen } = useCart();
-  const { getSetting } = useCMS();
-  const waRaw = getSetting('contact_whatsapp');
-  const waHref = buildWhatsAppHref(waRaw);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -90,44 +85,41 @@ export default function Header() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-1 sm:gap-4">
-                {waHref && (
-                  <a
-                    href={waHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary btn-primary-green hidden sm:inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-green-500 to-green-600 px-5 py-2.5 text-sm font-bold text-white hover:from-green-500 hover:to-green-600"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
-                  </a>
-                )}
-                <Link
-                  href={user ? "/account" : "/auth/login"}
-                  className="hidden sm:flex items-center gap-2 text-white hover:text-brand-accent transition-colors group"
-                >
-                  <div className="p-2 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors border border-white/10">
-                    <User className="w-5 h-5" />
-                  </div>
-                  <span className="font-medium text-sm hidden xl:inline">Your Account</span>
-                </Link>
-                <div className="relative hidden sm:block">
+              <div className="flex items-center gap-2 sm:gap-5">
+                <div className="hidden md:block relative w-full max-w-[16rem] lg:max-w-[20rem]">
+                  <form onSubmit={handleSearchSubmit} className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search products..."
+                      className="w-full rounded-full border border-white/20 bg-white/10 py-2 pl-4 pr-10 text-sm text-white placeholder:text-white/70 focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-brand-accent transition-colors"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                      aria-label="Submit search"
+                    >
+                      <Search className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </form>
+                </div>
+
+                {/* Mobile Search Toggle */}
+                <div className="relative md:hidden">
                   <button
                     type="button"
                     onClick={() => setIsSearchOpen((prev) => !prev)}
-                    className="flex items-center gap-2 text-white hover:text-brand-accent transition-colors group"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70"
                     aria-label="Open search"
                     aria-expanded={isSearchOpen}
                   >
-                    <div className="p-2 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors border border-white/10">
-                      <Search className="w-5 h-5" />
-                    </div>
-                    <span className="font-medium text-sm hidden xl:inline">Search</span>
+                    <Search className="w-5 h-5" strokeWidth={1.75} />
                   </button>
                   {isSearchOpen && (
                     <form
                       onSubmit={handleSearchSubmit}
-                      className="absolute right-0 top-full z-20 mt-2 w-[18rem] rounded-xl border border-white/15 bg-brand-primary/95 p-2 shadow-xl backdrop-blur-xl"
+                      className="absolute right-0 top-full z-20 mt-2 w-[calc(100vw-2rem)] max-w-sm rounded-xl border border-white/15 bg-brand-primary/95 p-2 shadow-xl backdrop-blur-xl"
                     >
                       <div className="flex items-center gap-2">
                         <input
@@ -140,7 +132,7 @@ export default function Header() {
                         />
                         <button
                           type="submit"
-                          className="btn-icon inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                          className="btn-icon inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20"
                           aria-label="Submit search"
                         >
                           <Search className="h-4 w-4" />
@@ -150,20 +142,29 @@ export default function Header() {
                   )}
                 </div>
 
+                <Link
+                  href={user ? "/account" : "/auth/login"}
+                  className="hidden sm:flex items-center gap-2 text-white hover:text-brand-accent transition-colors group"
+                  aria-label="Account"
+                >
+                  <User className="w-5 h-5 group-hover:scale-110 transition-transform" strokeWidth={1.75} />
+                  <span className="font-medium text-sm hidden xl:inline">Account</span>
+                </Link>
+
                 <div className="relative">
                   <button
                     type="button"
-                    className="group relative flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 xl:h-auto xl:w-auto xl:gap-2"
+                    className="group relative flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 sm:w-auto sm:gap-2 sm:px-2"
                     onClick={() => setIsCartOpen(!isCartOpen)}
                     aria-label="Cart"
                   >
-                    <ShoppingCart className="w-5 h-5" strokeWidth={1.75} />
+                    <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" strokeWidth={1.75} />
                     {cartCount > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-accent text-[10px] font-bold text-white">
+                      <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-accent text-[10px] font-bold text-white shadow-sm sm:-right-1 sm:-top-1">
                         {cartCount}
                       </span>
                     )}
-                    <span className="hidden font-medium text-sm xl:inline">My Basket</span>
+                    <span className="hidden font-medium text-sm xl:inline">Basket</span>
                   </button>
                   <MiniCart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
                 </div>

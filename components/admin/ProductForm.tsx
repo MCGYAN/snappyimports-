@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { IMPORT_TYPE_OPTIONS, IMPORT_TYPE_DESCRIPTIONS, parseProductCommerce, resolveDirectPayment } from '@/lib/product-commerce';
+import { getImportProductMode } from '@/lib/snappy-import';
+import { inferVariantSizeName } from '@/lib/product-variants';
 
 interface ProductFormProps {
     initialData?: any;
@@ -27,6 +30,16 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [status, setStatus] = useState(initialData?.status || 'Active');
     const [featured, setFeatured] = useState(initialData?.featured || false);
     const [preorderShipping, setPreorderShipping] = useState(initialData?.metadata?.preorder_shipping || '');
+    const initialCommerce = parseProductCommerce(initialData?.metadata);
+    const initialImportMode = getImportProductMode(
+        initialData?.categories?.name,
+        initialData?.categories?.slug,
+    );
+    const [directPaymentEnabled, setDirectPaymentEnabled] = useState(
+        resolveDirectPayment(initialCommerce.directPayment, initialImportMode),
+    );
+    const [importType, setImportType] = useState(initialData?.metadata?.import_type || '');
+    const [importNotes, setImportNotes] = useState(initialData?.metadata?.import_notes || '');
     const [activeTab, setActiveTab] = useState('general');
 
     // Auto-generate SKU function
@@ -61,13 +74,19 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     ];
     const sizePresets = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 
-    // Parse existing variants to extract unique colors and sizes
-    const existingVariants = (initialData?.product_variants || []).map((v: any) => ({
-        ...v,
-        stock: v.stock ?? v.quantity ?? 0,
-        color: v.color ?? v.option2 ?? '',
-        size: v.name || ''
-    }));
+    // Parse existing variants — distinguish color-only SKUs from real sizes
+    const existingVariants = (initialData?.product_variants || []).map((v: any) => {
+        const color = (v.color ?? v.option2 ?? '').trim();
+        const rawName = (v.name || v.option1 || '').trim();
+        const size = inferVariantSizeName(color, rawName);
+        return {
+            ...v,
+            stock: v.stock ?? v.quantity ?? 0,
+            color,
+            size,
+            displayName: rawName || color || 'Default',
+        };
+    });
 
     const [selectedColors, setSelectedColors] = useState<{ name: string; hex: string }[]>(() => {
         const colors = new Map<string, string>();
@@ -109,31 +128,62 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         return data;
     });
 
-    // Computed: all variant combinations
+    // Computed: variant combinations — colors only, sizes only, or colors × sizes (never colors × colors)
     const variantCombinations = (() => {
         const combos: { color: string; colorHex: string; size: string; key: string }[] = [];
-        const colors = selectedColors.length > 0 ? selectedColors : [{ name: '', hex: '' }];
-        const sizes = selectedSizes.length > 0 ? selectedSizes : [''];
+        const hasColors = selectedColors.length > 0;
+        const hasSizes = selectedSizes.length > 0;
 
-        for (const color of colors) {
-            for (const size of sizes) {
-                if (!color.name && !size) continue; // skip if both empty
-                const key = buildVariantKey(color.name, size);
-                combos.push({ color: color.name, colorHex: color.hex, size, key });
+        if (hasColors && hasSizes) {
+            for (const color of selectedColors) {
+                for (const size of selectedSizes) {
+                    combos.push({
+                        color: color.name,
+                        colorHex: color.hex,
+                        size,
+                        key: buildVariantKey(color.name, size),
+                    });
+                }
+            }
+        } else if (hasColors) {
+            for (const color of selectedColors) {
+                combos.push({
+                    color: color.name,
+                    colorHex: color.hex,
+                    size: '',
+                    key: buildVariantKey(color.name, ''),
+                });
+            }
+        } else if (hasSizes) {
+            for (const size of selectedSizes) {
+                combos.push({
+                    color: '',
+                    colorHex: '',
+                    size,
+                    key: buildVariantKey('', size),
+                });
             }
         }
+
         return combos;
     })();
 
     // Build the flat variants array for saving (used by handleSubmit)
-    const variants = variantCombinations.map(combo => {
+    const variants = variantCombinations.map((combo) => {
         const d = variantData[combo.key] || { price: price, stock: '0', sku: '' };
+        const hasColors = selectedColors.length > 0;
+        const hasSizes = selectedSizes.length > 0;
+        let variantName = 'Default';
+        if (hasColors && hasSizes) variantName = combo.size;
+        else if (hasColors) variantName = combo.color;
+        else if (hasSizes) variantName = combo.size;
+
         return {
-            name: combo.size,
+            name: variantName,
             color: combo.color,
             sku: d.sku,
             price: d.price || price,
-            stock: d.stock || '0'
+            stock: d.stock || '0',
         };
     });
 
@@ -201,6 +251,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const tabs = [
         { id: 'general', label: 'General', icon: 'ri-information-line' },
         { id: 'pricing', label: 'Pricing & Inventory', icon: 'ri-price-tag-3-line' },
+        { id: 'import', label: 'Import & Checkout', icon: 'ri-ship-line' },
         { id: 'variants', label: 'Variants', icon: 'ri-layout-grid-line' },
         { id: 'images', label: 'Images', icon: 'ri-image-line' },
         { id: 'seo', label: 'SEO', icon: 'ri-search-line' }
@@ -296,7 +347,10 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 tags: (keywords as string).split(',').map((k: string) => k.trim()).filter(Boolean),
                 metadata: {
                     low_stock_threshold: parseInt(lowStockThreshold) || 5,
-                    preorder_shipping: preorderShipping.trim() || null
+                    preorder_shipping: preorderShipping.trim() || null,
+                    direct_payment: directPaymentEnabled,
+                    import_type: importType || null,
+                    import_notes: importNotes.trim() || null,
                 }
             };
 
@@ -353,17 +407,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 }
 
                 if (variants.length > 0) {
-                    const variantInserts = variants.map(v => {
-                        const colorHex = selectedColors.find(c => c.name === v.color)?.hex || null;
+                    const variantInserts = variants.map((v) => {
+                        const colorHex = selectedColors.find((c) => c.name === v.color)?.hex || null;
+                        const hasSizes = selectedSizes.length > 0;
                         return {
                             product_id: productId,
                             name: v.name || v.color || 'Default',
                             sku: v.sku || null,
                             price: parseFloat(v.price) || 0,
                             quantity: parseInt(v.stock) || 0,
-                            option1: v.name || null,
+                            option1: hasSizes ? v.name : null,
                             option2: v.color?.trim() || null,
-                            metadata: colorHex ? { color_hex: colorHex } : {}
+                            metadata: colorHex ? { color_hex: colorHex } : {},
                         };
                     });
                     const { error: varError } = await supabase.from('product_variants').insert(variantInserts);
@@ -405,7 +460,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 <div className="flex items-center space-x-3">
                     {isEditMode && (
                         <Link
-                            href={`/product/${initialData?.id}`}
+                            href={`/product/${urlSlug || initialData?.slug || initialData?.id}`}
                             target="_blank"
                             className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 transition-colors font-semibold whitespace-nowrap cursor-pointer flex items-center"
                         >
@@ -689,11 +744,80 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                         </div>
                     )}
 
+                    {activeTab === 'import' && (
+                        <div className="space-y-6 max-w-3xl">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">Import & checkout</h3>
+                                <p className="text-gray-600">
+                                    Control how customers buy or inquire about this product. Share link:{' '}
+                                    <span className="font-mono text-sm text-brand-primary">
+                                        /product/{urlSlug || 'your-slug'}
+                                    </span>
+                                </p>
+                            </div>
+
+                            <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-gray-200 p-4 hover:border-brand-accent/40">
+                                <input
+                                    type="checkbox"
+                                    checked={directPaymentEnabled}
+                                    onChange={(e) => setDirectPaymentEnabled(e.target.checked)}
+                                    className="mt-1 h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-accent"
+                                />
+                                <div>
+                                    <span className="block text-sm font-semibold text-gray-900">Enable direct online payment</span>
+                                    <span className="mt-1 block text-sm text-gray-600">
+                                        When on, customers see <strong>Buy Now</strong> and can checkout with Moolre.
+                                        When off, they see <strong>Chat on WhatsApp</strong> and{' '}
+                                        <strong>Request Availability</strong> instead.
+                                    </span>
+                                    {!isEditMode && !directPaymentEnabled && (
+                                        <span className="mt-2 block text-xs text-gray-500">
+                                            Leave unchecked for high-value imports (vehicles, equipment) or quote-first items.
+                                        </span>
+                                    )}
+                                </div>
+                            </label>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-900 mb-2">Import type</label>
+                                <select
+                                    value={importType}
+                                    onChange={(e) => setImportType(e.target.value)}
+                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
+                                >
+                                    <option value="">— Not set —</option>
+                                    {IMPORT_TYPE_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                {importType && IMPORT_TYPE_DESCRIPTIONS[importType] ? (
+                                    <p className="mt-2 text-sm text-gray-600">{IMPORT_TYPE_DESCRIPTIONS[importType]}</p>
+                                ) : null}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-900 mb-2">Import notes</label>
+                                <textarea
+                                    rows={4}
+                                    value={importNotes}
+                                    onChange={(e) => setImportNotes(e.target.value)}
+                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent resize-none"
+                                    placeholder="What is included in the price? Clearing, delivery, warranty, lead time..."
+                                />
+                                <p className="text-sm text-gray-500 mt-2">Shown on the product page import details card.</p>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'variants' && (
                         <div className="space-y-8">
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900">Product Variants</h3>
-                                <p className="text-gray-600 mt-1">Select colors and sizes below. Variants are generated automatically.</p>
+                                <p className="text-gray-600 mt-1">
+                                    Add colors, sizes, or both. Sizes are optional — color-only products get one variant per color.
+                                </p>
                             </div>
 
                             {/* STEP 1: Colors */}
@@ -786,7 +910,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                         </span>
                                     )}
                                 </h4>
-                                <p className="text-xs text-gray-500 mb-4">Click sizes to add/remove. Use custom for volumes (100ml), weights, etc.</p>
+                                <p className="text-xs text-gray-500 mb-4">
+                                    Optional. Skip this step if the product has no sizes (e.g. vehicles by color only).
+                                </p>
 
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {sizePresets.map(size => {

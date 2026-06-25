@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 
+import { X, ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
+
 interface MiniCartProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,14 +44,14 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
             onClick={onClose}
             className="w-10 h-10 flex items-center justify-center hover:bg-white rounded-full transition-all cursor-pointer shadow-sm border border-transparent hover:border-gray-200 hover:scale-105"
           >
-            <i className="ri-close-line text-2xl text-gray-500 hover:text-brand-accent transition-colors"></i>
+            <X className="w-6 h-6 text-gray-500 hover:text-brand-accent transition-colors" />
           </button>
         </div>
 
         {cart.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
             <div className="w-24 h-24 flex items-center justify-center bg-gray-50 rounded-full mb-6 shadow-inner border border-gray-100">
-              <i className="ri-shopping-cart-line text-5xl text-gray-300"></i>
+              <ShoppingCart className="w-12 h-12 text-gray-300" />
             </div>
             <h3 className="text-2xl font-bold text-brand-foreground mb-2 tracking-tight">Your cart is empty</h3>
             <p className="text-gray-500 mb-8 font-medium">Looks like you haven't added anything yet.</p>
@@ -94,9 +96,9 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                             className="w-8 h-8 flex items-center justify-center hover:bg-white hover:text-brand-accent transition-colors cursor-pointer"
                           >
                             {item.quantity <= (item.moq || 1) ? (
-                              <i className="ri-delete-bin-line text-red-500"></i>
+                              <Trash2 className="w-4 h-4 text-red-500" />
                             ) : (
-                              <i className="ri-subtract-line text-gray-600"></i>
+                              <Minus className="w-4 h-4 text-gray-600" />
                             )}
                           </button>
                           <span className="w-8 text-center font-bold text-brand-foreground text-sm">{item.quantity}</span>
@@ -105,7 +107,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                             className="w-8 h-8 flex items-center justify-center hover:bg-white hover:text-brand-accent transition-colors cursor-pointer"
                             disabled={item.quantity >= item.maxStock}
                           >
-                            <i className="ri-add-line text-gray-600"></i>
+                            <Plus className="w-4 h-4 text-gray-600" />
                           </button>
                         </div>
                       </div>
@@ -118,7 +120,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                       onClick={() => removeFromCart(item.id, item.variant)}
                       className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded-full transition-colors flex-shrink-0 cursor-pointer self-start opacity-0 group-hover:opacity-100"
                     >
-                      <i className="ri-close-line text-xl text-gray-400 hover:text-red-500"></i>
+                      <X className="w-5 h-5 text-gray-400 hover:text-red-500" />
                     </button>
                   </div>
                 ))}

@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
-import StickyConversionDock from '@/components/snappy/StickyConversionDock';
 import ScrollToTop from '@/components/ScrollToTop';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import NavigationProgress from '@/components/NavigationProgress';
@@ -44,7 +43,6 @@ export default function StoreLayout({
           </main>
         </ErrorBoundary>
         <Footer />
-        <StickyConversionDock />
         <MobileBottomNav />
         <SessionTimeoutWarning />
         <PWAPrompt />
