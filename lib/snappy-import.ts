@@ -22,8 +22,8 @@ export function getDefaultPhoneCountryCode(): string {
 }
 
 /** Store defaults when CMS / env contact fields are unset. */
-export const DEFAULT_CONTACT_PHONE = '0593610190';
-export const DEFAULT_CONTACT_WHATSAPP = '0593517270';
+export const DEFAULT_CONTACT_PHONE = '0547512646';
+export const DEFAULT_CONTACT_WHATSAPP = '0547512646';
 
 export function resolveContactPhone(cmsValue?: string | null): string {
   return (
