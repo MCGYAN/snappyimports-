@@ -1,13 +1,13 @@
 'use client';
 
+import { useState } from 'react';
+import { Copy, Check } from 'lucide-react';
 import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 import PaymentReferenceHint from '@/components/PaymentReferenceHint';
-import { Copy, Check } from 'lucide-react';
-import { useState } from 'react';
 
 type InvoiceItem = {
   product_name?: string;
@@ -20,6 +20,73 @@ type InvoiceItem = {
     size?: string | null;
   } | null;
 };
+
+function CopyableAccountRow({ acc }: { acc: typeof SNAPPY_BANK_ACCOUNTS[0] }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(acc.accountNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      alert(`Copy this: ${acc.accountNumber}`);
+    }
+  };
+
+  return (
+    <div className="relative flex flex-col justify-between gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center">
+      <div className="absolute left-0 top-0 h-full w-1 bg-brand-accent/60"></div>
+      
+      <div className="flex-1 pl-2">
+        <div className="flex items-center gap-2">
+          <p className="font-bold text-brand-primary">{acc.bank}</p>
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            {acc.channel === 'momo' ? 'MoMo' : 'Bank'}
+          </span>
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+          <span className="font-medium text-slate-700">{acc.holder}</span>
+          {acc.registeredName && (
+            <span className="text-xs text-slate-500 hidden sm:inline">Reg: {acc.registeredName}</span>
+          )}
+          {acc.branch && <span className="text-xs text-slate-500 hidden sm:inline">Branch: {acc.branch}</span>}
+        </div>
+        {/* Mobile only extra details */}
+        <div className="mt-0.5 flex flex-col text-xs text-slate-500 sm:hidden">
+          {acc.registeredName && <span>Reg: {acc.registeredName}</span>}
+          {acc.branch && <span>Branch: {acc.branch}</span>}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-2 sm:bg-transparent sm:p-0">
+        <div className="sm:text-right">
+          <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">Account Number</p>
+          <p className="font-mono text-lg font-bold tracking-wider text-slate-900">
+            {acc.accountNumber}
+          </p>
+        </div>
+        <button
+          onClick={copy}
+          className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition-colors hover:border-brand-primary hover:text-brand-primary print:hidden"
+          title="Copy account number"
+        >
+          {copied ? (
+            <>
+              <Check className="h-4 w-4 text-green-600" />
+              <span className="text-green-600">Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4" />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 type Props = {
   order: {
@@ -220,53 +287,11 @@ export default function InvoiceDocument({ order }: Props) {
           </div>
         </div>
         
-        <div className="-mx-5 flex snap-x snap-mandatory overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:snap-none sm:overflow-visible sm:px-0 sm:pb-0 gap-4 sm:grid-cols-2 lg:grid-cols-3 print:mx-0 print:grid print:snap-none print:overflow-visible print:px-0 print:pb-0 print:grid-cols-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="grid gap-3 grid-cols-1">
           {SNAPPY_BANK_ACCOUNTS.map((acc) => (
-            <CopyableAccountCard key={acc.accountNumber} acc={acc} />
+            <CopyableAccountRow key={acc.accountNumber} acc={acc} />
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function CopyableAccountCard({ acc }: { acc: typeof SNAPPY_BANK_ACCOUNTS[0] }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(acc.accountNumber);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="relative w-[85vw] shrink-0 snap-center overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:w-auto print:w-auto">
-      <div className="absolute right-0 top-0 rounded-bl-xl bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-        {acc.channel === 'momo' ? 'Mobile Money' : 'Bank'}
-      </div>
-      <p className="pr-16 font-bold text-brand-primary">{acc.bank}</p>
-      <div className="mt-3 space-y-0.5">
-        <p className="text-sm font-medium text-slate-700">{acc.holder}</p>
-        {acc.registeredName ? (
-          <p className="text-xs text-slate-500">Reg: {acc.registeredName}</p>
-        ) : null}
-        {acc.branch ? <p className="text-xs text-slate-500">Branch: {acc.branch}</p> : null}
-      </div>
-      <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-        <div>
-          <p className="text-[10px] font-semibold uppercase text-slate-400">Account Number</p>
-          <p className="font-mono text-lg font-bold tracking-wider text-slate-900">
-            {acc.accountNumber}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 shadow-sm transition-all active:scale-95 print:hidden hover:text-brand-primary"
-          title="Copy account number"
-        >
-          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-        </button>
       </div>
     </div>
   );
