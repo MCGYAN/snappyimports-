@@ -14,5 +14,8 @@ export function formatStoreMoney(
       : code === 'USD'
         ? '$'
         : `${code} `;
-  return `${symbol}${Number(amount || 0).toFixed(2)}`;
+  return `${symbol}${Number(amount || 0).toLocaleString('en-GH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }

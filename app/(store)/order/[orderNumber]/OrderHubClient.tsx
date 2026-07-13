@@ -159,11 +159,12 @@ export default function OrderHubPage() {
   const handlePrint = () => window.print();
 
   const handleDownloadPdf = async () => {
-    const el = document.getElementById('invoice-print');
-    if (!el) return;
+    const root = document.getElementById('invoice-print');
+    const official = root?.querySelector<HTMLElement>('.invoice-official');
+    if (!official) return;
     setDownloading(true);
     try {
-      await downloadElementAsPdf(el, `${orderNumber || 'invoice'}.pdf`);
+      await downloadElementAsPdf(official, `${orderNumber || 'invoice'}.pdf`);
     } catch (err) {
       console.error('[order pdf]', err);
       alert('Could not download PDF. Try Print instead.');
