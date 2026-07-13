@@ -25,25 +25,27 @@ export default function PaymentReferenceHint({ code, supportId, className = '' }
 
   return (
     <div className={className}>
-      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+      <p className="text-xs font-bold uppercase tracking-wider text-brand-primary">
         Transfer code (optional)
       </p>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <p className="font-mono text-2xl font-black tracking-wide text-brand-primary">{code}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <div className="rounded-lg bg-white px-3 py-1.5 shadow-sm border border-slate-200">
+          <p className="font-mono text-xl font-black tracking-wide text-brand-primary">{code}</p>
+        </div>
         <button
           type="button"
           onClick={copy}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-brand-primary print:hidden"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand-primary px-4 text-xs font-bold text-white transition-colors hover:bg-brand-primary/90 print:hidden"
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
-      <p className="mt-2 text-sm text-slate-500">
+      <p className="mt-3 text-sm font-medium text-slate-600">
         Add this on your transfer so we match your payment faster.
       </p>
       {supportId ? (
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-2 text-[11px] font-medium text-slate-400">
           Support id: <span className="font-mono">{supportId}</span>
         </p>
       ) : null}
