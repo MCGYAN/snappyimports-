@@ -10,13 +10,16 @@ const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
+  preload: true,
 });
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  // Fewer weights = smaller font download on first visit
+  weight: ["400", "600", "700"],
   variable: "--font-poppins",
   display: "swap",
+  preload: true,
 });
 
 export const viewport: Viewport = {
@@ -156,11 +159,26 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
 
         <link rel="icon" href="/icon" type="image/png" sizes="any" />
-
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        {/* Non-blocking RemixIcon: load as print, then switch to all */}
         <link
-          href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css"
+          id="remixicon-css"
           rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css"
+          media="print"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var l=document.getElementById('remixicon-css');if(!l)return;l.onload=function(){l.media='all'};if(l.sheet)l.media='all';setTimeout(function(){l.media='all'},3000);})();`,
+          }}
+        />
+        <noscript>
+          <link
+            href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css"
+            rel="stylesheet"
+          />
+        </noscript>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -176,9 +194,9 @@ export default function RootLayout({
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
-          <Script id="google-analytics" strategy="afterInteractive">
+          <Script id="google-analytics" strategy="lazyOnload">
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
@@ -194,7 +212,7 @@ export default function RootLayout({
       {RECAPTCHA_SITE_KEY && (
         <Script
           src={`https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`}
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
       )}
 

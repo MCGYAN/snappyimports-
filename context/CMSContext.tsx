@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '@/lib/supabase';
 import { SITE_LOGO_PATH } from '@/lib/brand';
 import { DEFAULT_CONTACT_PHONE, DEFAULT_CONTACT_WHATSAPP } from '@/lib/snappy-import';
+import { STORE_CURRENCY, STORE_CURRENCY_SYMBOL } from '@/lib/currency';
 
 interface SiteSettings {
     site_name: string;
@@ -84,8 +85,8 @@ const defaultSettings: SiteSettings = {
     social_youtube: '',
     primary_color: '#0ea5e9',
     secondary_color: '#fbbf24',
-    currency: 'USD',
-    currency_symbol: '$',
+    currency: STORE_CURRENCY,
+    currency_symbol: STORE_CURRENCY_SYMBOL,
 };
 
 const CMSContext = createContext<CMSContextType>({
@@ -116,8 +117,8 @@ export function CMSProvider({ children }: { children: ReactNode }) {
         social_youtube: '',
         primary_color: '#0ea5e9',
         secondary_color: '#fbbf24',
-        currency: 'USD',
-        currency_symbol: '$',
+        currency: STORE_CURRENCY,
+        currency_symbol: STORE_CURRENCY_SYMBOL,
     });
     const [content, setContent] = useState<CMSContent[]>([]);
     const [banners, setBanners] = useState<Banner[]>([]);

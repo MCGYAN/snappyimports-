@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     if (featured && cache && cache.data?.[cacheKey] && Date.now() - cache.timestamp < CACHE_TTL) {
         return NextResponse.json(cache.data[cacheKey], {
             headers: {
-                'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800',
+                'Cache-Control': 'public, max-age=60, s-maxage=900, stale-while-revalidate=1800',
                 'X-Cache': 'HIT'
             }
         });
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json(data, {
             headers: {
-                'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800',
+                'Cache-Control': 'public, max-age=60, s-maxage=900, stale-while-revalidate=1800',
                 'X-Cache': 'MISS'
             }
         });

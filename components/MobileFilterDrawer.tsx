@@ -135,8 +135,8 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
               />
               <div className="flex items-center justify-between text-sm text-gray-700">
-                <span>${priceRange[0]}</span>
-                <span>${priceRange[1]}</span>
+                <span>GH¢{priceRange[0]}</span>
+                <span>GH¢{priceRange[1]}</span>
               </div>
             </div>
           </div>

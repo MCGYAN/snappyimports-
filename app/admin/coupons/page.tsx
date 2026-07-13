@@ -155,10 +155,10 @@ export default function AdminCouponsPage() {
                     </td>
                     <td className="py-4 px-4 text-gray-700">{coupon.type}</td>
                     <td className="py-4 px-4 font-semibold text-gray-900">
-                      {coupon.type === 'Percentage' ? `${coupon.value}%` : coupon.type === 'Fixed Amount' ? `$ ${coupon.value}` : 'Free Shipping'}
+                      {coupon.type === 'Percentage' ? `${coupon.value}%` : coupon.type === 'Fixed Amount' ? `GH¢${coupon.value}` : 'Free Shipping'}
                     </td>
                     <td className="py-4 px-4 text-gray-700 whitespace-nowrap">
-                      {coupon.minPurchase > 0 ? `$ ${coupon.minPurchase.toFixed(2)}` : 'No minimum'}
+                      {coupon.minPurchase > 0 ? `GH¢${coupon.minPurchase.toFixed(2)}` : 'No minimum'}
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-2">

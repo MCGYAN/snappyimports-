@@ -23,7 +23,7 @@ export function generateMetadata({
   ogImage,
   ogType = 'website',
   price,
-  currency = 'USD',
+  currency = 'GHS',
   availability,
   category,
   publishedTime,
@@ -113,7 +113,7 @@ export function generateProductSchema(product: {
     offers: {
       '@type': 'Offer',
       price: product.price,
-      priceCurrency: product.currency || 'USD',
+      priceCurrency: product.currency || 'GHS',
       availability: product.availability === 'in_stock'
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',

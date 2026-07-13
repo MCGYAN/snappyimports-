@@ -643,7 +643,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 <p className="text-brand-primary font-semibold mb-1">Discount Calculation</p>
                                 {price && comparePrice && parseFloat(comparePrice) > parseFloat(price) ? (
                                     <p className="text-brand-primary">
-                                        Savings: $ {(parseFloat(comparePrice) - parseFloat(price)).toFixed(2)}
+                                        Savings: GH¢{(parseFloat(comparePrice) - parseFloat(price)).toFixed(2)}
                                         <span className="ml-2">
                                             ({(((parseFloat(comparePrice) - parseFloat(price)) / parseFloat(comparePrice)) * 100).toFixed(0)}% off)
                                         </span>
@@ -816,7 +816,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900">Product Variants</h3>
                                 <p className="text-gray-600 mt-1">
-                                    Add colors, sizes, or both. Sizes are optional — color-only products get one variant per color.
+                                    Add colors, sizes, or both. Sizes are optional. Color-only products get one variant per color.
                                 </p>
                             </div>
 

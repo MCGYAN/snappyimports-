@@ -20,7 +20,7 @@ export async function GET() {
     if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
         return NextResponse.json(cache.data, {
             headers: {
-                'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+                'Cache-Control': 'public, max-age=120, s-maxage=1800, stale-while-revalidate=3600',
                 'X-Cache': 'HIT'
             }
         });
@@ -43,7 +43,7 @@ export async function GET() {
 
         return NextResponse.json(data, {
             headers: {
-                'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+                'Cache-Control': 'public, max-age=120, s-maxage=1800, stale-while-revalidate=3600',
                 'X-Cache': 'MISS'
             }
         });

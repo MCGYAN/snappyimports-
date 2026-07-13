@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
-
+import { formatStoreMoney } from '@/lib/currency';
+import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 import { X, ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
 
 interface MiniCartProps {
@@ -38,7 +39,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
       <div className="fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-md flex-col border-l border-white/40 liquid-glass shadow-2xl slide-in-right">
         <div className="flex items-center justify-between border-b border-white/40 p-6 liquid-glass-well">
           <h2 className="text-xl font-extrabold text-brand-foreground tracking-tight">
-            Shopping Cart <span className="text-brand-accent ml-1">({cart.reduce((sum, i) => sum + i.quantity, 0)})</span>
+            Your basket <span className="text-brand-accent ml-1">({cart.reduce((sum, i) => sum + i.quantity, 0)})</span>
           </h2>
           <button
             onClick={onClose}
@@ -53,7 +54,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
             <div className="w-24 h-24 flex items-center justify-center bg-gray-50 rounded-full mb-6 shadow-inner border border-gray-100">
               <ShoppingCart className="w-12 h-12 text-gray-300" />
             </div>
-            <h3 className="text-2xl font-bold text-brand-foreground mb-2 tracking-tight">Your cart is empty</h3>
+            <h3 className="text-2xl font-bold text-brand-foreground mb-2 tracking-tight">Your basket is empty</h3>
             <p className="text-gray-500 mb-8 font-medium">Looks like you haven't added anything yet.</p>
             <Link
               href="/shop"
@@ -80,14 +81,14 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <h3 className="font-bold text-brand-foreground mb-1 line-clamp-2 leading-snug">{item.name}</h3>
                       {item.variant && (
-                        <p className="text-xs text-gray-500 mb-2 font-medium bg-gray-50 inline-block px-2 py-1 rounded-md w-fit">
-                          Variant: {item.variant}
+                        <p className="text-xs text-brand-primary mb-2 font-semibold bg-brand-light inline-block px-2 py-1 rounded-md w-fit">
+                          {cleanVariantDisplayLabel(item.variant)}
                         </p>
                       )}
 
                       <div className="flex items-center justify-between mt-auto pt-2">
                         <span className="text-lg font-black text-brand-primary tracking-tight">
-                          ${item.price.toFixed(2)}
+                          {formatStoreMoney(item.price)}
                         </span>
 
                         <div className="flex items-center border border-gray-200 rounded-full bg-gray-50 overflow-hidden shadow-sm">
@@ -118,7 +119,8 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
 
                     <button
                       onClick={() => removeFromCart(item.id, item.variant)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded-full transition-colors flex-shrink-0 cursor-pointer self-start opacity-0 group-hover:opacity-100"
+                      aria-label="Remove item"
+                      className="w-9 h-9 flex items-center justify-center hover:bg-red-50 active:bg-red-50 rounded-full transition-colors flex-shrink-0 cursor-pointer self-start opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                     >
                       <X className="w-5 h-5 text-gray-400 hover:text-red-500" />
                     </button>
@@ -130,11 +132,11 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
             <div className="border-t border-white/40 p-6 liquid-glass-well backdrop-blur-md">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-500 font-bold uppercase tracking-widest text-xs">Subtotal</span>
-                <span className="text-2xl font-black text-brand-foreground tracking-tight">${subtotal.toFixed(2)}</span>
+                <span className="text-2xl font-black text-brand-foreground tracking-tight">{formatStoreMoney(subtotal)}</span>
               </div>
 
               <p className="text-xs text-gray-400 mb-6 font-medium">
-                Shipping and taxes calculated at checkout.
+                Free pickup. Doorstep delivery quoted after your order.
               </p>
 
               <div className="space-y-3">
@@ -143,14 +145,14 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                   onClick={onClose}
                   className="btn-primary block w-full cursor-pointer whitespace-nowrap rounded-full bg-brand-primary py-4 text-center text-sm font-bold uppercase tracking-wide text-white hover:bg-brand-accent"
                 >
-                  Proceed to Checkout
+                  Checkout
                 </Link>
                 <Link
                   href="/cart"
                   onClick={onClose}
                   className="btn-secondary block w-full cursor-pointer whitespace-nowrap rounded-full bg-gray-50 py-4 text-center text-sm font-bold uppercase tracking-wide text-brand-foreground hover:bg-gray-100 hover:text-brand-accent"
                 >
-                  View Cart
+                  View basket
                 </Link>
               </div>
             </div>

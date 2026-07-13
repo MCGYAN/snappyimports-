@@ -9,7 +9,11 @@ import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { executeRecaptcha } from '@/lib/recaptcha';
-import { ShoppingCart, ArrowLeft, User, Check, UserCircle } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, UserCircle } from 'lucide-react';
+import {
+  INVOICE_PAYMENT_THRESHOLD,
+  resolveCheckoutPaymentChannel,
+} from '@/lib/payment-routing';
 
 export default function CheckoutPage() {
   usePageTitle('Checkout');
@@ -18,9 +22,7 @@ export default function CheckoutPage() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [checkoutType, setCheckoutType] = useState<'guest' | 'account'>('guest');
   const [saveAddress, setSaveAddress] = useState(false);
-  const [savePayment, setSavePayment] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   const [shippingData, setShippingData] = useState({
@@ -33,28 +35,29 @@ export default function CheckoutPage() {
     region: ''
   });
 
-  // State / region list for shipping (replace with your locale)
+  // The 16 regions of Ghana
   const regionOptions = [
-    'Metro',
-    'North',
-    'South',
-    'East',
-    'West',
+    'Greater Accra',
+    'Ashanti',
+    'Western',
+    'Western North',
     'Central',
+    'Eastern',
+    'Volta',
+    'Oti',
+    'Northern',
+    'Savannah',
     'North East',
-    'North West',
-    'South East',
-    'South West',
-    'Rural (Zone A)',
-    'Rural (Zone B)',
-    'Other'
+    'Upper East',
+    'Upper West',
+    'Bono',
+    'Bono East',
+    'Ahafo'
   ];
 
   const [deliveryMethod, setDeliveryMethod] = useState('pickup');
-  const [paymentMethod, setPaymentMethod] = useState('moolre');
+  const [paymentMethod, setPaymentMethod] = useState<'moolre' | 'invoice'>('moolre');
   const [errors, setErrors] = useState<any>({});
-
-
 
   // Check auth and cart
   useEffect(() => {
@@ -62,32 +65,31 @@ export default function CheckoutPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        setCheckoutType('account'); // Auto-select account checkout if logged in
-        // Pre-fill email if available
         setShippingData(prev => ({ ...prev, email: session.user.email || '' }));
       }
     }
     checkUser();
 
-    // Small delay to ensure cart load
     const timer = setTimeout(() => {
       if (cart.length === 0 && !isLoading) {
-        // router.push('/cart'); // Optional: redirect if empty
+        // optional empty cart redirect
       }
     }, 500);
     return () => clearTimeout(timer);
   }, [cart, router, isLoading]);
 
-  // Scroll to top when step changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  // Calculate Totals
   const subtotal = cartSubtotal;
-  const shippingCost = 0; // Delivery options temporarily disabled
-  const tax = 0; // No Tax
+  const shippingCost = 0;
+  const tax = 0;
   const total = subtotal + shippingCost + tax;
+
+  useEffect(() => {
+    setPaymentMethod(resolveCheckoutPaymentChannel(total));
+  }, [total]);
 
   const validateShipping = () => {
     const newErrors: any = {};
@@ -111,11 +113,8 @@ export default function CheckoutPage() {
   };
 
   const handleContinueToPayment = async () => {
-    // Skip step 3 and directly initiate payment with default method (Moolre/Mobile Money)
     await handlePlaceOrder();
   };
-
-
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
@@ -124,8 +123,8 @@ export default function CheckoutPage() {
     }
 
     setIsLoading(true);
+    const channel = resolveCheckoutPaymentChannel(total);
 
-    // reCAPTCHA: attempt to get token but don't block checkout on failure
     let recaptchaToken = '';
     const hasRecaptcha = typeof process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY === 'string' && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.length > 0;
     if (hasRecaptcha) {
@@ -134,7 +133,6 @@ export default function CheckoutPage() {
     }
 
     try {
-      // Place order via API (uses service role so RLS does not block guest checkout)
       const placeRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,11 +140,12 @@ export default function CheckoutPage() {
           recaptchaToken: recaptchaToken || '',
           shippingData,
           deliveryMethod,
-          paymentMethod,
-          cart: cart.map((item: { id: string; name: string; variant?: string; quantity: number; price: number; image?: string; slug?: string }) => ({
+          paymentMethod: channel,
+          cart: cart.map((item: { id: string; name: string; variant?: string; variantId?: string; quantity: number; price: number; image?: string; slug?: string }) => ({
             id: item.id,
             name: item.name,
             variant: item.variant,
+            variantId: item.variantId,
             quantity: item.quantity,
             price: item.price,
             image: item.image,
@@ -164,59 +163,48 @@ export default function CheckoutPage() {
         throw new Error('Invalid response from server');
       }
 
-      const order = placeData.order;
-      const orderNumber = placeData.orderNumber;
+      const orderNumber = placeData.orderNumber as string;
+      const paymentChannel = (placeData.paymentChannel || channel) as 'moolre' | 'invoice';
 
-      // Handle Payment Redirects or Completion
-      if (paymentMethod === 'moolre') {
-        try {
-          // Payment link reminder will be sent automatically after 15 mins if unpaid (via cron)
-
-          const paymentRes = await fetch('/api/payment/moolre', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              orderId: orderNumber,
-              amount: total,
-              customerEmail: shippingData.email
-            })
-          });
-
-          const paymentResult = await paymentRes.json();
-
-          if (!paymentResult.success) {
-            throw new Error(paymentResult.message || 'Payment initialization failed');
-          }
-
-          // Clear cart before redirecting
-          clearCart();
-
-          // Redirect to Moolre
-          window.location.href = paymentResult.url;
-          return;
-
-        } catch (paymentErr: any) {
-          console.error('Payment Error:', paymentErr);
-          alert('Failed to initialize payment: ' + paymentErr.message);
-          setIsLoading(false);
-          return; // Stop execution
-        }
+      if (paymentChannel === 'invoice') {
+        clearCart();
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'order_created', payload: placeData.order }),
+        }).catch(() => {});
+        router.push(
+          `/order/${encodeURIComponent(orderNumber)}?email=${encodeURIComponent(shippingData.email)}`,
+        );
+        return;
       }
 
-      // 5. Send Notifications (For COD or others)
-      fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'order_created',
-          payload: order
-        })
-      }).catch(err => console.error('Notification trigger error:', err));
+      try {
+        const paymentRes = await fetch('/api/payment/moolre', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: orderNumber,
+            amount: total,
+            customerEmail: shippingData.email
+          })
+        });
 
-      // 6. Clear Cart & Redirect (For COD)
-      clearCart();
-      router.push(`/order-success?order=${orderNumber}`);
+        const paymentResult = await paymentRes.json();
 
+        if (!paymentResult.success) {
+          throw new Error(paymentResult.message || 'Payment initialization failed');
+        }
+
+        clearCart();
+        window.location.href = paymentResult.url;
+        return;
+      } catch (paymentErr: any) {
+        console.error('Payment Error:', paymentErr);
+        alert('Failed to initialize payment: ' + paymentErr.message);
+        setIsLoading(false);
+        return;
+      }
     } catch (err: any) {
       console.error('Checkout error:', err);
       alert('Failed to place order: ' + err.message);
@@ -254,51 +242,11 @@ export default function CheckoutPage() {
 
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
 
-        {currentStep === 1 && (
-          <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Checkout As</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              <button
-                onClick={() => !user && setCheckoutType('guest')}
-                className={`p-6 rounded-xl border-2 transition-all text-left cursor-pointer ${checkoutType === 'guest'
-                  ? 'border-brand-primary bg-brand-light'
-                  : 'border-gray-200 hover:border-gray-300'
-                  } ${user ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={!!user}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <User className="w-8 h-8 text-brand-primary" />
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkoutType === 'guest' ? 'border-brand-primary bg-brand-primary' : 'border-gray-300'
-                    }`}>
-                    {checkoutType === 'guest' && <Check className="w-4 h-4 text-white" />}
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Guest Checkout</h3>
-                <p className="text-sm text-gray-600">Quick checkout without creating an account</p>
-                {user && <p className="text-xs text-brand-accent mt-2">You are logged in</p>}
-              </button>
-
-              <button
-                onClick={() => setCheckoutType('account')}
-                className={`p-6 rounded-xl border-2 transition-all text-left cursor-pointer ${checkoutType === 'account'
-                  ? 'border-brand-primary bg-brand-light'
-                  : 'border-gray-200 hover:border-gray-300'
-                  }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <UserCircle className="w-8 h-8 text-brand-primary" />
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkoutType === 'account' ? 'border-brand-primary bg-brand-primary' : 'border-gray-300'
-                    }`}>
-                    {checkoutType === 'account' && <Check className="w-4 h-4 text-white" />}
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{user ? 'My Account' : 'Create Account'}</h3>
-                <p className="text-sm text-gray-600">
-                  {user ? `Logged in as ${user.email}` : 'Save info, track orders & earn loyalty points'}
-                </p>
-              </button>
-            </div>
-          </div>
+        {user && (
+          <p className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-light px-4 py-2 text-sm font-medium text-brand-primary">
+            <UserCircle className="h-4 w-4" />
+            Checking out as {user.email}
+          </p>
         )}
 
         <CheckoutSteps currentStep={currentStep} />
@@ -318,6 +266,7 @@ export default function CheckoutPage() {
                         </label>
                         <input
                           type="text"
+                          autoComplete="given-name"
                           value={shippingData.firstName}
                           onChange={(e) => setShippingData({ ...shippingData, firstName: e.target.value })}
                           className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.firstName ? 'border-red-500' : 'border-gray-300'
@@ -332,6 +281,7 @@ export default function CheckoutPage() {
                         </label>
                         <input
                           type="text"
+                          autoComplete="family-name"
                           value={shippingData.lastName}
                           onChange={(e) => setShippingData({ ...shippingData, lastName: e.target.value })}
                           className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.lastName ? 'border-red-500' : 'border-gray-300'
@@ -348,6 +298,8 @@ export default function CheckoutPage() {
                       </label>
                       <input
                         type="email"
+                        inputMode="email"
+                        autoComplete="email"
                         value={shippingData.email}
                         readOnly={!!user} // Make read-only if logged in (optional, but safer)
                         onChange={(e) => setShippingData({ ...shippingData, email: e.target.value })}
@@ -364,11 +316,13 @@ export default function CheckoutPage() {
                       </label>
                       <input
                         type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
                         value={shippingData.phone}
                         onChange={(e) => setShippingData({ ...shippingData, phone: e.target.value })}
                         className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.phone ? 'border-red-500' : 'border-gray-300'
                           }`}
-                        placeholder="+1 555 000 0000"
+                        placeholder="024 123 4567"
                       />
                       {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone}</p>}
                     </div>
@@ -379,6 +333,7 @@ export default function CheckoutPage() {
                       </label>
                       <input
                         type="text"
+                        autoComplete="street-address"
                         value={shippingData.address}
                         onChange={(e) => setShippingData({ ...shippingData, address: e.target.value })}
                         className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.address ? 'border-red-500' : 'border-gray-300'
@@ -395,6 +350,7 @@ export default function CheckoutPage() {
                         </label>
                         <input
                           type="text"
+                          autoComplete="address-level2"
                           value={shippingData.city}
                           onChange={(e) => setShippingData({ ...shippingData, city: e.target.value })}
                           className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.city ? 'border-red-500' : 'border-gray-300'
@@ -422,7 +378,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    {checkoutType === 'account' && (
+                    {user && (
                       <label className="flex items-center space-x-3 cursor-pointer">
                         <input
                           type="checkbox"
@@ -452,6 +408,18 @@ export default function CheckoutPage() {
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-6">Delivery Method</h2>
                   <div className="space-y-4">
+                    <div className="rounded-xl border border-brand-accent/25 bg-brand-accent/10 px-4 py-3 text-sm text-brand-primary">
+                      {paymentMethod === 'invoice' ? (
+                        <>
+                          Cart total is GH¢{total.toFixed(2)} (at or above GH¢{INVOICE_PAYMENT_THRESHOLD.toFixed(0)}).
+                          You will get a downloadable invoice with bank details. Pay by transfer, then tap “I’ve paid”.
+                        </>
+                      ) : (
+                        <>
+                          Cart total is under GH¢{INVOICE_PAYMENT_THRESHOLD.toFixed(0)}. Fast checkout with Mobile Money.
+                        </>
+                      )}
+                    </div>
                     <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'pickup' ? 'border-brand-primary bg-brand-light' : 'border-gray-300 hover:border-gray-400'
                       }`}>
                       <div className="flex items-center space-x-4">
@@ -500,7 +468,7 @@ export default function CheckoutPage() {
                           <p className="text-sm text-gray-600">Delivery within metro area</p>
                         </div>
                       </div>
-                      <p className="font-bold text-gray-900">$ 40.00</p>
+                      <p className="font-bold text-gray-900">GH¢40.00</p>
                     </label>
                     <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'outside-accra' ? 'border-brand-primary bg-brand-light' : 'border-gray-300 hover:border-gray-400'
                       }`}>
@@ -511,7 +479,7 @@ export default function CheckoutPage() {
                           <p className="text-sm text-gray-600">Delivery outside metro (rates vary)</p>
                         </div>
                       </div>
-                      <p className="font-bold text-gray-900">$ 30.00</p>
+                      <p className="font-bold text-gray-900">GH¢30.00</p>
                     </label>
                     */}
                   </div>
@@ -537,8 +505,10 @@ export default function CheckoutPage() {
                           </svg>
                           Processing...
                         </>
+                      ) : paymentMethod === 'invoice' ? (
+                        `Get invoice for GH¢${total.toFixed(2)}`
                       ) : (
-                        'Pay with Mobile Money'
+                        `Pay GH¢${total.toFixed(2)} with Mobile Money`
                       )}
                     </button>
                   </div>

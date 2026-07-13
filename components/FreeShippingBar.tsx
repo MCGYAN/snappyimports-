@@ -27,7 +27,7 @@ export default function FreeShippingBar({ currentAmount, threshold = 200 }: Free
             {isQualified ? (
               <>You qualify for free delivery</>
             ) : (
-              <>Add ${remaining.toFixed(2)} more for free delivery</>
+              <>Add GH¢{remaining.toFixed(2)} more for free delivery</>
             )}
           </span>
         </div>

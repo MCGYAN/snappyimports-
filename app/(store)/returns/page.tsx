@@ -192,7 +192,7 @@ export default function ReturnsPortalPage() {
                       </div>
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900 mb-1">{item.name}</p>
-                        <p className="text-lg font-bold text-gray-900 mb-3">${item.price.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-gray-900 mb-3">GH¢{item.price.toFixed(2)}</p>
                         
                         {selectedItems.includes(item.id) && (
                           <div className="mt-4">
@@ -289,7 +289,7 @@ export default function ReturnsPortalPage() {
                           <p className="font-semibold text-gray-900">{item.name}</p>
                           <p className="text-sm text-gray-600">Reason: {returnReasons[item.id]}</p>
                         </div>
-                        <p className="font-bold text-gray-900">${item.price.toFixed(2)}</p>
+                        <p className="font-bold text-gray-900">GH¢{item.price.toFixed(2)}</p>
                       </div>
                     ))}
                 </div>

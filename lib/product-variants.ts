@@ -107,3 +107,28 @@ export function findVariantByColorAndSize(
   const sizeKey = sizeLabel.trim().toLowerCase();
   return scoped.find((v) => getVariantSizeLabel(v).toLowerCase() === sizeKey);
 }
+
+/** Human-readable cart/invoice label. Avoids "Blue / Blue". */
+export function formatVariantLabel(
+  variant: StoreVariant | null | undefined,
+  selectedColor?: string,
+): string {
+  if (!variant && !selectedColor) return '';
+  const color = (variant ? getVariantColor(variant) : '') || (selectedColor || '').trim();
+  const size = variant ? getVariantSizeLabel(variant) : '';
+  const sizeClean = size && color && size.toLowerCase() === color.toLowerCase() ? '' : size;
+
+  if (color && sizeClean) return `${color} / ${sizeClean}`;
+  return color || sizeClean || (variant?.name || '').trim();
+}
+
+/** Normalize stored labels like "Blue / Blue" for display. */
+export function cleanVariantDisplayLabel(label: string | null | undefined): string {
+  if (!label) return '';
+  const parts = label.split('/').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+    return parts[0];
+  }
+  return label.trim();
+}
+

@@ -121,10 +121,10 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                 </div>
 
                 <div className="flex items-baseline space-x-3 mb-4">
-                  <span className="text-3xl font-bold text-gray-900">${product.price.toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-gray-900">GH¢{product.price.toFixed(2)}</span>
                   {product.originalPrice && (
                     <>
-                      <span className="text-lg text-gray-400 line-through">${product.originalPrice.toFixed(2)}</span>
+                      <span className="text-lg text-gray-400 line-through">GH¢{product.originalPrice.toFixed(2)}</span>
                       <span className="px-2 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded whitespace-nowrap">
                         Save {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
                       </span>

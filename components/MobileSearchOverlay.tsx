@@ -27,9 +27,9 @@ export default function MobileSearchOverlay({ isOpen, onClose }: MobileSearchOve
   ];
 
   const searchSuggestions = [
-    { name: 'Summer Floral Dress', category: 'Women\'s Clothing', price: '$289', image: 'https://picsum.photos/seed/ph-MobileSearchOverlay-1/80/80' },
-    { name: 'Classic Leather Handbag', category: 'Bags', price: '$459', image: 'https://picsum.photos/seed/ph-MobileSearchOverlay-2/80/80' },
-    { name: 'Designer Sunglasses', category: 'Accessories', price: '$199', image: 'https://picsum.photos/seed/ph-MobileSearchOverlay-3/80/80' }
+    { name: 'Summer Floral Dress', category: 'Women\'s Clothing', price: 'GH¢289', image: 'https://picsum.photos/seed/ph-MobileSearchOverlay-1/80/80' },
+    { name: 'Classic Leather Handbag', category: 'Bags', price: 'GH¢459', image: 'https://picsum.photos/seed/ph-MobileSearchOverlay-2/80/80' },
+    { name: 'Designer Sunglasses', category: 'Accessories', price: 'GH¢199', image: 'https://picsum.photos/seed/ph-MobileSearchOverlay-3/80/80' }
   ];
 
   useEffect(() => {

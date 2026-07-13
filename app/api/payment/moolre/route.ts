@@ -80,7 +80,7 @@ export async function POST(req: Request) {
             callback: `${baseUrl}/api/payment/moolre/callback`,
             redirect: `${baseUrl}/order-success?order=${orderRef}&payment_success=true`,
             reusable: "0",
-            currency: process.env.MOOLRE_CURRENCY || 'USD',
+            currency: process.env.MOOLRE_CURRENCY || 'GHS',
             accountnumber: process.env.MOOLRE_ACCOUNT_NUMBER,
             metadata: {
                 customer_email: customerEmail || order.email,

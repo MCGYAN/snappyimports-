@@ -36,7 +36,7 @@ export default function ImportDetailsCard({ importType, importNotes, priceLabel 
 
       {priceLabel ? (
         <p className="mt-3 text-xs text-gray-500">
-          Listed price ({priceLabel}) — confirm final landed cost with us before you pay.
+          Listed price ({priceLabel}). Confirm final landed cost with us before you pay.
         </p>
       ) : null}
 

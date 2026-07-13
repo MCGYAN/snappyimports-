@@ -17,39 +17,38 @@ type StatItem = {
 };
 
 export default function AdminDashboard() {
-  const [dateRange, setDateRange] = useState('7days'); // logic not implemented for this demo, just UI
   const [loading, setLoading] = useState(true);
 
   // Real Stats
   const [stats, setStats] = useState<StatItem[]>([
     {
-      title: 'Total Revenue',
-      value: '$ 0.00',
-      change: '0%',
+      title: 'Shop revenue',
+      value: 'GH¢0.00',
+      change: 'Paid product orders',
       trend: 'up',
       icon: 'ri-money-dollar-circle-line',
       tone: 'accent',
     },
     {
-      title: 'Orders',
+      title: 'Product orders',
       value: '0',
-      change: '0%',
+      change: '0 paid',
       trend: 'up',
       icon: 'ri-shopping-bag-line',
       tone: 'primary',
     },
     {
-      title: 'Customers',
+      title: 'Customers (Active)',
       value: '0',
-      change: '0%',
+      change: 'Unique buyers',
       trend: 'up',
       icon: 'ri-group-line',
       tone: 'accent',
     },
     {
-      title: 'Avg Order Value',
-      value: '$ 0.00',
-      change: '0%',
+      title: 'Avg order value',
+      value: 'GH¢0.00',
+      change: 'Paid orders only',
       trend: 'up',
       icon: 'ri-line-chart-line',
       tone: 'primary',
@@ -61,6 +60,12 @@ export default function AdminDashboard() {
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [rmbDesk, setRmbDesk] = useState({
+    openDeals: 0,
+    completedDeals: 0,
+    volumeGhs: 0,
+    volumeRmb: 0,
+  });
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -77,7 +82,7 @@ export default function AdminDashboard() {
           return;
         }
 
-        // Only count PAID orders for revenue & avg order value
+        // Only count PAID product orders for shop revenue (Buy RMB is separate)
         const paidOrders = allOrdersData?.filter(o => o.payment_status === 'paid') || [];
         const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.total || 0), 0);
         const totalOrders = allOrdersData?.length || 0;
@@ -122,17 +127,17 @@ export default function AdminDashboard() {
 
         setStats([
           {
-            title: 'Total Revenue',
-            value: `$ ${totalRevenue.toFixed(2)}`,
-            change: '+0%',
+            title: 'Shop revenue',
+            value: `GH¢${totalRevenue.toFixed(2)}`,
+            change: 'Paid product orders',
             trend: 'up',
             icon: 'ri-money-dollar-circle-line',
             tone: 'accent',
           },
           {
-            title: 'Orders',
+            title: 'Product orders',
             value: totalOrders.toString(),
-            change: '+0%',
+            change: `${paidOrderCount} paid`,
             trend: 'up',
             icon: 'ri-shopping-bag-line',
             tone: 'primary',
@@ -140,20 +145,43 @@ export default function AdminDashboard() {
           {
             title: 'Customers (Active)',
             value: uniqueCustomers.toString(),
-            change: '+0%',
+            change: 'Unique buyers',
             trend: 'up',
             icon: 'ri-group-line',
             tone: 'accent',
           },
           {
-            title: 'Avg Order Value',
-            value: `$ ${avgOrderValue.toFixed(2)}`,
-            change: '+0%',
+            title: 'Avg order value',
+            value: `GH¢${avgOrderValue.toFixed(2)}`,
+            change: 'Paid orders only',
             trend: 'up',
             icon: 'ri-line-chart-line',
             tone: 'primary',
           },
         ]);
+
+        // Buy RMB desk metrics (not included in shop revenue)
+        const { data: exchangeRows } = await supabase
+          .from('exchange_orders')
+          .select('status, payment_status, amount_from, amount_to, currency_from, currency_to');
+
+        if (exchangeRows) {
+          const completed = exchangeRows.filter(
+            (ex) => ex.status === 'completed' || ex.payment_status === 'paid' || ex.status === 'confirmed',
+          );
+          const open = exchangeRows.filter(
+            (ex) => !['completed', 'cancelled', 'expired'].includes(ex.status),
+          );
+          const settled = exchangeRows.filter(
+            (ex) => ex.status === 'completed' || ex.status === 'confirmed' || ex.payment_status === 'paid',
+          );
+          setRmbDesk({
+            openDeals: open.length,
+            completedDeals: completed.filter((ex) => ex.status === 'completed').length,
+            volumeGhs: settled.reduce((sum, ex) => sum + (Number(ex.amount_from) || 0), 0),
+            volumeRmb: settled.reduce((sum, ex) => sum + (Number(ex.amount_to) || 0), 0),
+          });
+        }
 
         // 3. Fetch Recent Orders (only paid orders)
         const { data: recentOrdersData } = await supabase
@@ -251,9 +279,15 @@ export default function AdminDashboard() {
       link: '/admin/pos',
     },
     {
+      title: 'Buy RMB desk',
+      icon: 'ri-exchange-dollar-line',
+      tone: 'accent' as AdminStatTone,
+      link: '/admin/exchange',
+    },
+    {
       title: 'Manage Orders',
       icon: 'ri-file-list-line',
-      tone: 'accent' as AdminStatTone,
+      tone: 'primary' as AdminStatTone,
       link: '/admin/orders',
     },
   ];
@@ -287,7 +321,9 @@ export default function AdminDashboard() {
     <div className="mx-auto max-w-7xl">
         <div className="mb-5 md:mb-8">
           <h1 className="font-heading text-2xl font-bold text-brand-primary md:text-3xl">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-600 md:text-base">Welcome back! Here&apos;s what&apos;s happening with your store.</p>
+          <p className="mt-1 text-sm text-slate-600 md:text-base">
+            Shop sales stay separate from Buy RMB desk volume.
+          </p>
         </div>
 
         <div className="mb-5 grid grid-cols-2 gap-3 md:mb-8 md:gap-6 lg:grid-cols-4">
@@ -307,19 +343,48 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Revenue Chart & Quick Actions */}
+        <div className="admin-card mb-5 md:mb-8">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-heading text-lg font-bold text-brand-primary md:text-xl">Buy RMB desk</h2>
+              <p className="text-sm text-slate-500">
+                Exchange volume only. Not counted in shop revenue.
+              </p>
+            </div>
+            <Link href="/admin/exchange" className="admin-link text-sm font-semibold whitespace-nowrap">
+              Open desk
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="rounded-xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Open deals</p>
+              <p className="mt-1 font-heading text-xl font-bold text-brand-primary">{rmbDesk.openDeals}</p>
+            </div>
+            <div className="rounded-xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Completed</p>
+              <p className="mt-1 font-heading text-xl font-bold text-brand-primary">{rmbDesk.completedDeals}</p>
+            </div>
+            <div className="rounded-xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cedis volume</p>
+              <p className="mt-1 font-heading text-xl font-bold text-brand-primary">
+                GH¢{rmbDesk.volumeGhs.toFixed(2)}
+              </p>
+            </div>
+            <div className="rounded-xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">RMB sent / locked</p>
+              <p className="mt-1 font-heading text-xl font-bold text-brand-primary">
+                {rmbDesk.volumeRmb.toFixed(2)} RMB
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Shop revenue chart & Quick Actions */}
         <div className="mb-5 grid gap-4 md:mb-8 md:gap-6 lg:grid-cols-3">
           <div className="admin-card lg:col-span-2">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between md:mb-4">
-              <h2 className="font-heading text-lg font-bold text-brand-primary md:text-xl">Revenue Trend</h2>
-              <select
-                className="store-input w-full py-2 text-sm sm:w-auto"
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-              >
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-              </select>
+              <h2 className="font-heading text-lg font-bold text-brand-primary md:text-xl">Shop revenue trend</h2>
+              <span className="text-sm font-medium text-slate-500">Last 7 days</span>
             </div>
             <ChartContainer>
               <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
@@ -331,10 +396,10 @@ export default function AdminDashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(11,31,58,0.06)" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={8} interval="preserveStartEnd" />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(value) => `$${value}`} width={42} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(value) => `GH¢${value}`} width={42} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 8px 32px rgba(11,31,58,0.08)', backdropFilter: 'blur(12px)' }}
-                  formatter={(value) => [`$${(value as number)?.toFixed(2) ?? '0.00'}`, 'Revenue']}
+                  formatter={(value) => [`GH¢${(value as number)?.toFixed(2) ?? '0.00'}`, 'Shop revenue']}
                 />
                 <Area type="monotone" dataKey="revenue" stroke={BRAND_ACCENT} strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
               </AreaChart>
@@ -388,7 +453,7 @@ export default function AdminDashboard() {
                           <p className="text-[11px] text-slate-500">{order.date}</p>
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-sm font-bold text-brand-primary">$ {order.total.toFixed(2)}</p>
+                          <p className="text-sm font-bold text-brand-primary">GH¢{order.total.toFixed(2)}</p>
                           <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColors[order.status] || 'bg-slate-100 text-slate-700'}`}>
                             {order.status === 'shipped' ? 'Packaged' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
@@ -423,7 +488,7 @@ export default function AdminDashboard() {
                             <p className="text-sm text-slate-500">{order.email}</p>
                           </td>
                           <td className="whitespace-nowrap px-4 py-4 text-slate-700">{order.date}</td>
-                          <td className="whitespace-nowrap px-4 py-4 font-semibold text-brand-primary">$ {order.total.toFixed(2)}</td>
+                          <td className="whitespace-nowrap px-4 py-4 font-semibold text-brand-primary">GH¢{order.total.toFixed(2)}</td>
                           <td className="px-4 py-4">
                             <span className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${statusColors[order.status] || 'bg-slate-100 text-slate-700'}`}>
                               {order.status === 'shipped' ? 'Packaged' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}

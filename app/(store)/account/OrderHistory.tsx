@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { formatStoreMoney } from '@/lib/currency';
+import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
 interface Order {
   id: string;
   orderNumber: string;
+  email: string;
   date: string;
   status: string;
   total: number;
@@ -16,6 +19,7 @@ interface Order {
     image: string;
     quantity: number;
     price: number;
+    variant?: string;
   }[];
 }
 
@@ -44,6 +48,7 @@ export default function OrderHistory() {
           const formattedOrders = data.map((order: any) => ({
             id: order.id,
             orderNumber: order.order_number,
+            email: order.email || session.user.email || '',
             date: order.created_at,
             status: order.status,
             total: order.total,
@@ -52,7 +57,8 @@ export default function OrderHistory() {
               name: item.product_name,
               image: item.metadata?.image || 'https://via.placeholder.com/150',
               quantity: item.quantity,
-              price: item.unit_price
+              price: item.unit_price,
+              variant: cleanVariantDisplayLabel(item.variant_name) || undefined,
             }))
           }));
           setOrders(formattedOrders);
@@ -88,9 +94,10 @@ export default function OrderHistory() {
     alert('Reorder feature coming soon!');
   };
 
-  const handleDownloadInvoice = (orderId: string) => {
-    console.log('Downloading invoice for order:', orderId);
-    alert('Invoice download coming soon!');
+  const handleDownloadInvoice = (order: Order) => {
+    const email = encodeURIComponent(order.email || '');
+    const num = encodeURIComponent(order.orderNumber || order.id);
+    window.open(`/order/${num}?email=${email}`, '_blank');
   };
 
   if (loading) {
@@ -148,7 +155,7 @@ export default function OrderHistory() {
                   </div>
                   <div className="w-full sm:w-auto">
                     <p className="text-xs text-gray-600 mb-1">Total</p>
-                    <p className="font-bold text-brand-primary">${order.total.toFixed(2)}</p>
+                    <p className="font-bold text-brand-primary">{formatStoreMoney(order.total)}</p>
                   </div>
                 </div>
                 <div className="w-full sm:w-auto">
@@ -172,8 +179,11 @@ export default function OrderHistory() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-gray-900 mb-1">{item.name}</h4>
+                      {item.variant ? (
+                        <p className="text-sm font-semibold text-brand-primary">{item.variant}</p>
+                      ) : null}
                       <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                      <p className="text-sm font-bold text-gray-900 mt-1">${item.price.toFixed(2)}</p>
+                      <p className="text-sm font-bold text-gray-900 mt-1">{formatStoreMoney(item.price)}</p>
                     </div>
                   </div>
                 ))}
@@ -195,11 +205,11 @@ export default function OrderHistory() {
                   Reorder
                 </button>
                 <button
-                  onClick={() => handleDownloadInvoice(order.id)}
+                  onClick={() => handleDownloadInvoice(order)}
                   className="flex-1 sm:flex-none px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
                 >
-                  <i className="ri-download-line mr-2"></i>
-                  Invoice
+                  <i className="ri-file-list-3-line mr-2"></i>
+                  Invoice & pay
                 </button>
                 <Link
                   href="/contact"

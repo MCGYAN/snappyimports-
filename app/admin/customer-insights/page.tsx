@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GH', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'GHS'
   }).format(amount);
 };
 
@@ -188,7 +188,7 @@ export default function CustomerInsightsPage() {
             </div>
             <p className="text-sm text-gray-600 mb-1">VIP Customers</p>
             <p className="text-3xl font-bold text-gray-900">{stats.vip}</p>
-            <p className="text-sm text-brand-primary font-semibold mt-2">Spent &gt; $1,000</p>
+            <p className="text-sm text-brand-primary font-semibold mt-2">Spent &gt; GH¢1,000</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">

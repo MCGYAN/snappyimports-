@@ -148,7 +148,7 @@ export default function AboutPage() {
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-600">
               A parent buying a car for the family. A shop owner stocking phones. A builder who
-              needs a machine. One item or many — we treat your order like it matters. Because it
+              needs a machine. One item or many, we treat your order like it matters. Because it
               does.
             </p>
           </div>

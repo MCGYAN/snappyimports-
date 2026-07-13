@@ -36,7 +36,7 @@ export default function AdvancedCouponSystem({
       discount: 10, 
       type: 'percentage',
       minPurchase: 100,
-      description: '10% off on orders over $100'
+      description: '10% off on orders over GH¢100'
     },
     { 
       code: 'SAVE20', 
@@ -44,21 +44,21 @@ export default function AdvancedCouponSystem({
       type: 'percentage',
       minPurchase: 200,
       maxDiscount: 50,
-      description: '20% off (max $50) on orders over $200'
+      description: '20% off (max GH¢50) on orders over GH¢200'
     },
     { 
       code: 'FREE50', 
       discount: 50, 
       type: 'fixed',
       minPurchase: 500,
-      description: '$50 off on orders over $500'
+      description: 'GH¢50 off on orders over GH¢500'
     },
     { 
       code: 'NEWCUSTOMER', 
       discount: 15, 
       type: 'percentage',
       maxDiscount: 30,
-      description: '15% off (max $30) for new customers'
+      description: '15% off (max GH¢30) for new customers'
     }
   ];
 
@@ -72,7 +72,7 @@ export default function AdvancedCouponSystem({
     }
 
     if (coupon.minPurchase && subtotal < coupon.minPurchase) {
-      setError(`Minimum purchase of $${coupon.minPurchase} required`);
+      setError(`Minimum purchase of GH¢${coupon.minPurchase} required`);
       return;
     }
 
@@ -83,7 +83,7 @@ export default function AdvancedCouponSystem({
 
   const handleQuickApply = (coupon: Coupon) => {
     if (coupon.minPurchase && subtotal < coupon.minPurchase) {
-      setError(`Add $${(coupon.minPurchase - subtotal).toFixed(2)} more to use this coupon`);
+      setError(`Add GH¢${(coupon.minPurchase - subtotal).toFixed(2)} more to use this coupon`);
       return;
     }
     setError('');
@@ -155,7 +155,7 @@ export default function AdvancedCouponSystem({
                         </span>
                         {!isEligible && (
                           <span className="text-xs text-gray-500">
-                            Add ${needed.toFixed(2)} more
+                            Add GH¢{needed.toFixed(2)} more
                           </span>
                         )}
                       </div>

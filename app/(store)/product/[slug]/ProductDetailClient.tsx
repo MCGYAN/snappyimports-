@@ -13,6 +13,7 @@ import { useCart } from '@/context/CartContext';
 import { useCMS } from '@/context/CMSContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { buildTelHref, buildWhatsAppHref, getImportProductMode, resolveContactWhatsApp } from '@/lib/snappy-import';
+import { formatStoreMoney, STORE_CURRENCY } from '@/lib/currency';
 import {
   buildAvailabilityWhatsAppText,
   buildProductInquiryWhatsAppText,
@@ -28,6 +29,7 @@ import {
   inferVariantSizeName,
   isColorOnlyCatalog,
   variantsForColor,
+  formatVariantLabel,
 } from '@/lib/product-variants';
 import SocialShareButtons from '@/components/SocialShareButtons';
 import ImportDetailsCard from '@/components/snappy/ImportDetailsCard';
@@ -51,6 +53,7 @@ function colorNameToHex(name: string): string {
 export default function ProductDetailClient({ slug }: { slug: string }) {
   const [product, setProduct] = useState<any>(null);
   const { getSetting } = useCMS();
+  const money = (n: number) => formatStoreMoney(n, getSetting('currency') || STORE_CURRENCY);
   usePageTitle(product?.name || 'Product');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -221,19 +224,18 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const handleAddToCart = () => {
     if (!product) return;
-    if (needsVariantSelection) return; // Safety check
+    if (needsColorSelection || needsVariantSelection) return;
 
-    // Build variant display string: "Color / Name" or just "Name" or just "Color"
-    let variantLabel: string | undefined;
-    if (selectedVariant) {
-      const color = selectedVariant.color || selectedColor || '';
-      const name = selectedVariant.name || '';
-      if (color && name) {
-        variantLabel = `${color} / ${name}`;
-      } else {
-        variantLabel = color || name || undefined;
-      }
+    // Color-only catalog: ensure a concrete variant row is attached
+    let variantRow = selectedVariant;
+    if (!variantRow && selectedColor && colorOnlyCatalog) {
+      const matching = variantsForColor(product.variants || [], selectedColor);
+      variantRow = matching[0] || null;
     }
+
+    if (hasVariants && !variantRow) return;
+
+    const variantLabel = formatVariantLabel(variantRow, selectedColor) || undefined;
 
     addToCart({
       id: product.id,
@@ -242,6 +244,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       image: product.images[0],
       quantity: quantity,
       variant: variantLabel,
+      variantId: variantRow?.id || undefined,
       slug: product.slug,
       maxStock: activeStock,
       moq: product.moq || 1
@@ -283,7 +286,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     description: product.description,
     image: product.images[0],
     price: hasVariants ? minVariantPrice : product.price,
-    currency: 'USD',
+    currency: STORE_CURRENCY,
     sku: product.sku,
     rating: product.rating,
     reviewCount: product.reviewCount,
@@ -432,15 +435,15 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   {hasVariants && !selectedVariant ? (
                     <div>
                       <span className="text-3xl lg:text-4xl font-bold text-gray-900">
-                        From ${minVariantPrice.toFixed(2)}
+                        From {money(minVariantPrice)}
                       </span>
                       <p className="text-sm text-gray-500 mt-1">Select options to see final price</p>
                     </div>
                   ) : (
                     <>
-                      <span className="text-3xl lg:text-4xl font-bold text-gray-900">${activePrice.toFixed(2)}</span>
+                      <span className="text-3xl lg:text-4xl font-bold text-gray-900">{money(activePrice)}</span>
                       {product.compare_at_price && product.compare_at_price > activePrice && (
-                        <span className="text-xl text-gray-400 line-through ml-2">${product.compare_at_price.toFixed(2)}</span>
+                        <span className="text-xl text-gray-400 line-through ml-2">{money(product.compare_at_price)}</span>
                       )}
                     </>
                   )}
@@ -519,7 +522,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <label className="block font-semibold text-gray-900 mb-3">
                       Size / Type: {selectedVariant ? (
                         <span className="text-brand-primary font-normal">
-                          {getVariantSizeLabel(selectedVariant)}: ${selectedVariant.price?.toFixed(2)}
+                          {getVariantSizeLabel(selectedVariant)}: {money(selectedVariant.price || 0)}
                         </span>
                       ) : (
                         <span className="text-red-500 font-normal text-sm">Please select</span>
@@ -553,7 +556,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                             >
                               <span>{sizeLabel}</span>
                               <span className={`text-xs mt-0.5 ${isSelected ? 'text-brand-accent' : 'text-gray-500'}`}>
-                                ${(variant.price || product.price).toFixed(2)}
+                                {money(variant.price || product.price)}
                               </span>
                             </button>
                           );
@@ -568,7 +571,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <label className="block font-semibold text-gray-900 mb-3">
                       Variant: {selectedVariant ? (
                         <span className="text-brand-primary font-normal">
-                          {getVariantSizeLabel(selectedVariant)}: ${selectedVariant.price?.toFixed(2)}
+                          {getVariantSizeLabel(selectedVariant)}: {money(selectedVariant.price || 0)}
                         </span>
                       ) : (
                         <span className="text-red-500 font-normal text-sm">Please select a variant</span>
@@ -597,7 +600,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                           >
                             <span>{label}</span>
                             <span className={`text-xs mt-0.5 ${isSelected ? 'text-brand-accent' : 'text-gray-500'}`}>
-                              ${(variant.price || product.price).toFixed(2)}
+                              {money(variant.price || product.price)}
                             </span>
                           </button>
                         );
@@ -697,9 +700,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                         {activeStock > 0 && !needsVariantSelection && !needsColorSelection && (
                           <button
                             onClick={handleBuyNow}
-                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-accent px-5 py-4 text-lg font-bold text-white transition-all shadow-sm hover:bg-brand-accent/90 hover:shadow-md hover:-translate-y-0.5"
+                            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-brand-primary/20 bg-white px-5 py-3 text-base font-bold text-brand-primary transition-all hover:border-brand-primary/40 hover:bg-brand-light"
                           >
-                            Buy It Now
+                            Buy now, skip the basket
                           </button>
                         )}
                       </>
@@ -847,6 +850,39 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             </div>
           </section>
         )}
+
+        {/* Mobile: price + add to basket always within thumb reach (sits above MobileBottomNav on phones) */}
+        {allowOnlineCheckout && (
+          <div className="fixed inset-x-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(11,31,58,0.06)] backdrop-blur lg:hidden bottom-[calc(3.4rem+env(safe-area-inset-bottom))] md:bottom-0 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0">
+                <p className="text-lg font-extrabold leading-tight text-brand-primary">{money(activePrice)}</p>
+                <p className="truncate text-[11px] text-gray-500">
+                  {activeStock === 0 ? 'Out of stock' : quantity > 1 ? `Qty ${quantity}` : 'In stock'}
+                </p>
+              </div>
+              <button
+                disabled={activeStock === 0 || needsVariantSelection || needsColorSelection}
+                onClick={handleAddToCart}
+                className={`flex-1 rounded-xl py-3.5 text-base font-bold text-white transition-colors ${
+                  activeStock === 0 || needsVariantSelection || needsColorSelection
+                    ? 'bg-brand-primary/40'
+                    : 'bg-brand-primary active:bg-brand-primary/90'
+                }`}
+              >
+                {activeStock === 0
+                  ? 'Out of stock'
+                  : needsColorSelection
+                    ? 'Pick a color above'
+                    : needsVariantSelection
+                      ? 'Pick an option above'
+                      : 'Add to basket'}
+              </button>
+            </div>
+          </div>
+        )}
+        {/* Keep page content clear of the fixed bar + bottom nav */}
+        {allowOnlineCheckout && <div className="h-36 md:h-20 lg:hidden" aria-hidden />}
       </main>
     </>
   );

@@ -39,6 +39,7 @@ export default function Header() {
   const navLinks = [
     { label: 'Home', href: '/' },
     { label: 'Products', href: '/shop' },
+    { label: 'Buy RMB', href: '/exchange' },
     { label: 'Categories', href: '/categories' },
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },

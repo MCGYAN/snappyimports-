@@ -1,11 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Favicon and icons served from public/ (copied from favicon/)
+  // Tree-shake heavy icon / animation imports
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'recharts'],
+  },
   images: {
-    minimumCacheTTL: 2592000, // Cache optimized images for 30 days
+    minimumCacheTTL: 2592000,
     formats: ['image/avif', 'image/webp'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
@@ -24,15 +27,11 @@ const nextConfig: NextConfig = {
     ],
   },
   eslint: {
-    // ESLint will run during builds - warnings allowed, errors will fail build
-    // Currently only has exhaustive-deps warnings which are acceptable
     ignoreDuringBuilds: false,
   },
   typescript: {
-    // TypeScript checks enabled - type errors will fail build
     ignoreBuildErrors: false,
   },
-  // Security + Caching headers
   async headers() {
     return [
       {
@@ -42,80 +41,80 @@ const nextConfig: NextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' }
-        ]
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
       },
-      // Service worker - no cache, always fresh
       {
         source: '/service-worker.js',
         headers: [
           { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
-          { key: 'Service-Worker-Allowed', value: '/' }
-        ]
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
       },
-      // Manifest
       {
         source: '/manifest.json',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=3600' },
-          { key: 'Content-Type', value: 'application/manifest+json' }
-        ]
+          { key: 'Content-Type', value: 'application/manifest+json' },
+        ],
       },
-      // Cache storefront API routes aggressively (5 min CDN, revalidate in background)
+      // Browser + CDN cache for storefront APIs
       {
         source: '/api/storefront/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=900, stale-while-revalidate=1800' }
-        ]
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=60, s-maxage=900, stale-while-revalidate=1800',
+          },
+        ],
       },
-      // Cache static assets (JS, CSS, fonts) for 1 year (they have content hashes)
       {
         source: '/_next/static/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
-        ]
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
       },
-      // Cache optimized images for 30 days
       {
         source: '/_next/image',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }
-        ]
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=2592000, stale-while-revalidate=86400',
+          },
+        ],
       },
-      // Cache static images in public (hero, logos, etc.) for 1 year when served directly
       {
         source: '/:path*.jpeg',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
-        ]
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
       },
       {
         source: '/:path*.jpg',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
-        ]
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
       },
       {
         source: '/:path*.png',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
-        ]
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
       },
       {
         source: '/:path*.webp',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
-        ]
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
       },
-      // Favicon and PWA icons (from favicon/ in public/)
       {
         source: '/favicon.ico',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
-        ]
-      }
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
     ];
-  }
+  },
 };
 
 export default nextConfig;

@@ -1,0 +1,17 @@
+---
+description: Avoid dash separators in storefront copy (AI-slop look)
+alwaysApply: true
+---
+
+# No dash separators in UI copy
+
+Do not use short hyphens (` - `), en dashes (` – `), or em dashes (` — `) as clause separators in customer-facing or admin-facing copy. They make the site look like generic AI writing.
+
+Prefer full stops, commas, or short separate sentences.
+
+Bad: `Official buy rate — lock today’s rate…`
+Good: `Official buy rate. Lock today’s rate…`
+
+Also avoid decorative separators like middle dots (` · `) in marketing lines when a period works.
+
+Keep hyphens only where English requires them in real compound words (e.g. `real-time` if already used), in code, URLs, CSS, and math/minus signs. Never use a dash as a stylish pause between clauses.

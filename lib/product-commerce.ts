@@ -23,7 +23,7 @@ export const IMPORT_TYPE_DESCRIPTIONS: Record<string, string> = {
   exw:
     'Ex Works. You collect from the supplier location in China; all freight, insurance, and import handling to Ghana is on you or arranged with us.',
   ddp:
-    'Delivered Duty Paid. The price aims to cover delivery to you in Ghana, including duties where quoted — confirm scope with us before paying.',
+    'Delivered Duty Paid. The price aims to cover delivery to you in Ghana, including duties where quoted. Confirm scope with us before paying.',
   custom:
     'Custom import terms. See notes below or message us for exactly what is included in this price.',
 };

@@ -148,23 +148,23 @@ export default function PaymentPage() {
           <div className="space-y-3 mb-6">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Subtotal</span>
-              <span className="text-gray-900">$ {order?.subtotal?.toFixed(2)}</span>
+              <span className="text-gray-900">GH¢{order?.subtotal?.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Shipping</span>
-              <span className="text-gray-900">$ {order?.shipping_total?.toFixed(2)}</span>
+              <span className="text-gray-900">GH¢{order?.shipping_total?.toFixed(2)}</span>
             </div>
             {order?.discount_total > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Discount</span>
-                <span className="text-green-600">-$ {order?.discount_total?.toFixed(2)}</span>
+                <span className="text-green-600">-GH¢{order?.discount_total?.toFixed(2)}</span>
               </div>
             )}
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">
             <span className="text-lg font-semibold text-gray-900">Total</span>
-            <span className="text-2xl font-bold text-brand-primary">$ {order?.total?.toFixed(2)}</span>
+            <span className="text-2xl font-bold text-brand-primary">GH¢{order?.total?.toFixed(2)}</span>
           </div>
         </div>
 
@@ -220,7 +220,7 @@ export default function PaymentPage() {
           ) : (
             <>
               <ShieldCheck className="w-5 h-5 mr-2" />
-              Pay $ {order?.total?.toFixed(2)} with Mobile Money
+              Pay GH¢{order?.total?.toFixed(2)} with Mobile Money
             </>
           )}
         </button>

@@ -118,7 +118,7 @@ export default function InventoryManagementPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `inventory-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `inventory-export-GH¢{new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     setShowExportModal(false);
   };
@@ -180,7 +180,7 @@ export default function InventoryManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Retail Value</p>
-                <p className="text-3xl font-bold text-brand-primary">${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                <p className="text-3xl font-bold text-brand-primary">GH¢{totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
               </div>
               <div className="w-12 h-12 flex items-center justify-center bg-brand-primary/10 rounded-lg">
                 <i className="ri-money-dollar-circle-line text-2xl text-brand-primary"></i>
@@ -315,7 +315,7 @@ export default function InventoryManagementPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="font-semibold text-gray-900">
-                          ${(product.currentStock * product.price).toFixed(2)}
+                          GH¢{(product.currentStock * product.price).toFixed(2)}
                         </span>
                       </td>
                       <td className="px-6 py-4">

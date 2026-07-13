@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
+import { cleanVariantDisplayLabel } from '@/lib/product-variants';
+import { formatStoreMoney } from '@/lib/currency';
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
@@ -247,7 +249,9 @@ function OrderSuccessContent() {
                       <p className="font-semibold text-gray-900 line-clamp-2">{item.product_name}</p>
                       <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                       {item.variant_name && (
-                        <p className="text-xs text-gray-500">{item.variant_name}</p>
+                        <p className="text-xs font-semibold text-brand-primary">
+                          {cleanVariantDisplayLabel(item.variant_name)}
+                        </p>
                       )}
                       {item.metadata?.preorder_shipping && (
                         <p className="text-xs text-amber-700 bg-amber-50 inline-flex items-center gap-1 px-2 py-0.5 rounded mt-1 border border-amber-200">
@@ -255,23 +259,23 @@ function OrderSuccessContent() {
                         </p>
                       )}
                     </div>
-                    <p className="font-bold text-gray-900">${item.unit_price.toFixed(2)}</p>
+                    <p className="font-bold text-gray-900">GH¢{item.unit_price.toFixed(2)}</p>
                   </div>
                 ))}
               </div>
               <div className="border-t border-gray-200 mt-4 pt-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
                   <span>Subtotal</span>
-                  <span>${order.subtotal.toFixed(2)}</span>
+                  <span>GH¢{order.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
                   <span>Shipping</span>
-                  <span>${order.shipping_total.toFixed(2)}</span>
+                  <span>GH¢{order.shipping_total.toFixed(2)}</span>
                 </div>
 
                 <div className="flex justify-between text-xl font-bold text-gray-900 border-t border-gray-200 pt-2">
                   <span>Total Paid</span>
-                  <span>${order.total.toFixed(2)}</span>
+                  <span>GH¢{order.total.toFixed(2)}</span>
                 </div>
               </div>
             </div>

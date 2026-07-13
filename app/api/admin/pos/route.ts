@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       phone: customerPhone || null,
       status: status || 'pending',
       payment_status: paymentStatus || 'pending',
-      currency: 'USD',
+      currency: 'GHS',
       subtotal: Number(subtotal) || 0,
       tax_total: Number(tax) || 0,
       shipping_total: 0,

@@ -42,7 +42,7 @@ export default function AdminOrdersPage() {
   const [sortBy, setSortBy] = useState('date');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [orderViewTab, setOrderViewTab] = useState<'confirmed' | 'abandoned'>('confirmed');
+  const [orderViewTab, setOrderViewTab] = useState<'paid' | 'open'>('paid');
   const [sendingPaymentLink, setSendingPaymentLink] = useState<string | null>(null);
   const [orderStats, setOrderStats] = useState<OrderStats[]>([
     { label: 'All Orders', count: 0, status: 'all' },
@@ -54,6 +54,7 @@ export default function AdminOrdersPage() {
   ]);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [confirmedCount, setConfirmedCount] = useState(0);
+  const [needsConfirmCount, setNeedsConfirmCount] = useState(0);
   const [showProductStats, setShowProductStats] = useState(false);
   const [productFilter, setProductFilter] = useState('all');
   const [availableProducts, setAvailableProducts] = useState<string[]>([]);
@@ -102,12 +103,15 @@ export default function AdminOrdersPage() {
       });
       setAvailableProducts(Array.from(productNames).sort());
 
-      // Separate confirmed (paid) from abandoned (pending payment)
+      // Paid vs still open (awaiting transfer / awaiting your confirmation)
       const confirmedOrders = ordersData?.filter(o => o.payment_status === 'paid') || [];
       const abandonedOrders = ordersData?.filter(o => o.payment_status !== 'paid') || [];
       
       setConfirmedCount(confirmedOrders.length);
       setAbandonedCount(abandonedOrders.length);
+      setNeedsConfirmCount(
+        abandonedOrders.filter(o => o.payment_status === 'awaiting_confirmation').length
+      );
 
       // Calculate stats based on confirmed orders only
       const stats = [
@@ -138,7 +142,9 @@ export default function AdminOrdersPage() {
 
   const formatStatus = (status: string) => {
     if (status === 'shipped') return 'Packaged';
-    return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+    if (status === 'awaiting_payment') return 'Awaiting payment';
+    if (status === 'payment_sent') return 'Payment sent';
+    return status ? status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : 'Unknown';
   };
 
   const getCustomerName = (order: Order) => {
@@ -311,9 +317,9 @@ export default function AdminOrdersPage() {
     const customerEmail = getCustomerEmail(order).toLowerCase();
     const orderId = (order.order_number || order.id).toLowerCase();
 
-    // First filter by view tab (confirmed vs abandoned)
+    // First filter by view tab (paid vs open)
     const isConfirmed = order.payment_status === 'paid';
-    const matchesViewTab = orderViewTab === 'confirmed' ? isConfirmed : !isConfirmed;
+    const matchesViewTab = orderViewTab === 'paid' ? isConfirmed : !isConfirmed;
 
     const matchesSearch = orderId.includes(searchQuery.toLowerCase()) ||
       customerName.includes(searchQuery.toLowerCase()) ||
@@ -322,6 +328,12 @@ export default function AdminOrdersPage() {
     const matchesProduct = productFilter === 'all' || 
       order.order_items?.some((item: any) => item.product_name === productFilter);
     return matchesViewTab && matchesSearch && matchesStatus && matchesProduct;
+  }).sort((a, b) => {
+    // On the open tab, transfers waiting for admin confirmation come first
+    if (orderViewTab !== 'open') return 0;
+    const aNeeds = a.payment_status === 'awaiting_confirmation' ? 0 : 1;
+    const bNeeds = b.payment_status === 'awaiting_confirmation' ? 0 : 1;
+    return aNeeds - bNeeds;
   });
 
   return (
@@ -349,31 +361,36 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* View Tabs: Confirmed Orders vs Abandoned Carts */}
+      {/* View Tabs: Paid orders vs Open orders */}
       <div className="flex border-b border-white/50">
         <button
-          onClick={() => { setOrderViewTab('confirmed'); setStatusFilter('all'); }}
+          onClick={() => { setOrderViewTab('paid'); setStatusFilter('all'); }}
           className={`cursor-pointer px-4 py-3 text-sm font-semibold transition-colors md:px-6 ${
-            orderViewTab === 'confirmed' ? 'admin-tab-active' : 'admin-tab-idle'
+            orderViewTab === 'paid' ? 'admin-tab-active' : 'admin-tab-idle'
           }`}
         >
           <i className="ri-check-double-line mr-2"></i>
-          Confirmed Orders ({confirmedCount})
+          Paid orders ({confirmedCount})
         </button>
         <button
-          onClick={() => { setOrderViewTab('abandoned'); setStatusFilter('all'); }}
+          onClick={() => { setOrderViewTab('open'); setStatusFilter('all'); }}
           className={`cursor-pointer px-4 py-3 text-sm font-semibold transition-colors md:px-6 ${
-            orderViewTab === 'abandoned'
+            orderViewTab === 'open'
               ? 'border-b-2 border-brand-accent font-semibold text-brand-accent'
               : 'admin-tab-idle'
           }`}
         >
-          <i className="ri-shopping-cart-2-line mr-2"></i>
-          Abandoned Carts ({abandonedCount})
+          <i className="ri-time-line mr-2"></i>
+          Open orders ({abandonedCount})
+          {needsConfirmCount > 0 && (
+            <span className="ml-2 inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
+              {needsConfirmCount} to confirm
+            </span>
+          )}
         </button>
       </div>
 
-      {orderViewTab === 'confirmed' && (
+      {orderViewTab === 'paid' && (
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4 lg:grid-cols-6">
         {orderStats.map((stat) => (
           <button
@@ -390,18 +407,27 @@ export default function AdminOrdersPage() {
       </div>
       )}
 
-      {/* Abandoned carts info banner */}
-      {orderViewTab === 'abandoned' && abandonedCount > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      {orderViewTab === 'open' && needsConfirmCount > 0 && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
           <div className="flex items-start space-x-3">
-            <i className="ri-information-line text-xl text-amber-600 mt-0.5"></i>
+            <i className="ri-alarm-warning-line mt-0.5 text-xl text-amber-600"></i>
             <div>
-              <p className="text-sm font-semibold text-amber-800">Abandoned Carts</p>
-              <p className="text-sm text-amber-700 mt-1">
-                These orders were created but payment was not completed. You can resend payment links to customers.
+              <p className="text-sm font-bold text-amber-900">
+                {needsConfirmCount} customer{needsConfirmCount > 1 ? 's' : ''} said they paid. Check your bank or MoMo, then confirm.
+              </p>
+              <p className="mt-1 text-sm text-amber-700">
+                These are at the top of the list. Open the order and tap Confirm payment.
               </p>
             </div>
           </div>
+        </div>
+      )}
+      {orderViewTab === 'open' && needsConfirmCount === 0 && abandonedCount > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm text-slate-600">
+            <i className="ri-time-line mr-2 text-slate-400"></i>
+            All open orders are waiting on the customer to pay. Nothing needs you right now.
+          </p>
         </div>
       )}
 
@@ -421,7 +447,7 @@ export default function AdminOrdersPage() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 transition-colors font-medium whitespace-nowrap cursor-pointer"
@@ -432,7 +458,7 @@ export default function AdminOrdersPage() {
               <select
                 value={productFilter}
                 onChange={(e) => setProductFilter(e.target.value)}
-                className="px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer"
+                className="min-w-0 flex-1 md:flex-none px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer"
               >
                 <option value="all">All Products</option>
                 {availableProducts.map((name) => (
@@ -442,7 +468,7 @@ export default function AdminOrdersPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer"
+                className="min-w-0 flex-1 md:flex-none px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent font-medium cursor-pointer"
               >
                 <option value="date">Sort by Date</option>
                 <option value="total">Sort by Total</option>
@@ -509,7 +535,65 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        {/* Mobile: card list. No sideways scrolling to reach actions. */}
+        <div className="md:hidden">
+          {loading ? (
+            <div className="py-12 text-center text-gray-500">
+              <i className="ri-loader-4-line animate-spin text-3xl text-brand-primary"></i>
+              <p className="mt-2">Loading orders...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="py-12 text-center text-gray-500">
+              <i className="ri-inbox-line text-4xl text-gray-300"></i>
+              <p className="mt-2">No orders found</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {filteredOrders.map((order) => {
+                const needsConfirm =
+                  orderViewTab === 'open' && order.payment_status === 'awaiting_confirmation';
+                return (
+                  <li key={order.id}>
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className={`block p-4 active:bg-gray-50 ${needsConfirm ? 'bg-amber-50/70' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-brand-primary">
+                            {order.order_number || order.id.substring(0, 8)}
+                          </p>
+                          <p className="truncate text-sm text-gray-600">{getCustomerName(order)}</p>
+                          <p className="mt-0.5 text-xs text-gray-400">{formatDate(order.created_at)}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="font-bold text-gray-900">GH¢{order.total?.toFixed(2) || '0.00'}</p>
+                          <span className={`mt-1 inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusColors[order.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                            {formatStatus(order.status)}
+                          </span>
+                        </div>
+                      </div>
+                      {orderViewTab === 'open' && (
+                        needsConfirm ? (
+                          <span className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-sm font-bold text-white">
+                            <i className="ri-hand-coin-line"></i>
+                            Customer paid. Tap to confirm
+                          </span>
+                        ) : (
+                          <p className={`mt-2 text-xs ${order.payment_status === 'failed' ? 'text-red-600' : 'text-slate-500'}`}>
+                            {order.payment_status === 'failed' ? 'Payment failed' : 'Waiting on customer to pay'}
+                          </p>
+                        )
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -549,7 +633,14 @@ export default function AdminOrdersPage() {
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={order.id}
+                    className={`border-b border-gray-100 transition-colors ${
+                      orderViewTab === 'open' && order.payment_status === 'awaiting_confirmation'
+                        ? 'bg-amber-50/70 hover:bg-amber-50'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
                     <td className="py-4 px-6">
                       <input
                         type="checkbox"
@@ -576,14 +667,24 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="py-4 px-4 text-gray-700 text-sm whitespace-nowrap">{formatDate(order.created_at)}</td>
                     <td className="py-4 px-4 text-gray-700">{getItemCount(order)}</td>
-                    <td className="py-4 px-4 font-semibold text-gray-900 whitespace-nowrap">$ {order.total?.toFixed(2) || '0.00'}</td>
+                    <td className="py-4 px-4 font-semibold text-gray-900 whitespace-nowrap">GH¢{order.total?.toFixed(2) || '0.00'}</td>
                     <td className="py-4 px-4 text-sm whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-gray-700">{order.payment_method || 'N/A'}</span>
-                        {orderViewTab === 'abandoned' && (
-                          <span className={`text-xs mt-1 ${order.payment_status === 'failed' ? 'text-red-600' : 'text-amber-600'}`}>
-                            {order.payment_status === 'failed' ? 'Failed' : 'Pending'}
-                          </span>
+                        {orderViewTab === 'open' && (
+                          order.payment_status === 'awaiting_confirmation' ? (
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-bold text-white hover:bg-amber-600"
+                            >
+                              <i className="ri-hand-coin-line"></i>
+                              Confirm payment
+                            </Link>
+                          ) : (
+                            <span className={`text-xs mt-1 ${order.payment_status === 'failed' ? 'text-red-600' : 'text-slate-500'}`}>
+                              {order.payment_status === 'failed' ? 'Payment failed' : 'Waiting on customer'}
+                            </span>
+                          )
                         )}
                       </div>
                     </td>
@@ -601,7 +702,7 @@ export default function AdminOrdersPage() {
                         >
                           <i className="ri-eye-line text-lg w-4 h-4 flex items-center justify-center"></i>
                         </Link>
-                        {orderViewTab === 'abandoned' && order.payment_status !== 'paid' && (
+                        {orderViewTab === 'open' && order.payment_status !== 'paid' && (
                           <button
                             onClick={() => handleResendPaymentLink(order)}
                             disabled={sendingPaymentLink === order.id}

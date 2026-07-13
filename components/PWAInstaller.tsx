@@ -68,38 +68,38 @@ export default function PWAInstaller() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('appinstalled', handleInstalled);
 
-    // Register service worker with update detection
+    // Register service worker after first paint so it doesn't compete with page load
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/service-worker.js', { scope: '/' })
-        .then((registration) => {
-          console.log('[PWA] Service Worker registered with scope:', registration.scope);
+      const registerSW = () => {
+        navigator.serviceWorker
+          .register('/service-worker.js', { scope: '/' })
+          .then((registration) => {
+            setInterval(() => {
+              registration.update();
+            }, 60 * 60 * 1000);
 
-          // Check for updates every 60 minutes
-          setInterval(() => {
-            registration.update();
-          }, 60 * 60 * 1000);
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (!newWorker) return;
 
-          // Listen for new service worker
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (!newWorker) return;
-
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New version available
-                window.dispatchEvent(new CustomEvent('sw-update-available', {
-                  detail: { registration }
-                }));
-              }
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  window.dispatchEvent(new CustomEvent('sw-update-available', {
+                    detail: { registration }
+                  }));
+                }
+              });
             });
-          });
-        })
-        .catch((error) => {
-          console.error('[PWA] Service Worker registration failed:', error);
-        });
+          })
+          .catch(() => {});
+      };
 
-      // Handle controller change (new SW activated)
+      if (document.readyState === 'complete') {
+        setTimeout(registerSW, 2500);
+      } else {
+        window.addEventListener('load', () => setTimeout(registerSW, 2500), { once: true });
+      }
+
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {

@@ -79,7 +79,7 @@ export default function ProductCard({
   const { getSetting } = useCMS();
   const [activeColor, setActiveColor] = useState<string | null>(null);
 
-  const sym = getSetting('currency_symbol') || '$';
+  const sym = getSetting('currency_symbol') || 'GH¢';
   const displayPrice = hasVariants && minVariantPrice ? minVariantPrice : price;
   const discount = originalPrice ? Math.round((1 - displayPrice / originalPrice) * 100) : 0;
   const isWishlisted = wishlist?.isInWishlist(id) ?? false;

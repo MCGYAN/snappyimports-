@@ -289,7 +289,7 @@ function OrderTrackingContent() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Total</p>
-                  <p className="font-semibold text-gray-900">$ {Number(order.total).toFixed(2)}</p>
+                  <p className="font-semibold text-gray-900">GH¢{Number(order.total).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -374,10 +374,16 @@ function OrderTrackingContent() {
                   <h3 className="font-semibold text-gray-900">{item.product_name}</h3>
                   <p className="text-sm text-gray-600 mt-1">Quantity: {item.quantity}</p>
                   {item.variant_name && (
-                    <p className="text-xs text-gray-500">{item.variant_name}</p>
+                    <p className="text-xs font-semibold text-brand-primary">
+                      {String(item.variant_name).includes('/') &&
+                      String(item.variant_name).split('/')[0].trim().toLowerCase() ===
+                        String(item.variant_name).split('/')[1]?.trim().toLowerCase()
+                        ? `Color: ${String(item.variant_name).split('/')[0].trim()}`
+                        : item.variant_name}
+                    </p>
                   )}
                 </div>
-                <p className="font-bold text-brand-primary">$ {Number(item.unit_price).toFixed(2)}</p>
+                <p className="font-bold text-brand-primary">GH¢{Number(item.unit_price).toFixed(2)}</p>
               </div>
             ))}
           </div>

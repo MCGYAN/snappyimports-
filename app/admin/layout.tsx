@@ -159,6 +159,11 @@ export default function AdminLayout({
       badge: ''
     },
     {
+      title: 'Buy RMB',
+      icon: 'ri-exchange-dollar-line',
+      path: '/admin/exchange'
+    },
+    {
       title: 'POS System',
       icon: 'ri-store-3-line',
       path: '/admin/pos'

@@ -204,7 +204,7 @@ export default function AdvancedSearch() {
                     <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
                     <p className="text-xs text-gray-500">{product.category}</p>
                   </div>
-                  <p className="font-bold text-gray-900">${product.price}</p>
+                  <p className="font-bold text-gray-900">GH¢{product.price}</p>
                 </Link>
               ))}
             </div>

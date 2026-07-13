@@ -205,7 +205,7 @@ export default function ProductEditor({ productId }: { productId: string }) {
               <div className="p-4 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
                 <p className="text-brand-primary font-semibold mb-1">Discount Calculation</p>
                 <p className="text-brand-primary">
-                  Savings: $ {(parseFloat(comparePrice) - parseFloat(price)).toFixed(2)} 
+                  Savings: GH¢{(parseFloat(comparePrice) - parseFloat(price)).toFixed(2)} 
                   <span className="ml-2">
                     ({(((parseFloat(comparePrice) - parseFloat(price)) / parseFloat(comparePrice)) * 100).toFixed(0)}% off)
                   </span>

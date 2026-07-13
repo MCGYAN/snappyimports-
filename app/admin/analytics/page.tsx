@@ -206,8 +206,8 @@ export default function AnalyticsPage() {
               </div>
               <span className="text-brand-primary font-semibold text-sm">Live</span>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-            <p className="text-3xl font-bold text-gray-900">${metrics.revenue.toLocaleString()}</p>
+            <p className="text-sm text-gray-600 mb-1">Shop revenue</p>
+            <p className="text-3xl font-bold text-gray-900">GH¢{metrics.revenue.toLocaleString()}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-1">Avg. Order Value</p>
-            <p className="text-3xl font-bold text-gray-900">${metrics.aov.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">GH¢{metrics.aov.toFixed(2)}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">
@@ -283,7 +283,7 @@ export default function AnalyticsPage() {
                     dataKey="value"
                   >
                     {categoryRevenue.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-GH¢{index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -310,7 +310,7 @@ export default function AnalyticsPage() {
                     <tr key={index}>
                       <td className="py-3 text-sm font-medium text-gray-900">{product.name}</td>
                       <td className="py-3 text-right text-sm text-gray-600">{product.units}</td>
-                      <td className="py-3 text-right text-sm font-semibold text-brand-primary">${product.revenue.toLocaleString()}</td>
+                      <td className="py-3 text-right text-sm font-semibold text-brand-primary">GH¢{product.revenue.toLocaleString()}</td>
                     </tr>
                   ))}
                   {topProducts.length === 0 && <tr><td colSpan={3} className="text-center py-4 text-gray-500">No sales data yet.</td></tr>}

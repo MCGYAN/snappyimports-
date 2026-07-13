@@ -1,26 +1,21 @@
 'use client';
 
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import ScrollToTop from '@/components/ScrollToTop';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import NavigationProgress from '@/components/NavigationProgress';
-import CookieConsent from '@/components/CookieConsent';
 import { CMSProvider } from '@/context/CMSContext';
 
-// Lazy-load non-critical components
-import dynamic from 'next/dynamic';
-const SessionTimeoutWarning = dynamic(() => import('@/components/SessionTimeoutWarning'), { ssr: false });
-const PWAPrompt = dynamic(() => import('@/components/PWAPrompt'), { ssr: false });
+// Defer non-critical chrome so first paint / navigation stay light
+const CookieConsent = dynamic(() => import('@/components/CookieConsent'), { ssr: false });
 const PWAInstaller = dynamic(() => import('@/components/PWAInstaller'), { ssr: false });
-const PWASplash = dynamic(() => import('@/components/PWASplash'), { ssr: false });
-const PushNotificationManager = dynamic(() => import('@/components/PushNotificationManager'), { ssr: false });
-const OfflineIndicator = dynamic(() => import('@/components/OfflineIndicator'), { ssr: false });
-const NetworkStatusMonitor = dynamic(() => import('@/components/NetworkStatusMonitor'), { ssr: false });
+const PWAPrompt = dynamic(() => import('@/components/PWAPrompt'), { ssr: false });
 const UpdatePrompt = dynamic(() => import('@/components/UpdatePrompt'), { ssr: false });
-const LiveSalesNotification = dynamic(() => import('@/components/LiveSalesNotification'), { ssr: false });
+const OfflineIndicator = dynamic(() => import('@/components/OfflineIndicator'), { ssr: false });
 
 export default function StoreLayout({
   children,
@@ -34,7 +29,6 @@ export default function StoreLayout({
       </Suspense>
       <ScrollToTop />
       <div className="min-h-screen store-site-bg">
-        <PWASplash />
         <PWAInstaller />
         <Header />
         <ErrorBoundary>
@@ -44,13 +38,9 @@ export default function StoreLayout({
         </ErrorBoundary>
         <Footer />
         <MobileBottomNav />
-        <SessionTimeoutWarning />
         <PWAPrompt />
-        <PushNotificationManager />
         <OfflineIndicator />
-        <NetworkStatusMonitor />
         <UpdatePrompt />
-        <LiveSalesNotification />
         <CookieConsent />
       </div>
     </CMSProvider>

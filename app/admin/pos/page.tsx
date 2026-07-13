@@ -226,7 +226,7 @@ export default function POSPage() {
         setCheckoutError(null);
 
         try {
-            const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const orderNumber = `ORD-GH¢{Date.now()}-GH¢{Math.floor(Math.random() * 1000)}`;
             const customerName = getCustomerFullName();
             const customerEmail = getOrderEmail();
             const customerPhone = getOrderPhone();
@@ -440,7 +440,7 @@ export default function POSPage() {
                                     <div className="p-3 flex flex-col flex-1">
                                         <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-auto">{product.name}</h3>
                                         <div className="flex items-center justify-between mt-2 pt-2">
-                                            <span className="text-brand-primary font-bold">${product.price.toFixed(2)}</span>
+                                            <span className="text-brand-primary font-bold">GH¢{product.price.toFixed(2)}</span>
                                             <button className="w-8 h-8 rounded-full bg-brand-primary/5 text-brand-primary flex items-center justify-center group-hover:bg-brand-accent group-hover:text-white transition-colors">
                                                 <i className="ri-add-line"></i>
                                             </button>
@@ -464,7 +464,7 @@ export default function POSPage() {
                                 Items
                             </span>
                             <span>View Cart</span>
-                            <span>${grandTotal.toFixed(2)}</span>
+                            <span>GH¢{grandTotal.toFixed(2)}</span>
                         </button>
                     </div>
                 )}
@@ -520,7 +520,7 @@ export default function POSPage() {
                                                 <i className="ri-add-line text-xs"></i>
                                             </button>
                                         </div>
-                                        <p className="text-sm font-bold text-gray-900">${(item.price * item.cartQuantity).toFixed(2)}</p>
+                                        <p className="text-sm font-bold text-gray-900">GH¢{(item.price * item.cartQuantity).toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -533,15 +533,15 @@ export default function POSPage() {
                     <div className="space-y-1 text-sm">
                         <div className="flex justify-between text-gray-600">
                             <span>Subtotal</span>
-                            <span>${cartTotal.toFixed(2)}</span>
+                            <span>GH¢{cartTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
                             <span>Tax (0%)</span>
-                            <span>$0.00</span>
+                            <span>GH¢0.00</span>
                         </div>
                         <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t border-gray-200 mt-2">
                             <span>Total</span>
-                            <span>${grandTotal.toFixed(2)}</span>
+                            <span>GH¢{grandTotal.toFixed(2)}</span>
                         </div>
                     </div>
 
@@ -558,7 +558,7 @@ export default function POSPage() {
                             disabled={cart.length === 0}
                             className="px-4 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-accent font-bold text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Charge ${grandTotal.toFixed(2)}
+                            Charge GH¢{grandTotal.toFixed(2)}
                         </button>
                     </div>
                 </div>
@@ -583,7 +583,7 @@ export default function POSPage() {
                                     {!completedOrder.paymentPending && paymentMethod === 'cash' && changeDue > 0 && (
                                         <div className="mt-3 bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-3">
                                             <p className="text-sm text-brand-primary">Change Due</p>
-                                            <p className="text-2xl font-bold text-brand-primary">${changeDue.toFixed(2)}</p>
+                                            <p className="text-2xl font-bold text-brand-primary">GH¢{changeDue.toFixed(2)}</p>
                                         </div>
                                     )}
 
@@ -649,7 +649,7 @@ export default function POSPage() {
                                     {/* Total Display */}
                                     <div className="text-center py-4 bg-brand-primary/5 rounded-xl border border-brand-primary/15">
                                         <p className="text-sm text-brand-primary uppercase tracking-wide font-semibold">Amount to Pay</p>
-                                        <p className="text-4xl font-extrabold text-brand-primary mt-1">${grandTotal.toFixed(2)}</p>
+                                        <p className="text-4xl font-extrabold text-brand-primary mt-1">GH¢{grandTotal.toFixed(2)}</p>
                                     </div>
 
                                     {/* Customer Select */}
@@ -850,7 +850,7 @@ export default function POSPage() {
                                                 />
                                             </div>
                                             {changeDue > 0 && (
-                                                <p className="text-right text-brand-primary font-bold mt-2">Change: ${changeDue.toFixed(2)}</p>
+                                                <p className="text-right text-brand-primary font-bold mt-2">Change: GH¢{changeDue.toFixed(2)}</p>
                                             )}
                                             {changeDue < 0 && amountTendered && (
                                                 <p className="text-right text-red-500 font-medium mt-2">Insufficient amount</p>
@@ -863,7 +863,7 @@ export default function POSPage() {
                                                         onClick={() => setAmountTendered(amount.toString())}
                                                         className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
                                                     >
-                                                        ${amount.toFixed(2)}
+                                                        GH¢{amount.toFixed(2)}
                                                     </button>
                                                 ))}
                                             </div>

@@ -9,6 +9,8 @@ import AdvancedCouponSystem from '@/components/AdvancedCouponSystem';
 import { useCart } from '@/context/CartContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { ShoppingCart, Trash2, Minus, Plus, ShieldCheck, RefreshCcw, HeadphonesIcon, X } from 'lucide-react';
+import { formatStoreMoney } from '@/lib/currency';
+import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
 export default function CartPage() {
   usePageTitle('Shopping Cart');
@@ -34,8 +36,9 @@ export default function CartPage() {
     }
   }
 
-  const shipping = subtotal >= 500 ? 0 : 50;
-  const total = subtotal - couponDiscount + shipping;
+  // Same rule as checkout: pickup is free, doorstep delivery is quoted after the order.
+  // The total shown here must match the checkout total exactly.
+  const total = subtotal - couponDiscount;
 
   return (
     <div className="store-page flex flex-col">
@@ -69,7 +72,7 @@ export default function CartPage() {
                     <h2 className="text-2xl font-bold text-brand-primary">Basket Items ({cartItems.length})</h2>
                     {savings > 0 && (
                       <span className="text-brand-accent font-bold bg-brand-accent/10 px-3 py-1 rounded-full text-sm">
-                        You save ${savings.toFixed(2)}
+                        You save {formatStoreMoney(savings)}
                       </span>
                     )}
                   </div>
@@ -90,14 +93,18 @@ export default function CartPage() {
                           </div>
 
                           <div className="text-sm text-gray-500 mb-4 space-y-1 font-medium">
-                            {item.variant && <p className="bg-gray-100 inline-block px-2 py-0.5 rounded text-gray-700">Variant: {item.variant}</p>}
+                            {item.variant && (
+                              <p className="bg-brand-light inline-block px-2 py-0.5 rounded text-brand-primary font-semibold">
+                                {cleanVariantDisplayLabel(item.variant)}
+                              </p>
+                            )}
                             <p className="text-green-600 flex items-center gap-1">
                               <ShieldCheck className="w-4 h-4" /> In Stock
                             </p>
                           </div>
 
                           <div className="flex items-center justify-between flex-wrap gap-4 mt-auto">
-                            <span className="text-xl font-extrabold text-brand-primary">${item.price.toFixed(2)}</span>
+                            <span className="text-xl font-extrabold text-brand-primary">{formatStoreMoney(item.price)}</span>
 
                             <div className="flex items-center space-x-4">
                               <div className="flex h-10 items-center overflow-hidden rounded-lg border border-white/50 liquid-glass-well shadow-sm">
@@ -151,26 +158,27 @@ export default function CartPage() {
                   <div className="space-y-4 mb-6 text-[15px] font-medium text-gray-600">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">{formatStoreMoney(subtotal)}</span>
                     </div>
 
                     {appliedCoupon && (
                       <div className="flex justify-between text-brand-accent">
                         <span>Coupon ({appliedCoupon.code})</span>
-                        <span className="font-bold">-${couponDiscount.toFixed(2)}</span>
+                        <span className="font-bold">-{formatStoreMoney(couponDiscount)}</span>
                       </div>
                     )}
 
                     <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span className="font-bold text-gray-900">{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                      <span>Delivery</span>
+                      <span className="font-bold text-gray-900">Free pickup</span>
                     </div>
+                    <p className="text-xs text-gray-400">Doorstep delivery is quoted after your order.</p>
                   </div>
 
                   <div className="border-t border-gray-200 pt-6 mb-8">
                     <div className="flex justify-between items-center text-2xl font-black text-brand-primary">
                       <span>Total</span>
-                      <span>${total.toFixed(2)}</span>
+                      <span>{formatStoreMoney(total)}</span>
                     </div>
                   </div>
 
@@ -185,7 +193,7 @@ export default function CartPage() {
                     href="/checkout"
                     className="btn-primary mt-6 mb-4 flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand-accent py-4 text-lg font-bold text-white hover:bg-brand-accent/92"
                   >
-                    <ShieldCheck className="w-5 h-5" /> Secure Checkout
+                    <ShieldCheck className="w-5 h-5" /> Checkout
                   </Link>
 
                   <Link
@@ -211,7 +219,7 @@ export default function CartPage() {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-gray-900">Easy returns</p>
-                        <p className="text-xs text-gray-500 mt-0.5">14-day return policy</p>
+                        <p className="text-xs text-gray-500 mt-0.5">30-day return policy</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -227,6 +235,23 @@ export default function CartPage() {
                 </div>
               </div>
             </div>
+
+            {/* Mobile: total + checkout pinned above the bottom nav */}
+            <div className="fixed inset-x-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(11,31,58,0.06)] backdrop-blur lg:hidden bottom-[calc(3.4rem+env(safe-area-inset-bottom))] md:bottom-0 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Total</p>
+                  <p className="text-lg font-extrabold leading-tight text-brand-primary">{formatStoreMoney(total)}</p>
+                </div>
+                <Link
+                  href="/checkout"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-accent py-3.5 text-base font-bold text-white active:bg-brand-accent/90"
+                >
+                  <ShieldCheck className="h-5 w-5" /> Checkout
+                </Link>
+              </div>
+            </div>
+            <div className="h-24 md:h-16 lg:hidden" aria-hidden />
           </section>
         )}
       </div>

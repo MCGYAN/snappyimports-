@@ -62,11 +62,11 @@ export default function RecentlyViewed() {
                 </h3>
                 <div className="flex items-center space-x-2">
                   <span className="text-lg font-bold text-gray-900">
-                    ${product.price.toFixed(2)}
+                    GH¢{product.price.toFixed(2)}
                   </span>
                   {product.originalPrice && (
                     <span className="text-sm text-gray-400 line-through">
-                      ${product.originalPrice.toFixed(2)}
+                      GH¢{product.originalPrice.toFixed(2)}
                     </span>
                   )}
                 </div>

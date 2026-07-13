@@ -3,22 +3,22 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import ProductCard, { type ColorVariant, getColorHex } from '@/components/ProductCard';
 import CategoryCard from '@/components/CategoryCard';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
-import TrustSection from '@/components/snappy/TrustSection';
-import ProcessSteps from '@/components/snappy/ProcessSteps';
-import ImportJourneyTimeline from '@/components/snappy/ImportJourneyTimeline';
-import ImportCta from '@/components/snappy/ImportCta';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useIsMobile } from '@/hooks/useIsMobile';
 import { useCMS } from '@/context/CMSContext';
 import { buildWhatsAppHref } from '@/lib/snappy-import';
 import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+
+const TrustSection = dynamic(() => import('@/components/snappy/TrustSection'), { loading: () => null });
+const ProcessSteps = dynamic(() => import('@/components/snappy/ProcessSteps'), { loading: () => null });
+const ImportJourneyTimeline = dynamic(() => import('@/components/snappy/ImportJourneyTimeline'), { loading: () => null });
+const ImportCta = dynamic(() => import('@/components/snappy/ImportCta'), { loading: () => null });
 
 const FALLBACK_CATEGORIES = [
   { slug: 'vehicles', name: 'Vehicles' },
@@ -36,7 +36,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const sliderRef = useRef<HTMLDivElement>(null);
   const categorySliderRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
 
   const waHero = buildWhatsAppHref(getSetting('contact_whatsapp'));
   const waHeroPrefilled = waHero
@@ -103,58 +102,58 @@ export default function Home() {
   const showCategoryFallback = !loading && featuredProducts.length === 0;
 
   const renderProductCard = (product: any) => {
-    const variants = product.product_variants || [];
-    const hasVariants = variants.length > 0;
-    const minVariantPrice = hasVariants
-      ? Math.min(...variants.map((v: any) => v.price || product.price))
-      : undefined;
-    const totalVariantStock = hasVariants
-      ? variants.reduce((sum: number, v: any) => sum + (v.quantity || 0), 0)
-      : 0;
-    const effectiveStock = hasVariants ? totalVariantStock : product.quantity;
+                const variants = product.product_variants || [];
+                const hasVariants = variants.length > 0;
+                const minVariantPrice = hasVariants
+                  ? Math.min(...variants.map((v: any) => v.price || product.price))
+                  : undefined;
+                const totalVariantStock = hasVariants
+                  ? variants.reduce((sum: number, v: any) => sum + (v.quantity || 0), 0)
+                  : 0;
+                const effectiveStock = hasVariants ? totalVariantStock : product.quantity;
 
-    const colorVariants: ColorVariant[] = [];
-    const seenColors = new Set<string>();
-    for (const v of variants) {
-      const colorName = (v as any).option2;
-      if (colorName && !seenColors.has(colorName.toLowerCase().trim())) {
-        const hex = getColorHex(colorName);
-        if (hex) {
-          seenColors.add(colorName.toLowerCase().trim());
-          colorVariants.push({ name: colorName.trim(), hex });
-        }
-      }
-    }
+                const colorVariants: ColorVariant[] = [];
+                const seenColors = new Set<string>();
+                for (const v of variants) {
+                  const colorName = (v as any).option2;
+                  if (colorName && !seenColors.has(colorName.toLowerCase().trim())) {
+                    const hex = getColorHex(colorName);
+                    if (hex) {
+                      seenColors.add(colorName.toLowerCase().trim());
+                      colorVariants.push({ name: colorName.trim(), hex });
+                    }
+                  }
+                }
 
     const imageUrl =
       product.product_images?.find((img: any) => img.url)?.url ||
       product.product_images?.[0]?.url ||
       'https://via.placeholder.com/400x500';
 
-    return (
+                return (
       <div key={product.id} className="min-w-0 w-full">
-        <ProductCard
-            id={product.id}
-            slug={product.slug}
-            name={product.name}
-            price={product.price}
-            originalPrice={product.compare_at_price}
+                    <ProductCard
+                      id={product.id}
+                      slug={product.slug}
+                      name={product.name}
+                      price={product.price}
+                      originalPrice={product.compare_at_price}
             image={imageUrl}
-            rating={product.rating_avg || 5}
-            reviewCount={product.review_count || 0}
-            badge={product.featured ? 'Featured' : undefined}
-            inStock={effectiveStock > 0}
-            maxStock={effectiveStock || 50}
-            moq={product.moq || 1}
-            hasVariants={hasVariants}
-            minVariantPrice={minVariantPrice}
-            colorVariants={colorVariants}
-            categoryName={product.categories?.name}
-            categorySlug={product.categories?.slug}
+                      rating={product.rating_avg || 5}
+                      reviewCount={product.review_count || 0}
+                      badge={product.featured ? 'Featured' : undefined}
+                      inStock={effectiveStock > 0}
+                      maxStock={effectiveStock || 50}
+                      moq={product.moq || 1}
+                      hasVariants={hasVariants}
+                      minVariantPrice={minVariantPrice}
+                      colorVariants={colorVariants}
+                      categoryName={product.categories?.name}
+                      categorySlug={product.categories?.slug}
             compact
-        />
-      </div>
-    );
+                    />
+                  </div>
+                );
   };
 
   return (
@@ -168,7 +167,7 @@ export default function Home() {
             alt=""
             fill
             priority
-            quality={95}
+            quality={78}
             sizes="100vw"
             className="object-cover object-center"
           />
@@ -183,7 +182,7 @@ export default function Home() {
             alt=""
             fill
             priority
-            quality={95}
+            quality={78}
             sizes="100vw"
             className="object-cover object-center"
           />
@@ -193,12 +192,7 @@ export default function Home() {
 
         <div className="relative aspect-[4/5] w-full max-h-[90svh] sm:aspect-[5/4] lg:aspect-auto lg:h-[56.25vw] lg:max-h-[100svh]">
           <div className="absolute inset-0 z-10 mx-auto flex w-full max-w-[1440px] flex-col justify-end px-4 pb-20 pt-8 sm:px-6 sm:pb-28 sm:pt-10 md:px-8 lg:justify-center lg:px-10 lg:py-0 lg:pb-28 xl:px-14">
-            <motion.div
-              initial={isMobile ? false : { opacity: 0, y: 20 }}
-              animate={isMobile ? false : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="max-w-xl text-white max-md:text-left lg:max-w-2xl"
-            >
+            <div className="max-w-xl text-white max-md:text-left lg:max-w-2xl">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/80 sm:mb-4 sm:text-sm sm:font-medium sm:normal-case sm:tracking-normal">
               China to Ghana
             </p>
@@ -211,14 +205,10 @@ export default function Home() {
               We handle the hard part. You stay in the loop from start to finish.
             </p>
 
-            <motion.div
-              initial={isMobile ? false : { opacity: 0, y: 10 }}
-              animate={isMobile ? false : { opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.45 }}
-              className="mt-6 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:gap-4"
-            >
+            <div className="mt-6 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:gap-4">
               <Link
                 href="/shop"
+                prefetch
                 className="btn-interactive glass-panel-dark inline-flex min-h-[50px] items-center justify-center rounded-2xl px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-white/20"
               >
                 Browse imports
@@ -235,24 +225,22 @@ export default function Home() {
               ) : (
                 <Link
                   href="/contact"
+                  prefetch
                   className="btn-interactive inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-brand-accent px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-transparent shadow-[0_8px_20px_rgba(242,107,29,0.3)]"
                 >
                   Talk to us on WhatsApp
                 </Link>
               )}
-            </motion.div>
+            </div>
 
             <p className="mt-5 hidden text-sm leading-relaxed text-white/90 sm:mt-8 sm:block">
               Suppliers you can trust. China to Tema port. Updates you can count on.
             </p>
-          </motion.div>
+          </div>
           </div>
 
           {/* Category strip */}
-          <motion.div
-            initial={isMobile ? false : { opacity: 0, y: 12 }}
-            animate={isMobile ? false : { opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.5 }}
+          <div
             className="absolute inset-x-0 bottom-0 z-10 glass-panel-dark border-b-0 border-x-0 rounded-none lg:rounded-t-3xl mx-auto lg:max-w-[1440px] lg:bottom-4 lg:inset-x-10 xl:inset-x-14 lg:border lg:border-white/15"
           >
             <div className="flex items-center gap-6 overflow-x-auto px-6 py-4 scrollbar-hide sm:gap-10 sm:px-8 sm:py-5 md:px-10 lg:justify-center">
@@ -262,7 +250,7 @@ export default function Home() {
                 </span>
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
