@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
-import { deriveFulfillmentStage } from '@/lib/order-journey';
+import { deriveFulfillmentStage, canBookDelivery } from '@/lib/order-journey';
 
 /** POST — customer books last-mile delivery once goods are ready */
 export async function POST(req: Request) {
@@ -44,12 +44,11 @@ export async function POST(req: Request) {
     }
 
     const stage = deriveFulfillmentStage(order);
-    const canBook = ['ready', 'arrived_ghana', 'clearing', 'packed', 'shipped'].includes(stage) || order.status === 'shipped';
-    if (!canBook && stage !== 'ready') {
-      // Allow booking once paid and at least processing — admin can still schedule
-      if (!['paid', 'sourcing', 'packed', 'left_china', 'in_transit', 'arrived_ghana', 'clearing', 'ready'].includes(stage)) {
-        return NextResponse.json({ error: 'Delivery booking opens when your shipment is nearly ready.' }, { status: 400 });
-      }
+    if (!canBookDelivery(stage) && order.status !== 'shipped') {
+      return NextResponse.json(
+        { error: 'Delivery booking opens when your shipment is nearly ready in Ghana.' },
+        { status: 400 },
+      );
     }
 
     const booking = {
@@ -62,10 +61,11 @@ export async function POST(req: Request) {
       status: 'requested' as const,
     };
 
+    // Booking is a note on the order. Do not invent an extra journey stage.
     const metadata = {
       ...(order.metadata || {}),
       delivery_booking: booking,
-      fulfillment_stage: order.metadata?.fulfillment_stage === 'ready' ? 'out_for_delivery' : order.metadata?.fulfillment_stage || stage,
+      fulfillment_stage: order.metadata?.fulfillment_stage || stage,
     };
 
     const { data: updated, error: updateError } = await supabaseAdmin

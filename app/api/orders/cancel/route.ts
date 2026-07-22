@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     }
 
     const stage = String(order.metadata?.fulfillment_stage || '');
-    if (['in_transit_china', 'arrived_ghana', 'ready_for_delivery', 'out_for_delivery', 'delivered'].includes(stage)) {
+    if (['en_route_ghana', 'in_ghana', 'ready', 'delivered', 'left_china', 'in_transit', 'in_transit_china', 'arrived_ghana', 'clearing', 'out_for_delivery', 'ready_for_delivery'].includes(stage)) {
       return NextResponse.json(
         { error: 'Import journey is too far along to cancel here. Resolve manually with the customer.' },
         { status: 400 },

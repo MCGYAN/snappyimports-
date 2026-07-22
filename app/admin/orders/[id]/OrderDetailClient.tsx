@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
-import { FULFILLMENT_STAGES } from '@/lib/order-journey';
+import { ADMIN_FULFILLMENT_STAGES, FULFILLMENT_STAGES, normalizeFulfillmentStage } from '@/lib/order-journey';
 import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 
 interface OrderDetailClientProps {
@@ -930,19 +930,37 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <p className="text-sm font-semibold text-gray-900">Import journey</p>
                   <p className="text-xs text-gray-500">
-                    Current: {order.metadata?.fulfillment_stage || '—'}
+                    Current:{' '}
+                    {FULFILLMENT_STAGES.find(
+                      (s) =>
+                        s.key ===
+                        (normalizeFulfillmentStage(order.metadata?.fulfillment_stage) ||
+                          order.metadata?.fulfillment_stage),
+                    )?.title ||
+                      order.metadata?.fulfillment_stage ||
+                      '—'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Payment stages update automatically. Use these only when the goods actually move.
                   </p>
                   <select
-                    value={journeyStage || order.metadata?.fulfillment_stage || ''}
+                    value={
+                      journeyStage ||
+                      normalizeFulfillmentStage(order.metadata?.fulfillment_stage) ||
+                      ''
+                    }
                     onChange={(e) => setJourneyStage(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   >
-                    <option value="">Select stage…</option>
-                    {FULFILLMENT_STAGES.filter((s) => s.key !== 'cancelled').map((s) => (
-                      <option key={s.key} value={s.key}>
-                        {s.title}
-                      </option>
-                    ))}
+                    <option value="">Select milestone…</option>
+                    {ADMIN_FULFILLMENT_STAGES.map((key) => {
+                      const s = FULFILLMENT_STAGES.find((x) => x.key === key);
+                      return (
+                        <option key={key} value={key}>
+                          {s?.title || key}
+                        </option>
+                      );
+                    })}
                   </select>
                   <button
                     type="button"

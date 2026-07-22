@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import InvoiceDocument from '@/components/InvoiceDocument';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import {
+  canBookDelivery,
   deriveFulfillmentStage,
   FULFILLMENT_STAGES,
   fulfillmentIndex,
@@ -360,15 +361,18 @@ export default function OrderHubPage() {
             ) : null}
 
             <section className="store-card p-5 sm:p-8 print:hidden">
-              <div className="mb-6 flex items-center gap-2">
+              <div className="mb-2 flex items-center gap-2">
                 <Truck className="h-5 w-5 text-brand-accent" />
-                <h2 className="text-xl font-bold text-brand-primary">Shipping & tracking</h2>
+                <h2 className="text-xl font-bold text-brand-primary">Import journey</h2>
               </div>
+              <p className="mb-6 text-sm text-slate-500">
+                China to Ghana in clear steps. We update this when your goods actually move.
+              </p>
               <ol className="space-y-4">
                 {FULFILLMENT_STAGES.filter((s) => s.key !== 'cancelled').map((s) => {
                   const idx = fulfillmentIndex(s.key);
                   const current = fulfillmentIndex(stage);
-                  const done = order.payment_status === 'paid' ? idx <= current : idx === 0 && current === 0;
+                  const done = idx >= 0 && current >= 0 && idx < current;
                   const active = s.key === stage;
                   return (
                     <li key={s.key} className="flex gap-3">
@@ -399,7 +403,8 @@ export default function OrderHubPage() {
               ) : null}
             </section>
 
-            {order.payment_status === 'paid' && (
+            {order.payment_status === 'paid' &&
+              (canBookDelivery(stage) || order.metadata?.delivery_booking) && (
               <section className="store-card p-5 sm:p-8 print:hidden">
                 <div className="mb-4 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-brand-accent" />
