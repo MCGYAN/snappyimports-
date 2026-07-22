@@ -90,12 +90,14 @@ export default function ProductCard({
 
   const priceLabel = () => {
     if (mode === 'equipment') return 'Request quote';
-    if (mode === 'vehicles') {
-      return hasVariants && minVariantPrice
-        ? `From ${formatPrice(minVariantPrice)}, deposit`
-        : `${formatPrice(price)}, deposit`;
+    if (hasVariants && minVariantPrice) {
+      const base = Number(price) || 0;
+      const min = Number(minVariantPrice) || 0;
+      if (base > 0 && Math.abs(base - min) > 0.009) {
+        return `From ${formatPrice(min)}`;
+      }
+      return formatPrice(min || base);
     }
-    if (hasVariants && minVariantPrice) return `From ${formatPrice(minVariantPrice)}`;
     return formatPrice(price);
   };
 

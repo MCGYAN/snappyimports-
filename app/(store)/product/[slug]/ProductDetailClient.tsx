@@ -449,9 +449,16 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   {hasVariants && !selectedVariant ? (
                     <div>
                       <span className="text-3xl lg:text-4xl font-bold text-gray-900">
-                        From {money(minVariantPrice)}
+                        {money(minVariantPrice)}
                       </span>
-                      <p className="text-sm text-gray-500 mt-1">Select options to see final price</p>
+                      {product.compare_at_price && product.compare_at_price > minVariantPrice ? (
+                        <span className="ml-2 text-xl text-gray-400 line-through">
+                          {money(product.compare_at_price)}
+                        </span>
+                      ) : null}
+                      <p className="mt-1 text-sm text-gray-500">
+                        Full price. Pick a color or option to confirm.
+                      </p>
                     </div>
                   ) : (
                     <>
