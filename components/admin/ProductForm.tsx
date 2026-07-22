@@ -605,10 +605,10 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                        Price ($) *
+                                        Price (GH¢) *
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">$</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
                                         <input
                                             type="number"
                                             value={price}
@@ -622,10 +622,10 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                        Compare at Price ($)
+                                        Compare at Price (GH¢)
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">$</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
                                         <input
                                             type="number"
                                             value={comparePrice}
@@ -1009,7 +1009,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                     {selectedSizes.length > 0 && (
                                                         <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Size</th>
                                                     )}
-                                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Price ($)</th>
+                                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Price (GH¢)</th>
                                                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Stock</th>
                                                 </tr>
                                             </thead>

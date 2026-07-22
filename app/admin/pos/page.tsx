@@ -839,12 +839,12 @@ export default function POSPage() {
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-2">Amount Tendered</label>
                                             <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">GH¢</span>
                                                 <input
                                                     type="number"
                                                     value={amountTendered}
                                                     onChange={(e) => setAmountTendered(e.target.value)}
-                                                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 outline-none font-bold text-lg"
+                                                    className="w-full pl-16 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 outline-none font-bold text-lg"
                                                     placeholder="0.00"
                                                     autoFocus
                                                 />

@@ -170,10 +170,10 @@ export default function ProductEditor({ productId }: { productId: string }) {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Price ($) *
+                    Price (GH¢) *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
                     <input
                       type="number"
                       value={price}
@@ -186,10 +186,10 @@ export default function ProductEditor({ productId }: { productId: string }) {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Compare at Price ($)
+                    Compare at Price (GH¢)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
                     <input
                       type="number"
                       value={comparePrice}
