@@ -222,9 +222,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const activePrice = selectedVariant?.price ?? product?.price ?? 0;
   const activeStock = selectedVariant ? (selectedVariant.stock ?? selectedVariant.quantity ?? product?.stockCount ?? 0) : (product?.stockCount ?? 0);
 
-  const handleAddToCart = () => {
-    if (!product) return;
-    if (needsColorSelection || needsVariantSelection) return;
+  const addCurrentSelectionToCart = (openCart: boolean): boolean => {
+    if (!product) return false;
+    if (needsColorSelection || needsVariantSelection) return false;
 
     // Color-only catalog: ensure a concrete variant row is attached
     let variantRow = selectedVariant;
@@ -233,27 +233,37 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       variantRow = matching[0] || null;
     }
 
-    if (hasVariants && !variantRow) return;
+    if (hasVariants && !variantRow) return false;
 
     const variantLabel = formatVariantLabel(variantRow, selectedColor) || undefined;
 
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: activePrice,
-      image: product.images[0],
-      quantity: quantity,
-      variant: variantLabel,
-      variantId: variantRow?.id || undefined,
-      slug: product.slug,
-      maxStock: activeStock,
-      moq: product.moq || 1
-    });
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        price: activePrice,
+        image: product.images[0],
+        quantity: quantity,
+        variant: variantLabel,
+        variantId: variantRow?.id || undefined,
+        slug: product.slug,
+        maxStock: activeStock,
+        moq: product.moq || 1
+      },
+      { openCart },
+    );
+    return true;
+  };
+
+  const handleAddToCart = () => {
+    addCurrentSelectionToCart(true);
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    window.location.href = '/checkout';
+    // Add silently and go straight to checkout. No basket detour.
+    if (addCurrentSelectionToCart(false)) {
+      window.location.href = '/checkout';
+    }
   };
 
   if (loading) {
@@ -679,30 +689,30 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                         <button
                           disabled={activeStock === 0 || needsVariantSelection || needsColorSelection}
                           className={`w-full flex items-center justify-center gap-2 rounded-xl py-4 text-lg font-bold text-white transition-all shadow-sm ${
-                            activeStock === 0 || needsVariantSelection || needsColorSelection 
-                              ? 'bg-brand-primary/50 cursor-not-allowed' 
+                            activeStock === 0 || needsVariantSelection || needsColorSelection
+                              ? 'bg-brand-primary/50 cursor-not-allowed'
                               : 'bg-brand-primary hover:bg-brand-primary/90 hover:shadow-md hover:-translate-y-0.5'
                           }`}
-                          onClick={handleAddToCart}
+                          onClick={handleBuyNow}
                         >
-                          <ShoppingCart className="w-5 h-5" />
                           <span>
-                            {activeStock === 0 
-                              ? 'Out of Stock' 
-                              : needsColorSelection 
-                                ? 'Select a Color' 
-                                : needsVariantSelection 
-                                  ? 'Select a Variant' 
-                                  : 'Add to Cart'}
+                            {activeStock === 0
+                              ? 'Out of Stock'
+                              : needsColorSelection
+                                ? 'Select a Color'
+                                : needsVariantSelection
+                                  ? 'Select a Variant'
+                                  : 'Buy now'}
                           </span>
                         </button>
-                        
+
                         {activeStock > 0 && !needsVariantSelection && !needsColorSelection && (
                           <button
-                            onClick={handleBuyNow}
+                            onClick={handleAddToCart}
                             className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-brand-primary/20 bg-white px-5 py-3 text-base font-bold text-brand-primary transition-all hover:border-brand-primary/40 hover:bg-brand-light"
                           >
-                            Buy now, skip the basket
+                            <ShoppingCart className="w-5 h-5" />
+                            Add to basket instead
                           </button>
                         )}
                       </>
@@ -854,16 +864,25 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         {/* Mobile: price + add to basket always within thumb reach (sits above MobileBottomNav on phones) */}
         {allowOnlineCheckout && (
           <div className="fixed inset-x-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(11,31,58,0.06)] backdrop-blur lg:hidden bottom-[calc(3.4rem+env(safe-area-inset-bottom))] md:bottom-0 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <div className="min-w-0">
                 <p className="text-lg font-extrabold leading-tight text-brand-primary">{money(activePrice)}</p>
                 <p className="truncate text-[11px] text-gray-500">
                   {activeStock === 0 ? 'Out of stock' : quantity > 1 ? `Qty ${quantity}` : 'In stock'}
                 </p>
               </div>
+              {activeStock > 0 && !needsVariantSelection && !needsColorSelection && (
+                <button
+                  onClick={handleAddToCart}
+                  aria-label="Add to basket"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 border-brand-primary/20 bg-white text-brand-primary active:bg-brand-light"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                </button>
+              )}
               <button
                 disabled={activeStock === 0 || needsVariantSelection || needsColorSelection}
-                onClick={handleAddToCart}
+                onClick={handleBuyNow}
                 className={`flex-1 rounded-xl py-3.5 text-base font-bold text-white transition-colors ${
                   activeStock === 0 || needsVariantSelection || needsColorSelection
                     ? 'bg-brand-primary/40'
@@ -876,7 +895,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     ? 'Pick a color above'
                     : needsVariantSelection
                       ? 'Pick an option above'
-                      : 'Add to basket'}
+                      : 'Buy now'}
               </button>
             </div>
           </div>

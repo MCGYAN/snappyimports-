@@ -18,7 +18,7 @@ export type CartItem = {
 
 type CartContextType = {
     cart: CartItem[];
-    addToCart: (item: CartItem) => void;
+    addToCart: (item: CartItem, options?: { openCart?: boolean }) => void;
     removeFromCart: (itemId: string, variant?: string) => void;
     updateQuantity: (itemId: string, quantity: number, variant?: string) => void;
     clearCart: () => void;
@@ -104,7 +104,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [cart, isInitialized]);
 
-    const addToCart = (newItem: CartItem) => {
+    const addToCart = (newItem: CartItem, options?: { openCart?: boolean }) => {
         setCart((prevCart) => {
             const existingItemIndex = prevCart.findIndex(
                 (item) =>
@@ -128,7 +128,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             }
         });
 
-        setIsCartOpen(true); // Open cart when item is added
+        if (options?.openCart !== false) {
+            setIsCartOpen(true); // Open cart when item is added
+        }
     };
 
     const removeFromCart = (itemId: string, variant?: string) => {
