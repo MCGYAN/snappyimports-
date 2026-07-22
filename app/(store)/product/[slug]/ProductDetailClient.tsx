@@ -289,7 +289,36 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   }
 
   const discount = product.compare_at_price ? Math.round((1 - activePrice / product.compare_at_price) * 100) : 0;
-  const minVariantPrice = hasVariants ? Math.min(...product.variants.map((v: any) => v.price || product.price)) : product.price;
+  const minVariantPrice = hasVariants
+    ? Math.min(...product.variants.map((v: any) => Number(v.price) || product.price))
+    : product.price;
+  const maxVariantPrice = hasVariants
+    ? Math.max(...product.variants.map((v: any) => Number(v.price) || product.price))
+    : product.price;
+  const variantPricesDiffer = hasVariants && Math.abs(maxVariantPrice - minVariantPrice) > 0.009;
+  const listedPrice = hasVariants ? minVariantPrice : product.price;
+  const displayPrice = selectedVariant ? activePrice : listedPrice;
+  const optionConfirmed = Boolean(selectedVariant) || !hasVariants;
+
+  const colorPriceHints =
+    hasVariants && product.colors?.length > 0
+      ? product.colors
+          .map((color: string) => {
+            const matching = variantsForColor(product.variants, color);
+            if (!matching.length) return null;
+            const price = Math.min(
+              ...matching.map((v: any) => Number(v.price) || product.price),
+            );
+            return { color, price };
+          })
+          .filter(Boolean) as { color: string; price: number }[]
+      : [];
+  const colorPricesDiffer =
+    colorPriceHints.length > 1 &&
+    Math.abs(
+      Math.max(...colorPriceHints.map((h) => h.price)) -
+        Math.min(...colorPriceHints.map((h) => h.price)),
+    ) > 0.009;
 
   const productSchema = generateProductSchema({
     name: product.name,
@@ -445,29 +474,30 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   <span className="text-gray-700 font-medium">{Number(product.rating).toFixed(1)}</span>
                 </div>
 
-                <div className="flex items-baseline space-x-4 mb-6">
-                  {hasVariants && !selectedVariant ? (
-                    <div>
-                      <span className="text-3xl lg:text-4xl font-bold text-gray-900">
-                        {money(minVariantPrice)}
+                <div className="mb-6">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="text-3xl font-bold text-gray-900 lg:text-4xl">
+                      {money(displayPrice)}
+                    </span>
+                    {product.compare_at_price && product.compare_at_price > displayPrice ? (
+                      <span className="text-xl text-gray-400 line-through">
+                        {money(product.compare_at_price)}
                       </span>
-                      {product.compare_at_price && product.compare_at_price > minVariantPrice ? (
-                        <span className="ml-2 text-xl text-gray-400 line-through">
-                          {money(product.compare_at_price)}
-                        </span>
-                      ) : null}
-                      <p className="mt-1 text-sm text-gray-500">
-                        Full price. Pick a color or option to confirm.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="text-3xl lg:text-4xl font-bold text-gray-900">{money(activePrice)}</span>
-                      {product.compare_at_price && product.compare_at_price > activePrice && (
-                        <span className="text-xl text-gray-400 line-through ml-2">{money(product.compare_at_price)}</span>
-                      )}
-                    </>
-                  )}
+                    ) : null}
+                  </div>
+                  {hasVariants && !optionConfirmed ? (
+                    <p className="mt-1.5 text-sm text-gray-500">
+                      Price updates when you pick an option.
+                      {variantPricesDiffer
+                        ? ` Options run ${money(minVariantPrice)} to ${money(maxVariantPrice)}.`
+                        : ''}
+                    </p>
+                  ) : null}
+                  {hasVariants && optionConfirmed ? (
+                    <p className="mt-1.5 text-sm font-medium text-brand-primary">
+                      Your price for this option.
+                    </p>
+                  ) : null}
                 </div>
 
                 <p className="text-gray-700 leading-relaxed mb-6 text-lg">{product.description}</p>
@@ -534,6 +564,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                         );
                       })}
                     </div>
+                    {colorPricesDiffer ? (
+                      <p className="mt-3 text-sm text-gray-600">
+                        {colorPriceHints
+                          .map((h) => `${h.color} ${money(h.price)}`)
+                          .join(', ')}
+                      </p>
+                    ) : null}
                   </div>
                 )}
 
@@ -877,9 +914,15 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           <div className="fixed inset-x-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(11,31,58,0.06)] backdrop-blur lg:hidden bottom-[calc(3.4rem+env(safe-area-inset-bottom))] md:bottom-0 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-2.5">
               <div className="min-w-0">
-                <p className="text-lg font-extrabold leading-tight text-brand-primary">{money(activePrice)}</p>
+                <p className="text-lg font-extrabold leading-tight text-brand-primary">{money(displayPrice)}</p>
                 <p className="truncate text-[11px] text-gray-500">
-                  {activeStock === 0 ? 'Out of stock' : quantity > 1 ? `Qty ${quantity}` : 'In stock'}
+                  {activeStock === 0
+                    ? 'Out of stock'
+                    : !optionConfirmed
+                      ? 'Pick an option above'
+                      : quantity > 1
+                        ? `Qty ${quantity}`
+                        : 'Full price'}
                 </p>
               </div>
               {activeStock > 0 && !needsVariantSelection && !needsColorSelection && (
