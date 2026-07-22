@@ -70,11 +70,11 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
               <div className="space-y-4">
                 {cart.map((item) => (
                   <div key={`${item.id}-${item.variant}`} className="group flex space-x-4 rounded-2xl liquid-glass-card p-4 transition-all">
-                    <div className="w-24 h-24 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 relative">
+                    <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-full h-full object-cover object-center mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
+                        className="h-full w-full object-contain object-center p-1.5"
                       />
                     </div>
 

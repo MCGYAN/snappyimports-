@@ -366,37 +366,41 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-2 gap-12">
               <div>
-                <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4 shadow-lg border border-gray-100">
+                <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <Image
                     src={product.images[selectedImage]}
                     alt={product.name}
                     fill
-                    className="object-cover object-center"
+                    className="object-contain object-center p-5 sm:p-8 md:p-10"
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     priority
-                    quality={80}
+                    quality={85}
                   />
                   {discount > 0 && (
-                    <span className="absolute top-6 right-6 bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                    <span className="absolute top-4 right-4 z-10 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm">
                       Save {discount}%
                     </span>
                   )}
                 </div>
 
                 {product.images.length > 1 && (
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-4 gap-3 sm:gap-4">
                     {product.images.map((image: string, index: number) => (
                       <button
                         key={index}
+                        type="button"
                         onClick={() => setSelectedImage(index)}
-                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${selectedImage === index ? 'border-brand-primary shadow-md' : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                        className={`relative aspect-square overflow-hidden rounded-xl border-2 bg-white transition-all cursor-pointer ${
+                          selectedImage === index
+                            ? 'border-brand-primary shadow-md'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
                       >
                         <Image
                           src={image}
                           alt={`${product.name} view ${index + 1}`}
                           fill
-                          className="object-cover object-center"
+                          className="object-contain object-center p-2"
                           sizes="(max-width: 1024px) 25vw, 12vw"
                           quality={60}
                         />

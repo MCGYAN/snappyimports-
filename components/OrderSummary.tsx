@@ -27,13 +27,13 @@ export default function OrderSummary({ items, subtotal, shipping, tax, total }: 
       <div className="space-y-4 mb-6">
         {items.map((item) => (
           <div key={`${item.id}-${item.variant || 'novar'}`} className="flex space-x-4">
-            <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+            <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
               <img
                 src={item.image}
                 alt={item.name}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-contain object-center p-1"
               />
-              <div className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center bg-gray-500/80 backdrop-blur-sm text-white text-xs font-bold rounded-full shadow-sm">
+              <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-500/80 text-xs font-bold text-white shadow-sm backdrop-blur-sm">
                 {item.quantity}
               </div>
             </div>

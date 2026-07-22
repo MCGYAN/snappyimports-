@@ -64,12 +64,12 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
           <div className="bg-white p-8">
             <div className="grid md:grid-cols-2 gap-8">
               <div>
-                <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+                <div className="relative mb-4 aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white">
                   <Image
                     src={images[selectedImage]}
                     alt={product.name}
                     fill
-                    className="object-cover object-top"
+                    className="object-contain object-center p-4"
                     sizes="(max-width: 768px) 100vw, 50vw"
                     quality={75}
                   />
@@ -81,11 +81,11 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-colors ${
+                        className={`relative aspect-square overflow-hidden rounded-lg border-2 bg-white transition-colors ${
                           selectedImage === index ? 'border-blue-700' : 'border-transparent hover:border-gray-300'
                         }`}
                       >
-                        <Image src={image} alt="" fill className="object-cover object-top" sizes="12vw" quality={50} />
+                        <Image src={image} alt="" fill className="object-contain object-center p-1.5" sizes="12vw" quality={50} />
                       </button>
                     ))}
                   </div>
