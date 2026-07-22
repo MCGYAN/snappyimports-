@@ -172,7 +172,7 @@ export default function AboutPage() {
                 href="/shop"
                 className="btn-interactive inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3 text-[15px] font-semibold text-white shadow-[0_4px_16px_rgba(11,31,58,0.2)] hover:bg-[#061224]"
               >
-                Browse imports
+                Start an Order
                 <ArrowRight className="h-4 w-4" />
               </Link>
               {whatsApp ? (

@@ -209,26 +209,26 @@ export default function Home() {
               <Link
                 href="/shop"
                 prefetch
-                className="btn-interactive glass-panel-dark inline-flex min-h-[50px] items-center justify-center rounded-2xl px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-white/20"
+                className="btn-interactive inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-brand-accent px-8 py-3.5 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_20px_rgba(242,107,29,0.35)] sm:min-h-[56px] sm:px-10 sm:text-base border border-transparent"
               >
-                Browse imports
+                Order Now
               </Link>
               {waHeroPrefilled ? (
                 <a
                   href={waHeroPrefilled}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-interactive inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-brand-accent px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-transparent shadow-[0_8px_20px_rgba(242,107,29,0.3)]"
+                  className="btn-interactive glass-panel-dark inline-flex min-h-[50px] items-center justify-center rounded-2xl px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-white/20"
                 >
-                  Talk to us on WhatsApp
+                  Ask us on WhatsApp
                 </a>
               ) : (
                 <Link
                   href="/contact"
                   prefetch
-                  className="btn-interactive inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-brand-accent px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-transparent shadow-[0_8px_20px_rgba(242,107,29,0.3)]"
+                  className="btn-interactive glass-panel-dark inline-flex min-h-[50px] items-center justify-center rounded-2xl px-8 py-3.5 text-[15px] font-semibold tracking-wide text-white sm:min-h-[56px] sm:px-10 sm:text-base border border-white/20"
                 >
-                  Talk to us on WhatsApp
+                  Ask us on WhatsApp
                 </Link>
               )}
             </div>

@@ -112,10 +112,9 @@ export default function ProductCard({
     addToCart({ id, name, price, image, quantity: moq, slug, maxStock, moq });
   };
 
-  const cartButtonClass = `btn-interactive flex items-center justify-center rounded-xl bg-brand-accent text-white shadow-[0_6px_16px_rgba(242,107,29,0.35)] disabled:pointer-events-none disabled:opacity-50 ${
-    compact ? 'h-8 w-8 max-lg:rounded-lg lg:h-10 lg:w-10' : 'h-9 w-9 sm:h-10 sm:w-10'
+  const cartButtonClass = `btn-interactive flex shrink-0 items-center justify-center bg-brand-accent text-white font-bold transition-all shadow-[0_4px_12px_rgba(242,107,29,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(242,107,29,0.35)] disabled:pointer-events-none disabled:opacity-50 ${
+    compact ? 'h-8 rounded-lg px-3 text-[10px] lg:h-9 lg:rounded-xl lg:px-4 lg:text-xs' : 'h-9 rounded-xl px-3 text-[11px] sm:h-10 sm:px-5 sm:text-xs'
   }`;
-  const cartIconClass = compact ? 'h-3.5 w-3.5 lg:h-[18px] lg:w-[18px]' : 'h-4 w-4 sm:h-[18px] sm:w-[18px]';
   const openProductForOptions =
     mode === 'vehicles' || mode === 'equipment' || hasVariants;
 
@@ -237,23 +236,29 @@ export default function ProductCard({
             </span>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 mt-0.5">
             {openProductForOptions ? (
               <Link
                 href={`/product/${slug}`}
                 className={cartButtonClass}
-                aria-label="View product options"
+                aria-label="View product options to order"
               >
-                <ShoppingCart className={cartIconClass} />
+                Order now
               </Link>
             ) : (
               <button
-                onClick={handleAddToCart}
+                onClick={(e) => {
+                  // Direct Buy Now functionality
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addToCart({ id, name, price, image, quantity: moq, slug, maxStock, moq }, { openCart: false });
+                  window.location.href = '/checkout';
+                }}
                 disabled={!inStock}
                 className={cartButtonClass}
-                aria-label={moq > 1 ? `Add ${moq} to cart` : 'Add to cart'}
+                aria-label={moq > 1 ? `Order ${moq} now` : 'Order now'}
               >
-                <ShoppingCart className={cartIconClass} />
+                Order now
               </button>
             )}
           </div>

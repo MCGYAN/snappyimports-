@@ -59,7 +59,7 @@ export default function CartPage() {
               <h2 className="text-3xl font-bold text-brand-primary mb-4">Your basket is empty</h2>
               <p className="text-gray-600 mb-8 font-medium">Find something you want to import. Add it here when you are ready.</p>
               <Link href="/shop" className="btn-primary inline-block bg-brand-primary px-8 py-4 rounded-lg font-bold text-white whitespace-nowrap hover:bg-brand-accent">
-                Browse imports
+                Start an Order
               </Link>
             </div>
           </section>

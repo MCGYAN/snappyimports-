@@ -203,7 +203,7 @@ function ShopContent() {
   return (
     <main className="store-page">
       <PageHero
-        title="Browse imports"
+        title="Shop imports"
         subtitle="Find what you need. Filter by category and price. No guesswork."
       />
 
