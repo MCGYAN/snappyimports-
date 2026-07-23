@@ -137,8 +137,14 @@ export function deriveFulfillmentStage(order: {
   }
   if (order.payment_status !== 'paid') return 'awaiting_payment';
 
-  // Paid but admin has not advanced the import journey yet
-  if (normalized === 'paid' || !normalized) {
+  // Money is in. Ignore stale awaiting_payment / payment_sent left from checkout
+  // (Moolre mark_order_paid used to leave fulfillment_stage unchanged).
+  if (
+    !normalized ||
+    normalized === 'awaiting_payment' ||
+    normalized === 'payment_sent' ||
+    normalized === 'paid'
+  ) {
     if (order.status === 'shipped') return 'en_route_ghana';
     return 'paid';
   }

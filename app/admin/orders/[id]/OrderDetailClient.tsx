@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
-import { ADMIN_FULFILLMENT_STAGES, FULFILLMENT_STAGES, normalizeFulfillmentStage } from '@/lib/order-journey';
+import {
+  ADMIN_FULFILLMENT_STAGES,
+  deriveFulfillmentStage,
+  FULFILLMENT_STAGES,
+  fulfillmentIndex,
+  normalizeFulfillmentStage,
+} from '@/lib/order-journey';
 import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 
 interface OrderDetailClientProps {
@@ -373,6 +379,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Update failed');
       await fetchOrderDetails();
+      setJourneyStage('');
       alert('Import journey updated');
     } catch (err: any) {
       alert(err?.message || 'Failed to update journey');
@@ -455,14 +462,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     ? `${shippingAddress.firstName.trim()} ${shippingAddress.lastName.trim()}`
     : shippingAddress.full_name || shippingAddress.firstName || order.email?.split('@')[0] || 'Customer';
 
-  // Derive timeline from status (simplified logic as we don't have full history table joined here yet)
-  const timeline = [
-    { status: 'Order Placed', date: new Date(order.created_at).toLocaleString(), completed: true },
-    { status: 'Payment', date: order.payment_status, completed: order.payment_status === 'paid' },
-    { status: 'Processing', date: '', completed: ['processing', 'shipped', 'delivered'].includes(order.status) },
-    { status: 'Packaged', date: '', completed: ['shipped', 'delivered'].includes(order.status) },
-    { status: 'Delivered', date: '', completed: order.status === 'delivered' }
-  ];
+  const currentJourney = deriveFulfillmentStage(order);
+  const journeyIndex = fulfillmentIndex(currentJourney);
 
   // Mock fraud analysis for now (or implement real logic later)
   const fraudAnalysis: FraudAnalysis = {
@@ -719,107 +720,236 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Order Timeline</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Import journey</h2>
+              <p className="mb-6 text-sm text-gray-500">
+                China to Ghana milestones. Same path the customer sees.
+              </p>
               <div className="space-y-4">
-                {timeline.map((event, index) => (
-                  <div key={index} className="flex items-start space-x-4">
-                    <div className={`w-10 h-10 flex items-center justify-center rounded-full border-2 ${event.completed ? 'bg-brand-primary border-brand-primary' : 'bg-white border-gray-300'
-                      }`}>
-                      {event.completed ? (
-                        <i className="ri-check-line text-white text-xl"></i>
-                      ) : (
-                        <span className="w-3 h-3 bg-gray-300 rounded-full"></span>
-                      )}
+                {FULFILLMENT_STAGES.map((event, index) => {
+                  const done = journeyIndex >= 0 && index < journeyIndex;
+                  const active = event.key === currentJourney;
+                  return (
+                    <div key={event.key} className="flex items-start space-x-4">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${
+                          active || done
+                            ? 'border-brand-primary bg-brand-primary'
+                            : 'border-gray-300 bg-white'
+                        }`}
+                      >
+                        {done || active ? (
+                          <i className="ri-check-line text-xl text-white"></i>
+                        ) : (
+                          <span className="h-3 w-3 rounded-full bg-gray-300"></span>
+                        )}
+                      </div>
+                      <div className="flex-1 border-b border-gray-200 pb-6 last:border-0">
+                        <p
+                          className={`font-semibold ${
+                            active ? 'text-brand-accent' : done ? 'text-gray-900' : 'text-gray-500'
+                          }`}
+                        >
+                          {event.title}
+                          {active ? (
+                            <span className="ml-2 text-xs font-bold uppercase tracking-wide text-brand-accent">
+                              Current
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-600">{event.description}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 pb-6 border-b border-gray-200 last:border-0">
-                      <p className={`font-semibold ${event.completed ? 'text-gray-900' : 'text-gray-500'}`}>
-                        {event.status}
-                      </p>
-                      {event.date && (
-                        <p className="text-sm text-gray-600 mt-1">{event.date}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Order Status</h2>
-              <div className="relative">
-                <button
-                  onClick={() => setShowStatusMenu(!showStatusMenu)}
-                  className={`w-full px-4 py-3 rounded-lg border-2 font-semibold text-left flex items-center justify-between ${statusColors[pendingStatus || currentStatus] || 'bg-gray-100'}`}
-                >
-                  <span>
-                    {statusLabel(pendingStatus || currentStatus)}
-                    {pendingStatus && pendingStatus !== currentStatus && (
-                      <span className="ml-2 text-xs font-bold text-amber-700">not saved yet</span>
-                    )}
-                  </span>
-                  <i className="ri-arrow-down-s-line text-xl"></i>
-                </button>
-                {showStatusMenu && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg overflow-hidden z-10">
-                    {statusOptions.map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          setPendingStatus(status);
-                          setShowStatusMenu(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${status === (pendingStatus || currentStatus) ? 'bg-brand-primary/5 font-semibold' : ''
-                          }`}
-                      >
-                        {statusLabel(status)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Tracking Number
-                </label>
-                <input
-                  type="text"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
-                />
-              </div>
-
-              <button
-                onClick={() => handleUpdateStatus(pendingStatus || undefined)}
-                disabled={statusUpdating}
-                className="w-full mt-4 bg-brand-primary hover:bg-brand-accent text-white py-3 rounded-lg font-semibold transition-colors whitespace-nowrap disabled:opacity-50"
-              >
-                {statusUpdating
-                  ? 'Saving...'
-                  : pendingStatus && pendingStatus !== currentStatus
-                    ? `Save status: ${statusLabel(pendingStatus)}`
-                    : 'Save changes'}
-              </button>
-
-              {order.status !== 'cancelled' &&
-                order.status !== 'shipped' &&
-                order.status !== 'delivered' && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCancelModal(true)}
-                    className="w-full mt-3 border-2 border-red-300 bg-red-50 text-red-700 py-3 rounded-lg text-sm font-bold hover:bg-red-100"
-                  >
-                    Cancel this order…
-                  </button>
-                )}
-              {order.status === 'cancelled' && (
-                <p className="mt-3 text-sm text-red-700 bg-red-50 rounded-lg px-3 py-2">
-                  Cancelled{order.metadata?.cancel_reason ? `: ${order.metadata.cancel_reason}` : ''}
+            <div className="overflow-hidden rounded-2xl border border-brand-primary/15 bg-gradient-to-b from-brand-light/80 to-white shadow-sm">
+              <div className="border-b border-brand-primary/10 px-5 py-4">
+                <h2 className="text-lg font-bold text-gray-900">Update import journey</h2>
+                <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                  Tap a milestone, then confirm. Payment stages update on their own.
                 </p>
-              )}
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/80 px-3 py-2.5 ring-1 ring-brand-primary/10">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-white">
+                    <i className="ri-map-pin-line text-sm" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-brand-accent">
+                      Now at
+                    </p>
+                    <p className="truncate text-sm font-semibold text-brand-primary">
+                      {FULFILLMENT_STAGES.find((s) => s.key === currentJourney)?.title ||
+                        currentJourney}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 px-4 py-4" role="radiogroup" aria-label="Import journey milestone">
+                {ADMIN_FULFILLMENT_STAGES.map((key) => {
+                  const stage = FULFILLMENT_STAGES.find((x) => x.key === key);
+                  if (!stage) return null;
+                  const stageIdx = fulfillmentIndex(key);
+                  const isCurrent = currentJourney === key;
+                  const isPast = journeyIndex > stageIdx && journeyIndex >= 0;
+                  const isSelected = journeyStage === key;
+                  const nextKey = ADMIN_FULFILLMENT_STAGES.find(
+                    (k) => fulfillmentIndex(k) > journeyIndex,
+                  );
+                  const isNext = !journeyStage && key === nextKey;
+                  const icons: Record<string, string> = {
+                    sourcing: 'ri-shopping-bag-3-line',
+                    en_route_ghana: 'ri-ship-2-line',
+                    in_ghana: 'ri-flag-2-line',
+                    ready: 'ri-store-2-line',
+                    delivered: 'ri-checkbox-circle-line',
+                  };
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected || (!journeyStage && isCurrent)}
+                      disabled={order.status === 'cancelled' || updatingJourney}
+                      onClick={() => setJourneyStage(key)}
+                      className={`group w-full rounded-xl border px-3.5 py-3 text-left transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        isSelected
+                          ? 'border-brand-accent bg-brand-accent/10 shadow-sm ring-2 ring-brand-accent/25'
+                          : isCurrent
+                            ? 'border-brand-primary/30 bg-brand-primary/5'
+                            : 'border-gray-200/80 bg-white hover:border-brand-primary/35 hover:bg-brand-light/40'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base transition-colors ${
+                            isSelected
+                              ? 'bg-brand-accent text-white'
+                              : isPast || isCurrent
+                                ? 'bg-brand-primary text-white'
+                                : 'bg-gray-100 text-gray-500 group-hover:bg-brand-primary/10 group-hover:text-brand-primary'
+                          }`}
+                        >
+                          <i
+                            className={
+                              isPast && !isSelected
+                                ? 'ri-check-line'
+                                : icons[key] || 'ri-circle-line'
+                            }
+                            aria-hidden
+                          />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`text-sm font-semibold ${
+                                isSelected || isCurrent ? 'text-gray-900' : 'text-gray-700'
+                              }`}
+                            >
+                              {stage.title}
+                            </span>
+                            {isCurrent ? (
+                              <span className="rounded-md bg-brand-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-primary">
+                                Current
+                              </span>
+                            ) : null}
+                            {isNext && !isSelected ? (
+                              <span className="rounded-md bg-brand-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-accent">
+                                Suggested next
+                              </span>
+                            ) : null}
+                            {isSelected && !isCurrent ? (
+                              <span className="rounded-md bg-brand-accent px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                Selected
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="mt-0.5 block text-xs leading-snug text-gray-500">
+                            {stage.description}
+                          </span>
+                        </span>
+                        <span
+                          className={`mt-2 h-4 w-4 shrink-0 rounded-full border-2 ${
+                            isSelected
+                              ? 'border-brand-accent bg-brand-accent shadow-[inset_0_0_0_2px_white]'
+                              : 'border-gray-300 bg-white'
+                          }`}
+                          aria-hidden
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="border-t border-brand-primary/10 px-4 pb-5 pt-3">
+                <button
+                  type="button"
+                  onClick={handleUpdateJourney}
+                  disabled={
+                    updatingJourney ||
+                    !journeyStage ||
+                    journeyStage === currentJourney ||
+                    order.status === 'cancelled'
+                  }
+                  className="w-full rounded-xl bg-brand-primary py-3.5 text-sm font-bold text-white transition-colors hover:bg-brand-accent disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {updatingJourney
+                    ? 'Updating…'
+                    : journeyStage && journeyStage !== currentJourney
+                      ? `Move to ${
+                          FULFILLMENT_STAGES.find((s) => s.key === journeyStage)?.title ||
+                          'milestone'
+                        }`
+                      : 'Select a milestone to continue'}
+                </button>
+
+                <div className="mt-4">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
+                    Tracking number
+                  </label>
+                  <input
+                    type="text"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    placeholder="Optional carrier / warehouse ref"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleUpdateStatus(undefined)}
+                  disabled={statusUpdating}
+                  className="mt-3 w-full rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-800 transition-colors hover:border-brand-primary/30 hover:bg-brand-light/30 disabled:opacity-50"
+                >
+                  {statusUpdating ? 'Saving...' : 'Save tracking number'}
+                </button>
+
+                {order.status !== 'cancelled' &&
+                  currentJourney !== 'delivered' &&
+                  currentJourney !== 'en_route_ghana' &&
+                  currentJourney !== 'in_ghana' &&
+                  currentJourney !== 'ready' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelModal(true)}
+                      className="mt-3 w-full rounded-xl border border-red-200 bg-red-50/80 py-3 text-sm font-bold text-red-700 transition-colors hover:bg-red-100"
+                    >
+                      Cancel this order…
+                    </button>
+                  )}
+                {order.status === 'cancelled' && (
+                  <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+                    Cancelled
+                    {order.metadata?.cancel_reason ? `: ${order.metadata.cancel_reason}` : ''}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -927,61 +1057,20 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-gray-200 space-y-2">
-                  <p className="text-sm font-semibold text-gray-900">Import journey</p>
-                  <p className="text-xs text-gray-500">
-                    Current:{' '}
-                    {FULFILLMENT_STAGES.find(
-                      (s) =>
-                        s.key ===
-                        (normalizeFulfillmentStage(order.metadata?.fulfillment_stage) ||
-                          order.metadata?.fulfillment_stage),
-                    )?.title ||
-                      order.metadata?.fulfillment_stage ||
-                      '—'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Payment stages update automatically. Use these only when the goods actually move.
-                  </p>
-                  <select
-                    value={
-                      journeyStage ||
-                      normalizeFulfillmentStage(order.metadata?.fulfillment_stage) ||
-                      ''
-                    }
-                    onChange={(e) => setJourneyStage(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    <option value="">Select milestone…</option>
-                    {ADMIN_FULFILLMENT_STAGES.map((key) => {
-                      const s = FULFILLMENT_STAGES.find((x) => x.key === key);
-                      return (
-                        <option key={key} value={key}>
-                          {s?.title || key}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleUpdateJourney}
-                    disabled={updatingJourney || !journeyStage}
-                    className="w-full border-2 border-brand-primary text-brand-primary py-2 rounded-lg font-semibold disabled:opacity-50"
-                  >
-                    {updatingJourney ? 'Updating…' : 'Update journey'}
-                  </button>
-                  {order.metadata?.delivery_booking ? (
-                    <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                      <p className="font-bold">Delivery booked</p>
-                      <p>{order.metadata.delivery_booking.address}</p>
-                      <p>
-                        {[order.metadata.delivery_booking.preferredDate, order.metadata.delivery_booking.preferredTime]
-                          .filter(Boolean)
-                          .join(', ')}
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
+                {order.metadata?.delivery_booking ? (
+                  <div className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                    <p className="font-bold">Delivery booked</p>
+                    <p>{order.metadata.delivery_booking.address}</p>
+                    <p>
+                      {[
+                        order.metadata.delivery_booking.preferredDate,
+                        order.metadata.delivery_booking.preferredTime,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
 

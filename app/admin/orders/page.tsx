@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import ProductSalesStats from './ProductSalesStats';
+import {
+  deriveFulfillmentStage,
+  FULFILLMENT_STAGES,
+  type FulfillmentStage,
+} from '@/lib/order-journey';
 
 interface Order {
   id: string;
@@ -45,12 +50,13 @@ export default function AdminOrdersPage() {
   const [orderViewTab, setOrderViewTab] = useState<'paid' | 'open'>('paid');
   const [sendingPaymentLink, setSendingPaymentLink] = useState<string | null>(null);
   const [orderStats, setOrderStats] = useState<OrderStats[]>([
-    { label: 'All Orders', count: 0, status: 'all' },
-    { label: 'Pending', count: 0, status: 'pending' },
-    { label: 'Processing', count: 0, status: 'processing' },
-    { label: 'Packaged', count: 0, status: 'shipped' },
+    { label: 'All paid', count: 0, status: 'all' },
+    { label: 'Payment confirmed', count: 0, status: 'paid' },
+    { label: 'Sourcing', count: 0, status: 'sourcing' },
+    { label: 'To Ghana', count: 0, status: 'en_route_ghana' },
+    { label: 'In Ghana', count: 0, status: 'in_ghana' },
+    { label: 'Ready', count: 0, status: 'ready' },
     { label: 'Delivered', count: 0, status: 'delivered' },
-    { label: 'Cancelled', count: 0, status: 'cancelled' }
   ]);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [confirmedCount, setConfirmedCount] = useState(0);
@@ -113,14 +119,40 @@ export default function AdminOrdersPage() {
         abandonedOrders.filter(o => o.payment_status === 'awaiting_confirmation').length
       );
 
-      // Calculate stats based on confirmed orders only
+      // Calculate stats from import journey milestones (paid orders)
+      const journeyOf = (o: Order) => deriveFulfillmentStage(o);
       const stats = [
-        { label: 'All Orders', count: confirmedOrders.length, status: 'all' },
-        { label: 'Pending', count: confirmedOrders.filter(o => o.status === 'pending').length, status: 'pending' },
-        { label: 'Processing', count: confirmedOrders.filter(o => o.status === 'processing').length, status: 'processing' },
-        { label: 'Packaged', count: confirmedOrders.filter(o => o.status === 'shipped').length, status: 'shipped' },
-        { label: 'Delivered', count: confirmedOrders.filter(o => o.status === 'delivered').length, status: 'delivered' },
-        { label: 'Cancelled', count: confirmedOrders.filter(o => o.status === 'cancelled').length, status: 'cancelled' }
+        { label: 'All paid', count: confirmedOrders.length, status: 'all' },
+        {
+          label: 'Payment confirmed',
+          count: confirmedOrders.filter((o) => journeyOf(o) === 'paid').length,
+          status: 'paid',
+        },
+        {
+          label: 'Sourcing',
+          count: confirmedOrders.filter((o) => journeyOf(o) === 'sourcing').length,
+          status: 'sourcing',
+        },
+        {
+          label: 'To Ghana',
+          count: confirmedOrders.filter((o) => journeyOf(o) === 'en_route_ghana').length,
+          status: 'en_route_ghana',
+        },
+        {
+          label: 'In Ghana',
+          count: confirmedOrders.filter((o) => journeyOf(o) === 'in_ghana').length,
+          status: 'in_ghana',
+        },
+        {
+          label: 'Ready',
+          count: confirmedOrders.filter((o) => journeyOf(o) === 'ready').length,
+          status: 'ready',
+        },
+        {
+          label: 'Delivered',
+          count: confirmedOrders.filter((o) => journeyOf(o) === 'delivered').length,
+          status: 'delivered',
+        },
       ];
       setOrderStats(stats);
 
@@ -131,20 +163,24 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const statusColors: Record<string, string> = {
-    'pending': 'bg-amber-100 text-amber-700 border-amber-200',
-    'processing': 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
-    'shipped': 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
-    'delivered': 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
-    'cancelled': 'bg-red-100 text-red-700 border-red-200',
-    'awaiting_payment': 'bg-gray-100 text-gray-700 border-gray-200'
+  const journeyColors: Record<string, string> = {
+    awaiting_payment: 'bg-gray-100 text-gray-700 border-gray-200',
+    payment_sent: 'bg-amber-100 text-amber-700 border-amber-200',
+    paid: 'bg-green-100 text-green-700 border-green-200',
+    sourcing: 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
+    en_route_ghana: 'bg-sky-100 text-sky-800 border-sky-200',
+    in_ghana: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    ready: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    delivered: 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
+    cancelled: 'bg-red-100 text-red-700 border-red-200',
   };
 
-  const formatStatus = (status: string) => {
-    if (status === 'shipped') return 'Packaged';
-    if (status === 'awaiting_payment') return 'Awaiting payment';
-    if (status === 'payment_sent') return 'Payment sent';
-    return status ? status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : 'Unknown';
+  const formatJourney = (order: Order) => {
+    const stage = deriveFulfillmentStage(order);
+    return (
+      FULFILLMENT_STAGES.find((s) => s.key === stage)?.title ||
+      stage.replace(/_/g, ' ')
+    );
   };
 
   const getCustomerName = (order: Order) => {
@@ -324,7 +360,10 @@ export default function AdminOrdersPage() {
     const matchesSearch = orderId.includes(searchQuery.toLowerCase()) ||
       customerName.includes(searchQuery.toLowerCase()) ||
       customerEmail.includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    const matchesStatus =
+      statusFilter === 'all' ||
+      deriveFulfillmentStage(order) === (statusFilter as FulfillmentStage) ||
+      order.status === statusFilter;
     const matchesProduct = productFilter === 'all' || 
       order.order_items?.some((item: any) => item.product_name === productFilter);
     return matchesViewTab && matchesSearch && matchesStatus && matchesProduct;
@@ -568,8 +607,13 @@ export default function AdminOrdersPage() {
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="font-bold text-gray-900">GH¢{order.total?.toFixed(2) || '0.00'}</p>
-                          <span className={`mt-1 inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusColors[order.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                            {formatStatus(order.status)}
+                          <span
+                            className={`mt-1 inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                              journeyColors[deriveFulfillmentStage(order)] ||
+                              'border-gray-200 bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {formatJourney(order)}
                           </span>
                         </div>
                       </div>
@@ -689,8 +733,13 @@ export default function AdminOrdersPage() {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${statusColors[order.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                        {formatStatus(order.status)}
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap ${
+                          journeyColors[deriveFulfillmentStage(order)] ||
+                          'border-gray-200 bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {formatJourney(order)}
                       </span>
                     </td>
                     <td className="py-4 px-4">
