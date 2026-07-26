@@ -6,6 +6,14 @@ import { supabase } from '@/lib/supabase';
 import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
+import {
+  buildTelHref,
+  buildWhatsAppHref,
+  resolveContactEmail,
+  resolveContactPhone,
+  resolveContactWhatsApp,
+} from '@/lib/snappy-import';
+import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 
 export default function ContactPage() {
   usePageTitle('Contact Us');
@@ -98,12 +106,14 @@ export default function ContactPage() {
     }
   };
 
-  // Get contact details from CMS settings (defaults are neutral placeholders)
-  const contactEmail = getSetting('contact_email') || 'contact@example.com';
-  const contactPhone = getSetting('contact_phone') || '';
-  const contactWhatsapp = getSetting('contact_whatsapp') || '';
-  const primaryAddressLine = getSetting('contact_address') || '';
-  const secondaryAddressLine = getSetting('contact_address_tarkwa') || '';
+  // Contact details: CMS when set, otherwise invoice issuer defaults
+  const contactEmail = resolveContactEmail(getSetting('contact_email'));
+  const contactPhone = resolveContactPhone(getSetting('contact_phone'));
+  const contactWhatsapp = resolveContactWhatsApp(getSetting('contact_whatsapp'));
+  const primaryAddressLine =
+    getSetting('contact_address') || SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ');
+  const secondaryAddressLine =
+    getSetting('contact_address_tarkwa') || SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', ');
   const socialFacebook = getSetting('social_facebook') || '';
   const socialInstagram = getSetting('social_instagram') || '';
   const socialTikTok = getSetting('social_tiktok') || '';
@@ -112,19 +122,8 @@ export default function ContactPage() {
   const heroSubtitle = pageContent?.subtitle || 'Have a question or need assistance?';
   const heroContent = pageContent?.content || 'Our friendly team is here to help. Reach out through any of our contact channels.';
 
-  const defaultCc = (process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '1').replace(/\D/g, '') || '1';
-  const waNumber = contactWhatsapp.replace(/[^0-9]/g, '');
-  const waLink = waNumber
-    ? `https://wa.me/${waNumber.startsWith('0') ? `${defaultCc}${waNumber.slice(1)}` : waNumber}`
-    : '';
-  const telNumber = contactPhone.replace(/\s/g, '');
-  const telLink = telNumber
-    ? telNumber.startsWith('+')
-      ? `tel:${telNumber}`
-      : telNumber.startsWith('0')
-        ? `tel:+${defaultCc}${telNumber.slice(1)}`
-        : `tel:${telNumber}`
-    : '';
+  const waLink = buildWhatsAppHref(contactWhatsapp);
+  const telLink = buildTelHref(contactPhone);
 
   const addressParts = [primaryAddressLine, secondaryAddressLine].filter(Boolean);
   const locationDescription = addressParts.length ? addressParts.join(' • ') : '';

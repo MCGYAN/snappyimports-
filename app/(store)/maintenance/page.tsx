@@ -58,7 +58,7 @@ export default function MaintenancePage() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <a
-              href="mailto:contact@example.com"
+              href="mailto:snappyimportsgh@gmail.com"
               className="inline-flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-full font-medium hover:bg-[#0d2747] transition-colors whitespace-nowrap"
             >
               <i className="ri-mail-line"></i>

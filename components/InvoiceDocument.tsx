@@ -109,7 +109,7 @@ export default function InvoiceDocument({ order }: Props) {
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-10 w-auto object-contain sm:h-12"
+              className="h-16 w-auto object-contain sm:h-20"
             />
             <div>
               <p className="text-sm font-bold sm:text-base">{SNAPPY_INVOICE_ISSUER.brand}</p>
@@ -162,32 +162,6 @@ export default function InvoiceDocument({ order }: Props) {
                   </td>
                 </tr>
               ) : null}
-              <tr>
-                <td className="whitespace-nowrap py-0.5 pr-3 font-semibold">Payment method:</td>
-                <td className="py-0.5 text-right capitalize">{paymentLabel}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-0.5 pr-3 font-semibold">
-                  Subtotal ({currency}):
-                </td>
-                <td className="py-0.5 text-right">{formatMoney(order.subtotal || 0, currency)}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-0.5 pr-3 font-semibold">Shipping:</td>
-                <td className="py-0.5 text-right">
-                  {(order.shipping_total || 0) === 0
-                    ? 'FREE / TBA'
-                    : formatMoney(order.shipping_total || 0, currency)}
-                </td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap border-t border-black py-1 pr-3 pt-1.5 font-bold">
-                  TOTAL DUE ({currency})
-                </td>
-                <td className="border-t border-black py-1 pt-1.5 text-right text-sm font-bold sm:text-base">
-                  {formatMoney(order.total || 0, currency)}
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -227,8 +201,42 @@ export default function InvoiceDocument({ order }: Props) {
           </tbody>
         </table>
 
+        {/* Totals under the items, official style */}
+        <div className="mt-1.5 flex justify-end">
+          <table className="w-full max-w-[18rem] border-collapse">
+            <tbody>
+              <tr>
+                <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
+                <td className="py-px text-right capitalize">{paymentLabel}</td>
+              </tr>
+              <tr>
+                <td className="whitespace-nowrap py-px pr-3 font-semibold">
+                  Subtotal ({currency}):
+                </td>
+                <td className="py-px text-right">{formatMoney(order.subtotal || 0, currency)}</td>
+              </tr>
+              <tr>
+                <td className="whitespace-nowrap py-px pr-3 font-semibold">Shipping:</td>
+                <td className="py-px text-right">
+                  {(order.shipping_total || 0) === 0
+                    ? 'FREE / TBA'
+                    : formatMoney(order.shipping_total || 0, currency)}
+                </td>
+              </tr>
+              <tr>
+                <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1 font-bold">
+                  TOTAL DUE ({currency})
+                </td>
+                <td className="border-t border-black py-0.5 pt-1 text-right text-sm font-bold sm:text-base">
+                  {formatMoney(order.total || 0, currency)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         {/* Payment details */}
-        <div className="mt-4 border-t border-black pt-2">
+        <div className="mt-3 border-t border-black pt-2">
           <p className="font-bold uppercase tracking-wide">Payment details:</p>
           <p className="mt-0.5">
             Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
@@ -255,7 +263,7 @@ export default function InvoiceDocument({ order }: Props) {
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-12 w-auto object-contain"
+              className="h-20 w-auto object-contain"
             />
             <div>
               <p className="text-sm font-bold">{SNAPPY_INVOICE_ISSUER.brand}</p>
@@ -309,30 +317,6 @@ export default function InvoiceDocument({ order }: Props) {
                   </td>
                 </tr>
               ) : null}
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
-                <td className="py-px text-right capitalize">{paymentLabel}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Subtotal ({currency}):</td>
-                <td className="py-px text-right">{formatMoney(order.subtotal || 0, currency)}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Shipping:</td>
-                <td className="py-px text-right">
-                  {(order.shipping_total || 0) === 0
-                    ? 'FREE / TBA'
-                    : formatMoney(order.shipping_total || 0, currency)}
-                </td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1.5 font-bold">
-                  TOTAL DUE ({currency})
-                </td>
-                <td className="border-t border-black py-0.5 pt-1.5 text-right text-sm font-bold">
-                  {formatMoney(order.total || 0, currency)}
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -366,7 +350,39 @@ export default function InvoiceDocument({ order }: Props) {
           </tbody>
         </table>
 
-        <div className="mt-3 border-t border-black pt-2">
+        {/* Totals under the items, official style */}
+        <div className="mt-1 flex justify-end">
+          <table className="w-64 border-collapse text-[11px]">
+            <tbody>
+              <tr>
+                <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
+                <td className="py-px text-right capitalize">{paymentLabel}</td>
+              </tr>
+              <tr>
+                <td className="whitespace-nowrap py-px pr-3 font-semibold">Subtotal ({currency}):</td>
+                <td className="py-px text-right">{formatMoney(order.subtotal || 0, currency)}</td>
+              </tr>
+              <tr>
+                <td className="whitespace-nowrap py-px pr-3 font-semibold">Shipping:</td>
+                <td className="py-px text-right">
+                  {(order.shipping_total || 0) === 0
+                    ? 'FREE / TBA'
+                    : formatMoney(order.shipping_total || 0, currency)}
+                </td>
+              </tr>
+              <tr>
+                <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1 font-bold">
+                  TOTAL DUE ({currency})
+                </td>
+                <td className="border-t border-black py-0.5 pt-1 text-right text-sm font-bold">
+                  {formatMoney(order.total || 0, currency)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-2 border-t border-black pt-1.5">
           <p className="font-bold uppercase tracking-wide">Payment details:</p>
           <p className="mt-0.5">
             Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}

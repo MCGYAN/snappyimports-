@@ -26,7 +26,7 @@ export const SNAPPY_BANK_ACCOUNTS: BankAccount[] = [
   },
   {
     holder: 'Snappy Sampson Enterprise',
-    bank: 'MTN Mobile Money',
+    bank: 'MTN AGENT',
     accountNumber: '0550016939',
     registeredName: 'Sampson Dziwornu Amadah',
     channel: 'momo',

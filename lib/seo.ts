@@ -46,9 +46,9 @@ export const SEO = {
   logoUrl: absoluteSiteLogoUrl(SITE_URL),
 
   contact: {
-    phone: '',
-    whatsapp: '',
-    email: 'contact@example.com',
+    phone: '0547512646',
+    whatsapp: '0547512646',
+    email: 'snappyimportsgh@gmail.com',
   },
 
   social: {

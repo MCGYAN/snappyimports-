@@ -21,24 +21,46 @@ export function getDefaultPhoneCountryCode(): string {
   return (process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '233').replace(/\D/g, '') || '233';
 }
 
-/** Store defaults when CMS / env contact fields are unset. */
+/** Store defaults when CMS / env contact fields are unset (matches invoice issuer). */
 export const DEFAULT_CONTACT_PHONE = '0547512646';
 export const DEFAULT_CONTACT_WHATSAPP = '0547512646';
+export const DEFAULT_CONTACT_EMAIL = 'snappyimportsgh@gmail.com';
+
+function isPlaceholderContact(value?: string | null): boolean {
+  const v = value?.trim().toLowerCase() || '';
+  if (!v) return true;
+  return (
+    v.includes('example.com') ||
+    v.includes('yourdomain') ||
+    v === 'email@email.com'
+  );
+}
 
 export function resolveContactPhone(cmsValue?: string | null): string {
+  const cms = cmsValue?.trim();
   return (
-    cmsValue?.trim() ||
+    (!isPlaceholderContact(cms) ? cms : '') ||
     process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim() ||
     DEFAULT_CONTACT_PHONE
   );
 }
 
 export function resolveContactWhatsApp(cmsValue?: string | null): string {
+  const cms = cmsValue?.trim();
   return (
-    cmsValue?.trim() ||
+    (!isPlaceholderContact(cms) ? cms : '') ||
     process.env.NEXT_PUBLIC_CONTACT_WHATSAPP?.trim() ||
     process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim() ||
     DEFAULT_CONTACT_WHATSAPP
+  );
+}
+
+export function resolveContactEmail(cmsValue?: string | null): string {
+  const cms = cmsValue?.trim();
+  return (
+    (!isPlaceholderContact(cms) ? cms : '') ||
+    process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() ||
+    DEFAULT_CONTACT_EMAIL
   );
 }
 
