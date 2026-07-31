@@ -179,9 +179,25 @@ export default function OrderHubPage() {
 
   // Get invoice on checkout → land here, show invoice, and save the PDF.
   // Intent is carried by ?download=1 and/or sessionStorage (more reliable).
+  // Skip on phones: Safari/WebViews often hang on html2canvas.
   const autoDownloadStarted = useRef(false);
   useEffect(() => {
     if (!order || !orderNumber) return;
+
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const mobileLike =
+      /iPhone|iPad|iPod|Android/i.test(ua) ||
+      (typeof navigator !== 'undefined' &&
+        navigator.maxTouchPoints > 1 &&
+        /Mac/i.test(ua));
+    if (mobileLike) {
+      try {
+        sessionStorage.removeItem('snappy-auto-download-invoice');
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
 
     let fromQuery = false;
     try {

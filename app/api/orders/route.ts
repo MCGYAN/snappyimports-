@@ -5,7 +5,6 @@ import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-lim
 import {
   getInvoiceDueAt,
   resolveCheckoutPaymentChannel,
-  type CheckoutPaymentChannel,
 } from '@/lib/payment-routing';
 import { createPaymentReference } from '@/lib/payment-reference';
 import {
@@ -35,7 +34,6 @@ export async function POST(req: Request) {
       recaptchaToken,
       shippingData,
       deliveryMethod,
-      paymentMethod,
       cart,
       userId
     } = body;
@@ -119,10 +117,9 @@ export async function POST(req: Request) {
     const taxTotal = 0;
     const total = subtotal + shippingTotal + taxTotal;
 
-    const requestedChannel = (paymentMethod === 'invoice' || paymentMethod === 'moolre'
-      ? paymentMethod
-      : null) as CheckoutPaymentChannel | null;
-    const paymentChannel = requestedChannel || resolveCheckoutPaymentChannel(total);
+    // Always route from the server total. Do not trust the client's claim
+    // (avoids MoMo vs invoice mismatches if the UI and payload disagree).
+    const paymentChannel = resolveCheckoutPaymentChannel(total);
     const invoiceDueAt = paymentChannel === 'invoice' ? getInvoiceDueAt() : null;
 
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;

@@ -21,6 +21,16 @@ import {
 /** Contact details remembered locally so repeat buyers skip retyping. */
 const CONTACT_STORAGE_KEY = 'snappy-checkout-contact';
 
+/** Phones/tablets: skip auto PDF (Safari often hangs html2canvas). */
+function shouldSkipAutoInvoicePdf(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+  // iPadOS desktop-mode UA still has touch
+  if (navigator.maxTouchPoints > 1 && /Mac/i.test(ua)) return true;
+  return false;
+}
+
 /** Save invoice PDF in the same click flow as "Get invoice", before navigate. */
 async function downloadInvoiceFromOrder(order: any, orderNumber: string): Promise<void> {
   const host = document.createElement('div');
@@ -117,8 +127,11 @@ export default function CheckoutPage() {
   const total = subtotal + shippingCost + tax;
 
   useEffect(() => {
+    // Don't flip invoice ↔ MoMo while an order is in flight (clearCart would
+    // drop total to 0 and wrongly show "under GH¢2000").
+    if (isLoading) return;
     setPaymentMethod(resolveCheckoutPaymentChannel(total));
-  }, [total]);
+  }, [total, isLoading]);
 
   const needsAddress = deliveryMethod === 'doorstep';
 
@@ -217,30 +230,35 @@ export default function CheckoutPage() {
       const paymentChannel = (placeData.paymentChannel || channel) as 'moolre' | 'invoice';
 
       if (paymentChannel === 'invoice') {
-        clearCart();
         fetch('/api/notifications', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type: 'order_created', payload: placeData.order }),
         }).catch(() => {});
 
-        // Same click as "Get invoice": save PDF here (still in the click flow),
-        // then open the on-screen invoice. If save fails, order page retries.
+        // Desktop only: save PDF in this same click. Mobile/Safari often hangs
+        // on html2canvas, which left the button stuck on Processing…
+        const skipPdf = shouldSkipAutoInvoicePdf();
         let pdfSaved = false;
-        try {
-          await downloadInvoiceFromOrder(placeData.order, orderNumber);
-          pdfSaved = true;
-        } catch (pdfErr) {
-          console.error('[checkout invoice pdf]', pdfErr);
+        if (!skipPdf) {
           try {
-            sessionStorage.setItem('snappy-auto-download-invoice', orderNumber);
-          } catch {
-            /* private mode etc. */
+            await downloadInvoiceFromOrder(placeData.order, orderNumber);
+            pdfSaved = true;
+          } catch (pdfErr) {
+            console.error('[checkout invoice pdf]', pdfErr);
+            try {
+              sessionStorage.setItem('snappy-auto-download-invoice', orderNumber);
+            } catch {
+              /* private mode etc. */
+            }
           }
         }
 
+        // Clear after PDF attempt so the banner cannot flip to MoMo mid-wait
+        clearCart();
+
         const q = new URLSearchParams({ email: shippingData.email });
-        if (!pdfSaved) q.set('download', '1');
+        if (!pdfSaved && !skipPdf) q.set('download', '1');
         router.push(`/order/${encodeURIComponent(orderNumber)}?${q.toString()}`);
         return;
       }
