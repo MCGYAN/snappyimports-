@@ -308,7 +308,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      order,
+      order: { ...order, order_items: orderItems },
       orderNumber: order.order_number,
       paymentChannel,
       invoiceDueAt,

@@ -107,7 +107,8 @@ export default function Footer() {
             <h4 className={mobileHeadingClass}>Support</h4>
             <ul className="space-y-1.5 text-sm lg:space-y-2.5">
               <li><Link href="/contact" className={linkClass}>Contact us</Link></li>
-              <li><Link href="/order-tracking" className={linkClass}>Track order</Link></li>
+              <li><Link href="/order-tracking" className={linkClass}>Find my order</Link></li>
+              <li><Link href="/exchange/lookup" className={linkClass}>Find RMB invoice</Link></li>
               <li><Link href="/shipping" className={linkClass}>Shipping</Link></li>
               <li><Link href="/returns" className={linkClass}>Returns</Link></li>
             </ul>

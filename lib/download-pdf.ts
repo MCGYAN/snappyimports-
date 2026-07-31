@@ -19,6 +19,40 @@ async function waitForImages(root: HTMLElement): Promise<void> {
   );
 }
 
+/**
+ * Copy the browser's computed typography/spacing onto the clone as inline
+ * styles. html2canvas re-renders the DOM in its own sandbox and can lose
+ * class-based line-height / margins, which makes the PDF look airier than the
+ * on-screen invoice. Inline styles always survive the capture.
+ */
+function inlineComputedSpacing(source: HTMLElement, clone: HTMLElement): void {
+  const sourceNodes = [source, ...Array.from(source.querySelectorAll<HTMLElement>('*'))];
+  const cloneNodes = [clone, ...Array.from(clone.querySelectorAll<HTMLElement>('*'))];
+
+  sourceNodes.forEach((orig, i) => {
+    const target = cloneNodes[i];
+    if (!target) return;
+    const cs = window.getComputedStyle(orig);
+
+    target.style.marginTop = cs.marginTop;
+    target.style.marginBottom = cs.marginBottom;
+    target.style.marginLeft = cs.marginLeft;
+    target.style.marginRight = cs.marginRight;
+    target.style.paddingTop = cs.paddingTop;
+    target.style.paddingBottom = cs.paddingBottom;
+    target.style.paddingLeft = cs.paddingLeft;
+    target.style.paddingRight = cs.paddingRight;
+    target.style.fontSize = cs.fontSize;
+    target.style.letterSpacing = cs.letterSpacing;
+
+    const fontPx = parseFloat(cs.fontSize);
+    target.style.lineHeight =
+      cs.lineHeight === 'normal' && Number.isFinite(fontPx)
+        ? `${Math.round(fontPx * 1.35)}px`
+        : cs.lineHeight;
+  });
+}
+
 export async function downloadElementAsPdf(
   element: HTMLElement,
   filename: string,
@@ -45,6 +79,7 @@ export async function downloadElementAsPdf(
   const clone = element.cloneNode(true) as HTMLElement;
   clone.classList.remove('hidden');
   clone.style.display = 'block';
+  inlineComputedSpacing(element, clone);
   stage.appendChild(clone);
   document.body.appendChild(stage);
 

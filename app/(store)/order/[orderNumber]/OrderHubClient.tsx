@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import InvoiceDocument from '@/components/InvoiceDocument';
@@ -40,6 +40,7 @@ export default function OrderHubPage() {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [autoDownloadHint, setAutoDownloadHint] = useState(false);
   const [deliveryForm, setDeliveryForm] = useState({
     address: '',
     city: '',
@@ -159,20 +160,97 @@ export default function OrderHubPage() {
 
   const handlePrint = () => window.print();
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = useCallback(async () => {
     const root = document.getElementById('invoice-print');
     const official = root?.querySelector<HTMLElement>('.invoice-official');
-    if (!official) return;
+    if (!official) return false;
     setDownloading(true);
     try {
       await downloadElementAsPdf(official, `${orderNumber || 'invoice'}.pdf`);
+      return true;
     } catch (err) {
       console.error('[order pdf]', err);
       alert('Could not download PDF. Try Print instead.');
+      return false;
     } finally {
       setDownloading(false);
     }
-  };
+  }, [orderNumber]);
+
+  // Get invoice on checkout → land here, show invoice, and save the PDF.
+  // Intent is carried by ?download=1 and/or sessionStorage (more reliable).
+  const autoDownloadStarted = useRef(false);
+  useEffect(() => {
+    if (!order || !orderNumber) return;
+
+    let fromQuery = false;
+    try {
+      fromQuery = searchParams.get('download') === '1';
+    } catch {
+      fromQuery = false;
+    }
+
+    let fromStorage = false;
+    try {
+      fromStorage = sessionStorage.getItem('snappy-auto-download-invoice') === orderNumber;
+    } catch {
+      fromStorage = false;
+    }
+
+    if (!fromQuery && !fromStorage) return;
+    if (autoDownloadStarted.current) return;
+
+    setAutoDownloadHint(true);
+    let cancelled = false;
+    let tries = 0;
+
+    const clearIntent = () => {
+      try {
+        sessionStorage.removeItem('snappy-auto-download-invoice');
+      } catch {
+        /* ignore */
+      }
+      if (typeof window !== 'undefined' && window.location.search.includes('download=')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('download');
+        window.history.replaceState({}, '', url.toString());
+      }
+    };
+
+    const attempt = async () => {
+      if (cancelled || autoDownloadStarted.current) return;
+
+      const official = document
+        .getElementById('invoice-print')
+        ?.querySelector<HTMLElement>('.invoice-official');
+
+      if (!official) {
+        if (tries++ < 40) {
+          window.setTimeout(() => {
+            void attempt();
+          }, 150);
+        }
+        return;
+      }
+
+      // Only lock once the node exists so React Strict Mode remounts can retry.
+      autoDownloadStarted.current = true;
+      clearIntent();
+      const ok = await handleDownloadPdf();
+      if (!ok) setAutoDownloadHint(true);
+      else setAutoDownloadHint(false);
+    };
+
+    // First paint after order state lands in the tree
+    const start = window.setTimeout(() => {
+      void attempt();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(start);
+    };
+  }, [order, orderNumber, searchParams, handleDownloadPdf]);
 
   if (!orderNumber) {
     return (
@@ -277,7 +355,14 @@ export default function OrderHubPage() {
 
             <section className="store-card p-5 sm:p-8">
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
-                <h2 className="text-xl font-bold text-brand-primary">Invoice</h2>
+                <div>
+                  <h2 className="text-xl font-bold text-brand-primary">Invoice</h2>
+                  {autoDownloadHint ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Saving your PDF… If nothing downloads, tap Download PDF below.
+                    </p>
+                  ) : null}
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -288,7 +373,9 @@ export default function OrderHubPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={handleDownloadPdf}
+                    onClick={() => {
+                      void handleDownloadPdf();
+                    }}
                     disabled={downloading}
                     className="inline-flex items-center gap-2 rounded-full bg-brand-accent px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
                   >

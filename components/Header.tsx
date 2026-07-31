@@ -8,7 +8,7 @@ import StoreLogo from './StoreLogo';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import AnnouncementBar from './AnnouncementBar';
-import { Search, User, ShoppingCart, Menu, X } from 'lucide-react';
+import { Search, User, ShoppingCart, Menu, X, PackageSearch } from 'lucide-react';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -39,10 +39,11 @@ export default function Header() {
   const navLinks = [
     { label: 'Home', href: '/' },
     { label: 'Products', href: '/shop' },
-    { label: 'Buy RMB', href: '/exchange' },
     { label: 'Categories', href: '/categories' },
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },
+    { label: 'Buy RMB', href: '/exchange' },
+    { label: 'Track order', href: '/order-tracking' },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -201,6 +202,14 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href="/order-tracking"
+                className="mobile-editorial-nav-link flex items-center gap-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <PackageSearch className="h-5 w-5 text-brand-accent" strokeWidth={1.75} />
+                Find my order
+              </Link>
               <Link
                 href="/account"
                 className="mobile-editorial-nav-link flex items-center gap-2 border-b-0 pt-2"

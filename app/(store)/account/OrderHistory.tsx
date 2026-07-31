@@ -191,7 +191,7 @@ export default function OrderHistory() {
 
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-gray-200">
                 <Link
-                  href={`/order-tracking?order=${order.orderNumber}`}
+                  href={`/order/${encodeURIComponent(order.orderNumber)}`}
                   className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
                 >
                   <i className="ri-map-pin-line mr-2"></i>

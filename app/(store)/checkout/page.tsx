@@ -2,12 +2,16 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import OrderSummary from '@/components/OrderSummary';
+import InvoiceDocument from '@/components/InvoiceDocument';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { executeRecaptcha } from '@/lib/recaptcha';
+import { downloadElementAsPdf } from '@/lib/download-pdf';
 import { ShoppingCart, ArrowLeft, UserCircle } from 'lucide-react';
 import {
   INVOICE_PAYMENT_THRESHOLD,
@@ -16,6 +20,31 @@ import {
 
 /** Contact details remembered locally so repeat buyers skip retyping. */
 const CONTACT_STORAGE_KEY = 'snappy-checkout-contact';
+
+/** Save invoice PDF in the same click flow as "Get invoice", before navigate. */
+async function downloadInvoiceFromOrder(order: any, orderNumber: string): Promise<void> {
+  const host = document.createElement('div');
+  host.setAttribute('aria-hidden', 'true');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;pointer-events:none;';
+  document.body.appendChild(host);
+
+  const root = createRoot(host);
+  try {
+    flushSync(() => {
+      root.render(<InvoiceDocument order={order} />);
+    });
+    // Allow logo/layout to settle before capture
+    await new Promise((r) => window.setTimeout(r, 400));
+    const official = host.querySelector<HTMLElement>('.invoice-official');
+    if (!official) {
+      throw new Error('Invoice layout not ready');
+    }
+    await downloadElementAsPdf(official, `${orderNumber}.pdf`);
+  } finally {
+    root.unmount();
+    host.remove();
+  }
+}
 
 export default function CheckoutPage() {
   usePageTitle('Checkout');
@@ -194,9 +223,25 @@ export default function CheckoutPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type: 'order_created', payload: placeData.order }),
         }).catch(() => {});
-        router.push(
-          `/order/${encodeURIComponent(orderNumber)}?email=${encodeURIComponent(shippingData.email)}`,
-        );
+
+        // Same click as "Get invoice": save PDF here (still in the click flow),
+        // then open the on-screen invoice. If save fails, order page retries.
+        let pdfSaved = false;
+        try {
+          await downloadInvoiceFromOrder(placeData.order, orderNumber);
+          pdfSaved = true;
+        } catch (pdfErr) {
+          console.error('[checkout invoice pdf]', pdfErr);
+          try {
+            sessionStorage.setItem('snappy-auto-download-invoice', orderNumber);
+          } catch {
+            /* private mode etc. */
+          }
+        }
+
+        const q = new URLSearchParams({ email: shippingData.email });
+        if (!pdfSaved) q.set('download', '1');
+        router.push(`/order/${encodeURIComponent(orderNumber)}?${q.toString()}`);
         return;
       }
 

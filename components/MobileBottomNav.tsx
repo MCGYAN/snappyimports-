@@ -5,13 +5,11 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useCMS } from '@/context/CMSContext';
 import {
-  buildTelHref,
   buildWhatsAppHref,
-  resolveContactPhone,
   resolveContactWhatsApp,
 } from '@/lib/snappy-import';
 import type { LucideIcon } from 'lucide-react';
-import { Home, LayoutGrid, Phone, User, MessageCircle } from 'lucide-react';
+import { Home, LayoutGrid, PackageSearch, User, MessageCircle } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -20,7 +18,6 @@ export default function MobileBottomNav() {
   const [lastScrollY, setLastScrollY] = useState(0);
 
   const waHref = buildWhatsAppHref(resolveContactWhatsApp(getSetting('contact_whatsapp')));
-  const telHref = buildTelHref(resolveContactPhone(getSetting('contact_phone')));
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
@@ -64,14 +61,12 @@ export default function MobileBottomNav() {
             </a>
             <span className="text-[10px] font-medium text-slate-500">WhatsApp</span>
           </div>
-          <a
-            href={telHref}
-            className="flex flex-col items-center justify-center py-2 text-slate-500 active:opacity-70"
-            aria-label="Call"
-          >
-            <Phone className="h-5 w-5" strokeWidth={1.75} />
-            <span className="mt-0.5 text-[10px] font-medium">Call</span>
-          </a>
+          <MobileItem
+            href="/order-tracking"
+            label="Track"
+            active={isActive('/order-tracking') || isActive('/order/')}
+            icon={PackageSearch}
+          />
           <MobileItem href="/account" label="Account" active={isActive('/account')} icon={User} />
         </div>
       </div>

@@ -1,406 +1,151 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PackageSearch } from 'lucide-react';
 
-function OrderTrackingContent() {
+function FindMyOrderContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const urlOrderNumber = searchParams.get('order') || '';
-  
-  const [orderNumber, setOrderNumber] = useState(urlOrderNumber);
-  const [email, setEmail] = useState('');
-  const [isTracking, setIsTracking] = useState(false);
-  const [order, setOrder] = useState<any>(null);
+  const urlOrder = searchParams.get('order') || '';
+  const urlEmail = searchParams.get('email') || '';
+
+  const [orderNumber, setOrderNumber] = useState(urlOrder);
+  const [email, setEmail] = useState(urlEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Auto-track if order number AND email are in the URL
-  const urlEmail = searchParams.get('email') || '';
-
-  const fetchOrder = useCallback(async (orderNum: string, verifyEmail?: string) => {
-    const emailToVerify = (verifyEmail || email).trim();
-    if (!emailToVerify) {
-      setError('Please enter your email address to verify your identity.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch(
-        `/api/order-tracking?order=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailToVerify)}`
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError(body.error || 'Order not found. Please check your order number and email.');
-        setIsTracking(false);
+  const openOrder = useCallback(
+    async (orderNum: string, mail: string) => {
+      const cleanedOrder = orderNum.trim();
+      const cleanedEmail = mail.trim();
+      if (!cleanedOrder) {
+        setError('Enter your order number.');
         return;
       }
-      const data = await res.json();
-      setOrder(data);
-      setIsTracking(true);
-    } catch (err) {
-      console.error('Error fetching order:', err);
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [email]);
+      if (!cleanedEmail) {
+        setError('Enter the email you used at checkout.');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const res = await fetch(
+          `/api/orders/lookup?order=${encodeURIComponent(cleanedOrder)}&email=${encodeURIComponent(cleanedEmail)}`,
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error || 'Order not found. Check your order number and email.');
+          return;
+        }
+
+        // Full hub: unpaid invoice + pay, or paid import journey
+        router.push(
+          `/order/${encodeURIComponent(cleanedOrder)}?email=${encodeURIComponent(cleanedEmail)}`,
+        );
+      } catch {
+        setError('Something went wrong. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router],
+  );
 
   useEffect(() => {
-    if (urlOrderNumber && urlEmail) {
-      setEmail(urlEmail);
-      fetchOrder(urlOrderNumber, urlEmail);
+    if (urlOrder && urlEmail) {
+      openOrder(urlOrder, urlEmail);
     }
-  }, [urlOrderNumber, urlEmail, fetchOrder]);
+  }, [urlOrder, urlEmail, openOrder]);
 
-  const handleTrack = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    if (!orderNumber) {
-      setError('Please enter your order number');
-      return;
-    }
-
-    if (!email) {
-      setError('Please enter your email address for verification');
-      return;
-    }
-
-    fetchOrder(orderNumber, email);
+    openOrder(orderNumber, email);
   };
-
-  // Build tracking timeline from real order data
-  const getTrackingSteps = () => {
-    if (!order) return [];
-
-    const status = order.status || 'pending';
-    const paymentStatus = order.payment_status || 'pending';
-
-    const statusOrder = ['pending', 'processing', 'shipped', 'delivered'];
-    const currentIndex = statusOrder.indexOf(status);
-
-    const steps = [
-      {
-        key: 'placed',
-        title: 'Order Placed',
-        description: 'Your order has been confirmed',
-        date: new Date(order.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        icon: 'ri-checkbox-circle-line',
-        status: 'completed' as const
-      },
-      {
-        key: 'payment',
-        title: 'Payment',
-        description: paymentStatus === 'paid' ? 'Payment confirmed' : 'Awaiting payment',
-        date: paymentStatus === 'paid' 
-          ? (order.metadata?.payment_verified_at 
-            ? new Date(order.metadata.payment_verified_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-            : 'Confirmed')
-          : 'Pending',
-        icon: 'ri-bank-card-line',
-        status: paymentStatus === 'paid' ? 'completed' as const : 'pending' as const
-      },
-      {
-        key: 'processing',
-        title: 'Processing',
-        description: 'Your order is being prepared',
-        date: currentIndex >= 1 ? 'In progress' : 'Pending',
-        icon: 'ri-box-3-line',
-        status: currentIndex >= 1 ? 'completed' as const : currentIndex === 0 && paymentStatus === 'paid' ? 'active' as const : 'pending' as const
-      },
-      {
-        key: 'shipped',
-        title: 'Packaged',
-        description: 'Your order has been packaged',
-        date: currentIndex >= 2 ? 'Packaged' : 'Pending',
-        icon: 'ri-truck-line',
-        status: currentIndex >= 2 ? 'completed' as const : currentIndex === 1 ? 'active' as const : 'pending' as const
-      },
-      {
-        key: 'delivered',
-        title: 'Delivered',
-        description: 'Your order has been delivered',
-        date: currentIndex >= 3 ? 'Delivered' : 'Pending',
-        icon: 'ri-home-smile-line',
-        status: currentIndex >= 3 ? 'completed' as const : currentIndex === 2 ? 'active' as const : 'pending' as const
-      }
-    ];
-
-    return steps;
-  };
-
-  const getStatusBadge = () => {
-    if (!order) return { label: 'Unknown', color: 'bg-gray-100 text-gray-800' };
-    
-    const statusMap: Record<string, { label: string; color: string }> = {
-      'pending': { label: 'Pending', color: 'bg-amber-100 text-amber-800' },
-      'processing': { label: 'Processing', color: 'bg-brand-light text-blue-800' },
-      'shipped': { label: 'Packaged', color: 'bg-purple-100 text-purple-800' },
-      'delivered': { label: 'Delivered', color: 'bg-brand-light text-blue-800' },
-      'cancelled': { label: 'Cancelled', color: 'bg-red-100 text-red-800' }
-    };
-
-    return statusMap[order.status] || { label: order.status, color: 'bg-gray-100 text-gray-800' };
-  };
-
-  // Search form
-  if (!isTracking || !order) {
-    return (
-      <main className="min-h-screen bg-gray-50 py-12 px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Where is my order?</h1>
-            <p className="text-gray-600">Enter your order number and email. See exactly where things stand.</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <form onSubmit={handleTrack} className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Order Number or Tracking Number
-                </label>
-                <input
-                  type="text"
-                  value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                  placeholder="e.g. ORD-1770328211911-915 or SLI-ABC123"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Email Address <span className="text-red-500 font-normal">(Required)</span>
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                  placeholder="you@example.com"
-                />
-              </div>
-
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-brand-primary hover:bg-[#0d2747] text-white py-4 rounded-lg font-semibold transition-colors whitespace-nowrap disabled:opacity-50"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center">
-                    <i className="ri-loader-4-line animate-spin mr-2"></i>
-                    Searching...
-                  </span>
-                ) : 'Track Order'}
-              </button>
-            </form>
-
-            <div className="mt-8 p-4 border border-brand-accent/20 bg-brand-light rounded-lg">
-              <div className="flex items-start space-x-3">
-                <i className="ri-information-line text-xl text-brand-primary mt-0.5"></i>
-                <div>
-                  <p className="text-sm font-semibold text-brand-primary">Need help?</p>
-                  <p className="text-sm text-brand-primary mt-1">
-                    Your order number is in the email or text we sent you after you ordered.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 text-center">
-            <Link href="/" className="text-gray-600 hover:text-gray-900 font-medium whitespace-nowrap">
-              <i className="ri-arrow-left-line mr-2"></i>
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  // Order tracking results
-  const trackingSteps = getTrackingSteps();
-  const statusBadge = getStatusBadge();
-  const trackingNumber = order.metadata?.tracking_number || '';
-  const shippingAddress = order.shipping_address || {};
-  const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 7 * 24 * 60 * 60 * 1000)
-    .toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <button 
-            onClick={() => { setIsTracking(false); setOrder(null); setOrderNumber(''); setEmail(''); }}
-            className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center whitespace-nowrap cursor-pointer"
+    <main className="min-h-screen bg-gradient-to-b from-[#f8fafc] via-white to-[#eef2f7]">
+      <div className="mx-auto max-w-lg px-4 py-12 sm:py-16">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-primary text-white">
+            <PackageSearch className="h-7 w-7" strokeWidth={1.75} />
+          </div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">
+            No account needed
+          </p>
+          <h1 className="mt-2 font-heading text-3xl font-bold text-brand-primary sm:text-4xl">
+            Find my order
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
+            Enter your order number and checkout email. See payment status, re-download your
+            invoice, or follow your China to Ghana import journey.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="store-card space-y-5 p-6 sm:p-8">
+          <div>
+            <label htmlFor="find-order-number" className="mb-2 block text-sm font-semibold text-brand-primary">
+              Order number
+            </label>
+            <input
+              id="find-order-number"
+              type="text"
+              value={orderNumber}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              autoComplete="off"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-base focus:border-brand-accent focus:outline-none"
+              placeholder="e.g. ORD-1784…"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="find-order-email" className="mb-2 block text-sm font-semibold text-brand-primary">
+              Email used at checkout
+            </label>
+            <input
+              id="find-order-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-base focus:border-brand-accent focus:outline-none"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+
+          {error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-brand-primary py-3.5 text-sm font-bold text-white transition-colors hover:bg-brand-accent disabled:opacity-60"
           >
-            <i className="ri-arrow-left-line mr-2"></i>
-            Track Another Order
+            {loading ? 'Opening…' : 'Open my order'}
           </button>
-        </div>
+        </form>
 
-        <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{order.order_number}</h1>
-              {trackingNumber && (
-                <p className="text-gray-600 mt-1">
-                  <span className="font-medium">Tracking:</span>{' '}
-                  <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-sm">{trackingNumber}</span>
-                </p>
-              )}
-              <p className="text-gray-500 text-sm mt-1">Estimated delivery: {estimatedDelivery}</p>
-            </div>
-            <div className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap ${statusBadge.color}`}>
-              {statusBadge.label}
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 flex items-center justify-center bg-brand-light rounded-full">
-                  <i className="ri-map-pin-line text-xl text-brand-primary"></i>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Shipping To</p>
-                  <p className="font-semibold text-gray-900">
-                    {shippingAddress.city || shippingAddress.region || 'Not added'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 flex items-center justify-center bg-brand-light rounded-full">
-                  <i className="ri-money-cny-circle-line text-xl text-brand-primary"></i>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total</p>
-                  <p className="font-semibold text-gray-900">GH¢{Number(order.total).toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 flex items-center justify-center bg-brand-light rounded-full">
-                  <i className="ri-box-3-line text-xl text-brand-primary"></i>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Items</p>
-                  <p className="font-semibold text-gray-900">
-                    {order.order_items?.length || 0} Product{(order.order_items?.length || 0) !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tracking Timeline */}
-          <div className="relative">
-            {trackingSteps.map((step, index) => (
-              <div key={step.key} className="flex items-start mb-8 last:mb-0">
-                <div className="relative flex flex-col items-center mr-6">
-                  <div className={`w-12 h-12 flex items-center justify-center rounded-full font-bold transition-colors ${
-                    step.status === 'completed'
-                      ? 'bg-brand-primary text-white'
-                      : step.status === 'active'
-                      ? 'bg-brand-light text-brand-primary ring-4 ring-blue-200'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}>
-                    <i className={`${step.icon} text-xl`}></i>
-                  </div>
-                  {index < trackingSteps.length - 1 && (
-                    <div className={`w-0.5 h-16 mt-2 ${
-                      step.status === 'completed' ? 'bg-brand-primary' : 'bg-gray-200'
-                    }`}></div>
-                  )}
-                </div>
-                <div className="flex-1 pt-2">
-                  <h3 className={`font-bold text-lg ${
-                    step.status === 'pending' ? 'text-gray-500' : 'text-gray-900'
-                  }`}>
-                    {step.title}
-                  </h3>
-                  <p className={`text-sm mt-1 ${
-                    step.status === 'pending' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {step.description}
-                  </p>
-                  <p className={`text-sm mt-1 font-semibold ${
-                    step.status === 'pending' ? 'text-gray-400' : 'text-brand-primary'
-                  }`}>
-                    {step.date}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Order Items */}
-        <div className="bg-white rounded-xl shadow-sm p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Order Items</h2>
-          <div className="space-y-4">
-            {order.order_items?.map((item: any) => (
-              <div key={item.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
-                  {item.products?.product_images?.[0]?.url || item.metadata?.image ? (
-                    <img
-                      src={item.products?.product_images?.[0]?.url || item.metadata?.image}
-                      alt={item.product_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <i className="ri-image-line text-2xl text-gray-300"></i>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{item.product_name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">Quantity: {item.quantity}</p>
-                  {item.variant_name && (
-                    <p className="text-xs font-semibold text-brand-primary">
-                      {String(item.variant_name).includes('/') &&
-                      String(item.variant_name).split('/')[0].trim().toLowerCase() ===
-                        String(item.variant_name).split('/')[1]?.trim().toLowerCase()
-                        ? `Color: ${String(item.variant_name).split('/')[0].trim()}`
-                        : item.variant_name}
-                    </p>
-                  )}
-                </div>
-                <p className="font-bold text-brand-primary">GH¢{Number(item.unit_price).toFixed(2)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-gray-600 mb-4">Need help with your order?</p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/contact" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
-              <i className="ri-customer-service-line mr-1"></i>
-              Contact Support
+        <div className="mt-6 space-y-3 text-center text-sm text-slate-600">
+          <p>
+            Looking up a <span className="font-semibold text-brand-primary">Buy RMB</span> transfer?{' '}
+            <Link href="/exchange/lookup" className="font-semibold text-brand-accent hover:underline">
+              Find RMB invoice
             </Link>
-            <Link href="/returns" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
-              <i className="ri-arrow-left-right-line mr-1"></i>
-              Returns Policy
-            </Link>
-          </div>
+          </p>
+          <p className="text-xs text-slate-500">
+            Order number is on your invoice, confirmation email, or checkout success screen.
+          </p>
+          <Link href="/" className="inline-block font-medium text-slate-500 hover:text-brand-primary">
+            Back to home
+          </Link>
         </div>
       </div>
     </main>
@@ -409,14 +154,14 @@ function OrderTrackingContent() {
 
 export default function OrderTrackingPage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <i className="ri-loader-4-line animate-spin text-4xl text-brand-primary" />
         </div>
-      </main>
-    }>
-      <OrderTrackingContent />
+      }
+    >
+      <FindMyOrderContent />
     </Suspense>
   );
 }

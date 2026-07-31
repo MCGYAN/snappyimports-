@@ -125,11 +125,14 @@ function OrderSuccessContent() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Almost there</h1>
           <p className="text-gray-600 mb-6">
             Your payment is being processed. If you completed the payment, your order will be confirmed shortly.
-            You can check your order status from your account.
+            Use Find my order with your order number and email. No account needed.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/account?tab=orders" className="bg-brand-primary hover:bg-[#0d2747] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
-              Check Order Status
+            <Link
+              href={orderNumber ? `/order-tracking?order=${encodeURIComponent(orderNumber)}` : '/order-tracking'}
+              className="bg-brand-primary hover:bg-[#0d2747] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              Find my order
             </Link>
             <Link href="/shop" className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors">
               Return to Shop
@@ -142,7 +145,6 @@ function OrderSuccessContent() {
 
   const orderDate = new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const pointsEarned = Math.floor(order.total / 10); // Example logic: 1 point per 10 currency units
 
   return (
     <main className="min-h-screen bg-brand-light">
@@ -196,11 +198,11 @@ function OrderSuccessContent() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Link
-                href={`/account?tab=orders`}
+                href={`/order/${encodeURIComponent(order.order_number)}?email=${encodeURIComponent(order.email || '')}`}
                 className="bg-brand-primary hover:bg-[#0d2747] text-white px-8 py-4 rounded-lg font-semibold transition-colors inline-flex items-center justify-center whitespace-nowrap"
               >
-                <i className="ri-file-list-3-line mr-2"></i>
-                View Order
+                <i className="ri-map-pin-line mr-2"></i>
+                Track this order
               </Link>
               <Link
                 href="/shop"
@@ -211,22 +213,19 @@ function OrderSuccessContent() {
               </Link>
             </div>
 
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 flex items-center justify-center bg-amber-500 rounded-full">
-                    <i className="ri-star-fill text-white text-2xl"></i>
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-gray-900 text-lg">You Earned {pointsEarned} Points!</p>
-                    <p className="text-sm text-gray-600">Join our loyalty program to redeem.</p>
-                  </div>
+            <div className="bg-gradient-to-r from-slate-50 to-brand-light/60 rounded-xl p-6 border border-slate-200">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-left">
+                  <p className="font-bold text-gray-900 text-lg">Want orders saved in one place?</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Optional. You can always use Find my order with your email. No sign-in required to track.
+                  </p>
                 </div>
                 <Link
-                  href="/register"
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+                  href="/auth/signup"
+                  className="shrink-0 rounded-lg border-2 border-brand-primary px-6 py-3 font-semibold text-brand-primary transition-colors hover:bg-brand-primary hover:text-white whitespace-nowrap"
                 >
-                  Join Now
+                  Create account
                 </Link>
               </div>
             </div>
