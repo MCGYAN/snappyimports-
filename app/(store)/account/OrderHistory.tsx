@@ -33,6 +33,22 @@ export default function OrderHistory() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
+        // Pull in guest orders placed with this email before listing history
+        if (session.access_token) {
+          try {
+            await fetch('/api/orders/claim', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({}),
+            });
+          } catch {
+            /* non-blocking */
+          }
+        }
+
         const { data, error } = await supabase
           .from('orders')
           .select(`

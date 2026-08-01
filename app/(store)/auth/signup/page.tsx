@@ -131,6 +131,18 @@ export default function SignupPage() {
         if (!data.session) {
           setSuccess(true);
         } else {
+          try {
+            await fetch('/api/orders/claim', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${data.session.access_token}`,
+              },
+              body: JSON.stringify({}),
+            });
+          } catch {
+            /* non-blocking */
+          }
           // Auto-login success (if email confirming is off)
           router.push('/account');
           router.refresh();

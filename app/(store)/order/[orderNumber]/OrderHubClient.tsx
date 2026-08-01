@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import InvoiceDocument from '@/components/InvoiceDocument';
+import GuestAccessPrompt from '@/components/GuestAccessPrompt';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import {
   canBookDelivery,
@@ -462,6 +463,22 @@ export default function OrderHubPage() {
                 </div>
               </section>
             ) : null}
+
+            <GuestAccessPrompt
+              orderNumber={order.order_number || orderNumber}
+              email={order.email || email}
+              firstName={
+                order.shipping_address?.firstName ||
+                order.metadata?.first_name ||
+                ''
+              }
+              lastName={
+                order.shipping_address?.lastName ||
+                order.metadata?.last_name ||
+                ''
+              }
+              phone={order.phone || order.shipping_address?.phone || ''}
+            />
 
             <section className="store-card p-5 sm:p-8 print:hidden">
               <div className="mb-2 flex items-center gap-2">

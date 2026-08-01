@@ -1,15 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get('next') || '/account';
+  const emailFromQuery = searchParams.get('email') || '';
+
   const [formData, setFormData] = useState({
-    email: '',
+    email: emailFromQuery,
     password: '',
     rememberMe: false
   });
@@ -18,6 +22,12 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const { getToken, verifying } = useRecaptcha();
+
+  useEffect(() => {
+    if (emailFromQuery) {
+      setFormData((prev) => ({ ...prev, email: emailFromQuery }));
+    }
+  }, [emailFromQuery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +70,25 @@ export default function LoginPage() {
         throw error;
       }
 
-      if (data.session) {
-        router.push('/account');
-        router.refresh(); // Refresh to update auth state in other components
+      if (data.session?.access_token) {
+        // Attach any guest orders placed with this email
+        try {
+          await fetch('/api/orders/claim', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${data.session.access_token}`,
+            },
+            body: JSON.stringify({}),
+          });
+        } catch {
+          /* non-blocking */
+        }
+
+        const safeNext =
+          nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
+        router.push(safeNext);
+        router.refresh();
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -78,6 +104,7 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <p className="store-eyebrow mb-2">Account</p>
           <h1 className="font-heading text-3xl font-bold text-brand-primary sm:text-4xl">Welcome back</h1>
+
           <p className="mt-2 text-slate-500">Track your imports and manage your account</p>
         </div>
 
@@ -204,5 +231,19 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="store-page flex min-h-screen items-center justify-center px-4 py-12">
+          <p className="text-slate-500">Loading…</p>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
