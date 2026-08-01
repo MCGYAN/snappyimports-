@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { getAuthEmailRedirectTo, getFriendlyAuthError } from '@/lib/auth-copy';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -27,40 +29,46 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // reCAPTCHA verification
     const isHuman = await getToken('forgot_password');
     if (!isHuman) {
-      setError('Security verification failed. Please try again.');
+      setError('Security check failed. Please try again.');
       setIsLoading(false);
       return;
     }
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: getAuthEmailRedirectTo('/auth/callback'),
+      });
+      if (resetError) throw resetError;
       setIsSubmitted(true);
-    }, 1500);
+    } catch (err: any) {
+      setError(getFriendlyAuthError(err?.message || '', 'reset'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6">
-        <div className="max-w-md w-full">
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="w-16 h-16 flex items-center justify-center bg-brand-light rounded-full mx-auto mb-6">
+      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6">
+        <div className="w-full max-w-md">
+          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-light">
               <i className="ri-mail-send-line text-3xl text-brand-primary"></i>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-3">Check Your Email</h1>
-            <p className="text-gray-600 mb-6">
-              We've sent a password reset link to <strong>{email}</strong>
+            <h1 className="mb-3 text-2xl font-bold text-gray-900">Check your email</h1>
+            <p className="mb-6 text-gray-600">
+              If an account exists for <strong>{email}</strong>, we sent a reset link.
             </p>
-            <p className="text-sm text-gray-500 mb-8">
-              If you don't receive an email within a few minutes, please check your spam folder.
+            <p className="mb-8 text-sm text-gray-500">
+              No email yet? Check spam, then try again in a few minutes.
             </p>
             <Link
               href="/auth/login"
-              className="inline-block bg-brand-primary hover:bg-[#0d2747] text-white px-8 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+              className="inline-block whitespace-nowrap rounded-lg bg-brand-primary px-8 py-3 font-semibold text-white transition-colors hover:bg-[#0d2747]"
             >
-              Back to Sign In
+              Back to sign in
             </Link>
           </div>
         </div>
@@ -69,55 +77,40 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Reset Password</h1>
-          <p className="text-gray-600">Enter your email to receive a reset link</p>
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-4xl font-bold text-gray-900">Reset password</h1>
+          <p className="text-gray-600">Enter your email. We will send a reset link.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-8">
+        <div className="rounded-xl bg-white p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Email Address
-              </label>
+              <label className="mb-2 block text-sm font-semibold text-gray-900">Email</label>
               <input
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${
-                  error ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent"
                 placeholder="you@example.com"
               />
-              {error && (
-                <p className="text-sm text-red-600 mt-2">{error}</p>
-              )}
             </div>
-
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button
               type="submit"
               disabled={isLoading || verifying}
-              className="w-full bg-brand-primary hover:bg-[#0d2747] text-white py-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="w-full rounded-lg bg-brand-primary py-4 font-semibold text-white transition-colors hover:bg-[#0d2747] disabled:opacity-50"
             >
-              {isLoading || verifying ? (verifying ? 'Verifying...' : 'Sending...') : 'Send Reset Link'}
+              {isLoading || verifying ? 'Sending…' : 'Send reset link'}
             </button>
           </form>
-
-          <p className="mt-8 text-center text-gray-600">
-            Remember your password?{' '}
-            <Link href="/auth/login" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
-              Sign in
+          <p className="mt-6 text-center text-gray-600">
+            <Link href="/auth/login" className="font-semibold text-brand-primary hover:underline">
+              Back to sign in
             </Link>
           </p>
-        </div>
-
-        <div className="mt-8 text-center">
-          <Link href="/" className="text-gray-600 hover:text-gray-900 font-medium whitespace-nowrap">
-            <i className="ri-arrow-left-line mr-2"></i>
-            Back to Home
-          </Link>
         </div>
       </div>
     </main>

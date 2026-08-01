@@ -1,54 +1,38 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { getAuthEmailRedirectTo, getFriendlyAuthError } from '@/lib/auth-copy';
 
-function getFriendlyError(message: string): string {
-  const lower = message.toLowerCase();
-  if (lower.includes('email rate limit exceeded') || lower.includes('over_email_send_rate_limit')) {
-    return 'Our system is experiencing high demand. Please wait a few minutes and try again, or contact us for help.';
-  }
-  if (lower.includes('user already registered') || lower.includes('already been registered')) {
-    return 'An account with this email already exists. Try signing in instead.';
-  }
-  if (lower.includes('password') && lower.includes('weak')) {
-    return 'Your password is too weak. Please use at least 8 characters with a mix of letters, numbers, and symbols.';
-  }
-  if (lower.includes('invalid email')) {
-    return 'Please enter a valid email address.';
-  }
-  if (lower.includes('network') || lower.includes('fetch')) {
-    return 'Connection error. Please check your internet and try again.';
-  }
-  return message;
-}
-
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const emailFromQuery = searchParams.get('email') || '';
   const errorRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
+    email: emailFromQuery,
     password: '',
     confirmPassword: '',
     acceptTerms: false,
-    newsletter: false
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<any>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [success, setSuccess] = useState(false);
   const { getToken, verifying } = useRecaptcha();
 
-  // Auto-scroll to error when it appears
+  useEffect(() => {
+    if (emailFromQuery) {
+      setFormData((prev) => ({ ...prev, email: emailFromQuery }));
+    }
+  }, [emailFromQuery]);
+
   useEffect(() => {
     if (authError && errorRef.current) {
       errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -61,16 +45,11 @@ export default function SignupPage() {
     setAuthError('');
     setIsLoading(true);
 
-    const newErrors: any = {};
-    if (!formData.firstName) newErrors.firstName = 'First name is required';
-    if (!formData.lastName) newErrors.lastName = 'Last name is required';
+    const newErrors: Record<string, string> = {};
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
-    }
-    if (!formData.phone) {
-      newErrors.phone = 'Phone number is required';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
@@ -81,7 +60,7 @@ export default function SignupPage() {
       newErrors.confirmPassword = 'Passwords do not match';
     }
     if (!formData.acceptTerms) {
-      newErrors.acceptTerms = 'You must accept the terms and conditions';
+      newErrors.acceptTerms = 'Please accept the terms to continue';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -90,44 +69,37 @@ export default function SignupPage() {
       return;
     }
 
-    // reCAPTCHA verification
     const isHuman = await getToken('signup');
     if (!isHuman) {
-      setAuthError('Security verification failed. Please try again.');
+      setAuthError('Security check failed. Please try again.');
       setIsLoading(false);
       return;
     }
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            newsletter: formData.newsletter
-          }
-        }
+          emailRedirectTo: getAuthEmailRedirectTo('/auth/callback'),
+        },
       });
 
       if (error) throw error;
 
       if (data.user) {
-        // Send Welcome Notification
         fetch('/api/notifications', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: 'welcome',
             payload: {
-              email: formData.email,
-              firstName: formData.firstName
-            }
-          })
-        }).catch(err => console.error('Welcome notification error:', err));
-        // If Supabase confirms via email, data.session might be null initially
+              email: formData.email.trim(),
+              firstName: '',
+            },
+          }),
+        }).catch(() => {});
+
         if (!data.session) {
           setSuccess(true);
         } else {
@@ -143,14 +115,13 @@ export default function SignupPage() {
           } catch {
             /* non-blocking */
           }
-          // Auto-login success (if email confirming is off)
           router.push('/account');
           router.refresh();
         }
       }
     } catch (err: any) {
       console.error('Signup error:', err);
-      setAuthError(getFriendlyError(err.message || 'Failed to sign up. Please try again.'));
+      setAuthError(getFriendlyAuthError(err.message || '', 'signup'));
     } finally {
       setIsLoading(false);
     }
@@ -158,18 +129,22 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6">
-        <div className="max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-brand-light rounded-full flex items-center justify-center mx-auto mb-6">
+      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand-light">
             <i className="ri-mail-send-line text-4xl text-brand-accent"></i>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Check Your Email</h1>
-          <p className="text-gray-600 mb-8">
-            We've sent a confirmation link to <strong>{formData.email}</strong>.<br />
-            Please check your inbox to activate your account.
+          <h1 className="mb-4 text-3xl font-bold text-gray-900">Check your email</h1>
+          <p className="mb-8 text-gray-600">
+            We sent a link to <strong>{formData.email}</strong>.
+            <br />
+            Open it to finish creating your Snappy account.
           </p>
-          <Link href="/auth/login" className="inline-block bg-brand-primary text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#0d2747] transition-colors">
-            Back to Login
+          <Link
+            href="/auth/login"
+            className="inline-block rounded-lg bg-brand-primary px-8 py-3 font-semibold text-white transition-colors hover:bg-[#0d2747]"
+          >
+            Back to sign in
           </Link>
         </div>
       </main>
@@ -177,224 +152,161 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Create an account to track your imports</p>
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 sm:text-4xl">Create account</h1>
+          <p className="text-gray-600">Just your email and a password. That is all.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-8">
-          {authError && (
-            <div ref={errorRef} className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-start gap-3">
-              <i className="ri-error-warning-line text-red-500 text-lg flex-shrink-0 mt-0.5"></i>
+        <div className="rounded-xl bg-white p-8 shadow-sm">
+          {authError ? (
+            <div
+              ref={errorRef}
+              className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            >
+              <i className="ri-error-warning-line mt-0.5 flex-shrink-0 text-lg text-red-500"></i>
               <span>{authError}</span>
             </div>
-          )}
+          ) : null}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.firstName ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  placeholder="John"
-                />
-                {errors.firstName && (
-                  <p className="text-sm text-red-600 mt-1">{errors.firstName}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.lastName ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  placeholder="Doe"
-                />
-                {errors.lastName && (
-                  <p className="text-sm text-red-600 mt-1">{errors.lastName}</p>
-                )}
-              </div>
-            </div>
-
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Email Address
-              </label>
+              <label className="mb-2 block text-sm font-semibold text-gray-900">Email</label>
               <input
                 type="email"
+                autoComplete="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.email ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                className={`w-full rounded-lg border-2 px-4 py-3 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="you@example.com"
               />
-              {errors.email && (
-                <p className="text-sm text-red-600 mt-2">{errors.email}</p>
-              )}
+              {errors.email ? <p className="mt-1 text-sm text-red-600">{errors.email}</p> : null}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.phone ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                placeholder="+1 555 000 0000"
-              />
-              {errors.phone && (
-                <p className="text-sm text-red-600 mt-2">{errors.phone}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Password
-              </label>
+              <label className="mb-2 block text-sm font-semibold text-gray-900">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.password ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  className={`w-full rounded-lg border-2 px-4 py-3 pr-12 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="At least 8 characters"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   <i className={`${showPassword ? 'ri-eye-off-line' : 'ri-eye-line'} text-xl`}></i>
                 </button>
               </div>
               <PasswordStrengthMeter password={formData.password} />
-              {errors.password && (
-                <p className="text-sm text-red-600 mt-2">{errors.password}</p>
-              )}
+              {errors.password ? <p className="mt-1 text-sm text-red-600">{errors.password}</p> : null}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Confirm Password
-              </label>
+              <label className="mb-2 block text-sm font-semibold text-gray-900">Confirm password</label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  placeholder="Re-enter password"
+                  className={`w-full rounded-lg border-2 px-4 py-3 pr-12 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Type it again"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   <i className={`${showConfirmPassword ? 'ri-eye-off-line' : 'ri-eye-line'} text-xl`}></i>
                 </button>
               </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-600 mt-2">{errors.confirmPassword}</p>
-              )}
+              {errors.confirmPassword ? (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              ) : null}
             </div>
 
             <div>
-              <label className="flex items-start space-x-3 cursor-pointer">
+              <label className="flex cursor-pointer items-start space-x-3">
                 <input
                   type="checkbox"
                   checked={formData.acceptTerms}
                   onChange={(e) => setFormData({ ...formData, acceptTerms: e.target.checked })}
-                  className="w-4 h-4 mt-1 text-brand-accent rounded focus:ring-brand-accent"
+                  className="mt-1 h-4 w-4 rounded text-brand-accent focus:ring-brand-accent"
                 />
                 <span className="text-sm text-gray-700">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-brand-primary hover:text-brand-primary font-medium whitespace-nowrap">
-                    Terms & Conditions
-                  </Link>
-                  {' '}and{' '}
-                  <Link href="/privacy" className="text-brand-primary hover:text-brand-primary font-medium whitespace-nowrap">
+                  <Link href="/terms" className="font-medium text-brand-primary whitespace-nowrap hover:underline">
+                    Terms
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" className="font-medium text-brand-primary whitespace-nowrap hover:underline">
                     Privacy Policy
                   </Link>
+                  .
                 </span>
               </label>
-              {errors.acceptTerms && (
-                <p className="text-sm text-red-600 mt-2">{errors.acceptTerms}</p>
-              )}
+              {errors.acceptTerms ? <p className="mt-2 text-sm text-red-600">{errors.acceptTerms}</p> : null}
             </div>
 
             <button
               type="submit"
               disabled={isLoading || verifying}
-              className="w-full bg-brand-primary hover:bg-[#0d2747] text-white py-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
+              className="w-full cursor-pointer whitespace-nowrap rounded-lg bg-brand-primary py-4 font-semibold text-white transition-colors hover:bg-[#0d2747] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading || verifying ? (
                 <span className="flex items-center justify-center">
-                  <i className="ri-loader-4-line animate-spin mr-2"></i> {verifying ? 'Verifying...' : 'Creating account...'}
+                  <i className="ri-loader-4-line mr-2 animate-spin"></i>
+                  {verifying ? 'Checking…' : 'Creating account…'}
                 </span>
-              ) : 'Create Account'}
+              ) : (
+                'Create account'
+              )}
             </button>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">Or sign up with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <button
-                disabled
-                className="flex items-center justify-center space-x-2 border-2 border-gray-200 bg-gray-50 py-3 rounded-lg cursor-not-allowed opacity-60"
-              >
-                <i className="ri-google-fill text-xl text-red-600 grayscale opacity-50"></i>
-                <span className="font-medium text-gray-400">Google</span>
-              </button>
-              <button
-                disabled
-                className="flex items-center justify-center space-x-2 border-2 border-gray-200 bg-gray-50 py-3 rounded-lg cursor-not-allowed opacity-60"
-              >
-                <i className="ri-facebook-fill text-xl text-brand-accent grayscale opacity-50"></i>
-                <span className="font-medium text-gray-400">Facebook</span>
-              </button>
-            </div>
-          </div>
-
           <p className="mt-8 text-center text-gray-600">
             Already have an account?{' '}
-            <Link href="/auth/login" className="text-brand-primary hover:text-brand-primary font-semibold whitespace-nowrap">
+            <Link href="/auth/login" className="whitespace-nowrap font-semibold text-brand-primary hover:underline">
               Sign in
             </Link>
           </p>
         </div>
 
         <div className="mt-8 text-center">
-          <Link href="/" className="text-gray-600 hover:text-gray-900 font-medium whitespace-nowrap">
+          <Link href="/" className="whitespace-nowrap font-medium text-gray-600 hover:text-gray-900">
             <i className="ri-arrow-left-line mr-2"></i>
             Back to Home
           </Link>
         </div>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
+          <p className="text-slate-500">Loading…</p>
+        </main>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }

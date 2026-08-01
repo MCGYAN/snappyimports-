@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { getFriendlyAuthError } from '@/lib/auth-copy';
 
 function LoginForm() {
   const router = useRouter();
@@ -55,14 +56,14 @@ function LoginForm() {
     // reCAPTCHA verification
     const isHuman = await getToken('login');
     if (!isHuman) {
-      setAuthError('Security verification failed. Please try again.');
+      setAuthError('Security check failed. Please try again.');
       setIsLoading(false);
       return;
     }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
       });
 
@@ -92,7 +93,7 @@ function LoginForm() {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      setAuthError(error.message || 'Failed to sign in. Please check your credentials.');
+      setAuthError(getFriendlyAuthError(error?.message || '', 'login'));
     } finally {
       setIsLoading(false);
     }
@@ -109,11 +110,17 @@ function LoginForm() {
         </div>
 
         <div className="store-card p-8 md:p-10">
-          {authError && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {authError}
+          {authError ? (
+            <div className="mb-4 space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <p>{authError}</p>
+              <Link
+                href={`/auth/signup${formData.email ? `?email=${encodeURIComponent(formData.email.trim())}` : ''}`}
+                className="inline-block font-semibold text-brand-primary underline"
+              >
+                Create a new account
+              </Link>
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
