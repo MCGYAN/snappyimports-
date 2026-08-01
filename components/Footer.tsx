@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useCMS } from '@/context/CMSContext';
 import StoreLogo from '@/components/StoreLogo';
-import { useState, useEffect } from 'react';
 import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
 
 const linkClass =
@@ -14,22 +13,6 @@ const mobileHeadingClass =
 
 export default function Footer() {
   const { getSetting } = useCMS();
-  const [categories, setCategories] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch('/api/storefront/categories');
-        if (res.ok) {
-          const data = await res.json();
-          if (data) setCategories(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch categories', err);
-      }
-    };
-    fetchCategories();
-  }, []);
 
   const siteName = getSetting('site_name') || 'Store';
   const siteTagline = getSetting('site_tagline') || 'Importing is no longer stressful. We handle the hard part so you do not have to.';
@@ -95,11 +78,6 @@ export default function Footer() {
             <ul className="space-y-1.5 text-sm lg:space-y-2.5">
               <li><Link href="/shop" className={linkClass}>Featured products</Link></li>
               <li><Link href="/categories" className={linkClass}>All categories</Link></li>
-              {categories.slice(0, 2).map((cat, idx) => (
-                <li key={idx}>
-                  <Link href={`/shop?category=${cat.slug}`} className={linkClass}>{cat.name}</Link>
-                </li>
-              ))}
             </ul>
           </div>
 
