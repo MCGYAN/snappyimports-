@@ -122,13 +122,15 @@ function LoginForm() {
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="mb-2 block text-sm font-semibold text-gray-900">
                 Email Address
               </label>
               <input
                 type="email"
+                name="email"
+                autoComplete="username email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'
@@ -136,20 +138,22 @@ function LoginForm() {
                 placeholder="you@example.com"
               />
               {errors.email && (
-                <p className="text-sm text-red-600 mt-2">{errors.email}</p>
+                <p className="mt-2 text-sm text-red-600">{errors.email}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="mb-2 block text-sm font-semibold text-gray-900">
                 Password
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="current-password"
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`w-full px-4 py-3.5 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 transition-colors ${errors.password ? 'border-red-400' : ''
+                  className={`w-full rounded-xl border border-gray-200 px-4 py-3.5 pr-12 transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-900/10 ${errors.password ? 'border-red-400' : ''
                     }`}
                   placeholder="Enter your password"
                 />

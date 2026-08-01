@@ -6,7 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
-import { getAuthEmailRedirectTo, getFriendlyAuthError } from '@/lib/auth-copy';
+import {
+  getFriendlyAuthError,
+  getPasswordIssues,
+  isStrongPassword,
+  isValidGhPhone,
+} from '@/lib/auth-copy';
 
 function SignupForm() {
   const router = useRouter();
@@ -14,6 +19,9 @@ function SignupForm() {
   const emailFromQuery = searchParams.get('email') || '';
   const errorRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
     email: emailFromQuery,
     password: '',
     confirmPassword: '',
@@ -24,7 +32,6 @@ function SignupForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [success, setSuccess] = useState(false);
   const { getToken, verifying } = useRecaptcha();
 
   useEffect(() => {
@@ -46,15 +53,22 @@ function SignupForm() {
     setIsLoading(true);
 
     const newErrors: Record<string, string> = {};
-    if (!formData.email) {
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!isValidGhPhone(formData.phone)) {
+      newErrors.phone = 'Use a valid Ghana number, like 0244123456';
+    }
+    if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!isStrongPassword(formData.password)) {
+      newErrors.password = getPasswordIssues(formData.password).join('. ') + '.';
     }
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -81,7 +95,12 @@ function SignupForm() {
         email: formData.email.trim(),
         password: formData.password,
         options: {
-          emailRedirectTo: getAuthEmailRedirectTo('/auth/callback'),
+          data: {
+            first_name: formData.firstName.trim(),
+            last_name: formData.lastName.trim(),
+            phone: formData.phone.trim(),
+            full_name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+          },
         },
       });
 
@@ -95,14 +114,12 @@ function SignupForm() {
             type: 'welcome',
             payload: {
               email: formData.email.trim(),
-              firstName: '',
+              firstName: formData.firstName.trim(),
             },
           }),
         }).catch(() => {});
 
-        if (!data.session) {
-          setSuccess(true);
-        } else {
+        if (data.session?.access_token) {
           try {
             await fetch('/api/orders/claim', {
               method: 'POST',
@@ -117,7 +134,13 @@ function SignupForm() {
           }
           router.push('/account');
           router.refresh();
+          return;
         }
+
+        // Autoconfirm should return a session; if not, send them to sign in.
+        router.push(
+          `/auth/login?email=${encodeURIComponent(formData.email.trim())}&next=/account`,
+        );
       }
     } catch (err: any) {
       console.error('Signup error:', err);
@@ -127,60 +150,93 @@ function SignupForm() {
     }
   };
 
-  if (success) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6">
-        <div className="w-full max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand-light">
-            <i className="ri-mail-send-line text-4xl text-brand-accent"></i>
-          </div>
-          <h1 className="mb-4 text-3xl font-bold text-gray-900">Check your email</h1>
-          <p className="mb-8 text-gray-600">
-            We sent a link to <strong>{formData.email}</strong>.
-            <br />
-            Open it to finish creating your Snappy account.
-          </p>
-          <Link
-            href="/auth/login"
-            className="inline-block rounded-lg bg-brand-primary px-8 py-3 font-semibold text-white transition-colors hover:bg-[#0d2747]"
-          >
-            Back to sign in
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const inputClass = (hasError?: boolean) =>
+    `w-full rounded-lg border-2 px-4 py-3 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent ${
+      hasError ? 'border-red-500' : 'border-gray-300'
+    }`;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-3xl font-bold text-gray-900 sm:text-4xl">Create account</h1>
-          <p className="text-gray-600">Just your email and a password. That is all.</p>
+          <p className="text-gray-600">
+            Save your details once. Then reopen invoices and track orders anytime.
+          </p>
         </div>
 
         <div className="rounded-xl bg-white p-8 shadow-sm">
           {authError ? (
             <div
               ref={errorRef}
-              className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              className="mb-4 space-y-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
             >
-              <i className="ri-error-warning-line mt-0.5 flex-shrink-0 text-lg text-red-500"></i>
-              <span>{authError}</span>
+              <p>{authError}</p>
+              {authError.toLowerCase().includes('sign in') ? (
+                <Link
+                  href={`/auth/login${formData.email ? `?email=${encodeURIComponent(formData.email.trim())}` : ''}`}
+                  className="inline-block font-semibold text-brand-primary underline"
+                >
+                  Sign in instead
+                </Link>
+              ) : null}
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" autoComplete="on">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-900">First name</label>
+                <input
+                  type="text"
+                  name="given-name"
+                  autoComplete="given-name"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  className={inputClass(Boolean(errors.firstName))}
+                  placeholder="Ama"
+                />
+                {errors.firstName ? <p className="mt-1 text-sm text-red-600">{errors.firstName}</p> : null}
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-900">Last name</label>
+                <input
+                  type="text"
+                  name="family-name"
+                  autoComplete="family-name"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  className={inputClass(Boolean(errors.lastName))}
+                  placeholder="Mensah"
+                />
+                {errors.lastName ? <p className="mt-1 text-sm text-red-600">{errors.lastName}</p> : null}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-gray-900">Phone</label>
+              <input
+                type="tel"
+                name="tel"
+                autoComplete="tel"
+                inputMode="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className={inputClass(Boolean(errors.phone))}
+                placeholder="0244123456"
+              />
+              {errors.phone ? <p className="mt-1 text-sm text-red-600">{errors.phone}</p> : null}
+            </div>
+
             <div>
               <label className="mb-2 block text-sm font-semibold text-gray-900">Email</label>
               <input
                 type="email"
-                autoComplete="email"
+                name="email"
+                autoComplete="username email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full rounded-lg border-2 px-4 py-3 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={inputClass(Boolean(errors.email))}
                 placeholder="you@example.com"
               />
               {errors.email ? <p className="mt-1 text-sm text-red-600">{errors.email}</p> : null}
@@ -191,13 +247,12 @@ function SignupForm() {
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="new-password"
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`w-full rounded-lg border-2 px-4 py-3 pr-12 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent ${
-                    errors.password ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="At least 8 characters"
+                  className={`${inputClass(Boolean(errors.password))} pr-12`}
+                  placeholder="Create a strong password"
                 />
                 <button
                   type="button"
@@ -209,6 +264,9 @@ function SignupForm() {
                 </button>
               </div>
               <PasswordStrengthMeter password={formData.password} />
+              <p className="mt-1 text-xs text-slate-500">
+                Your browser can offer to save this password for next time.
+              </p>
               {errors.password ? <p className="mt-1 text-sm text-red-600">{errors.password}</p> : null}
             </div>
 
@@ -217,12 +275,11 @@ function SignupForm() {
               <div className="relative">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirm-password"
                   autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className={`w-full rounded-lg border-2 px-4 py-3 pr-12 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent ${
-                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`${inputClass(Boolean(errors.confirmPassword))} pr-12`}
                   placeholder="Type it again"
                 />
                 <button
