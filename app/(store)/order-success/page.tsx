@@ -125,14 +125,14 @@ function OrderSuccessContent() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Almost there</h1>
           <p className="text-gray-600 mb-6">
             Your payment is being processed. If you completed the payment, your order will be confirmed shortly.
-            Use Find my order with your order number and email. No account needed.
+            Create an account with the same email to see it in your order history, or use Find my order in the footer.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href={orderNumber ? `/order-tracking?order=${encodeURIComponent(orderNumber)}` : '/order-tracking'}
+              href="/auth/signup"
               className="bg-brand-primary hover:bg-[#0d2747] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
-              Find my order
+              Create account
             </Link>
             <Link href="/shop" className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors">
               Return to Shop
@@ -217,8 +217,8 @@ function OrderSuccessContent() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-left">
                   <p className="font-bold text-gray-900 text-lg">Want orders saved in one place?</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Optional. You can always use Find my order with your email. No sign-in required to track.
+                  <p className="mt-1 text-sm text-gray-600">
+                    Create an account with the same email to reopen invoices, tap I’ve paid, and track imports later.
                   </p>
                 </div>
                 <Link
