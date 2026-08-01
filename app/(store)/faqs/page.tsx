@@ -20,113 +20,105 @@ export default function FAQsPage() {
     {
       category: 'orders',
       question: 'How do I place an order?',
-      answer: 'Browse what you need. Add it to your cart. Check out or message us on WhatsApp. We confirm everything before you pay.'
+      answer:
+        'Browse products, add them to your cart, and check out. Enter your name, email, and phone. Choose store pickup or doorstep delivery, then complete payment.',
     },
     {
       category: 'orders',
-      question: 'Can I change or cancel my order?',
-      answer: 'Yes, within one hour of ordering. Contact us right away. After that, we may already be sourcing your item.'
+      question: 'I ordered as a guest. How do I see my invoice again?',
+      answer:
+        'Create an account or sign in with the same email you used at checkout. Your guest invoices and orders show in Order history. You can also use Find my order in the footer with your order number and email.',
     },
     {
       category: 'orders',
       question: 'Where is my order?',
-      answer: 'Go to order tracking and enter your order number and email. You see every step from China to Ghana.'
+      answer:
+        'Sign in and open the order from your account. You will see the import journey from payment through sourcing, shipping to Ghana, and ready or delivered. If you have no account yet, use Find my order in the footer.',
     },
     {
       category: 'orders',
-      question: 'What if I get the wrong item?',
-      answer: 'Tell us within 48 hours with photos. We fix it fast. Wrong items are collected at no cost to you.'
+      question: 'Can I change or cancel my order?',
+      answer:
+        'Message us on WhatsApp or the contact page as soon as you can, with your order number. If payment is confirmed and sourcing has started, changes may not be possible.',
     },
     {
       category: 'shipping',
-      question: 'How long does delivery take?',
-      answer: 'Sea freight takes a few weeks. Air is faster. We give you a real date up front, not a vague promise.'
+      question: 'How long does an import take?',
+      answer:
+        'It depends on the product and shipping method. We update your order status as goods move from China to Ghana. Ask us before you pay if you need a clearer estimate.',
     },
     {
       category: 'shipping',
-      question: 'How much does shipping cost?',
-      answer: 'It depends on size, weight, and method. We quote the full landed cost before you commit. No surprise fees.'
+      question: 'Do you deliver to my door?',
+      answer:
+        'Yes. At checkout choose doorstep delivery, or choose store pickup. When goods are ready in Ghana, we confirm delivery details and any delivery cost with you.',
     },
     {
       category: 'shipping',
-      question: 'Do you ship outside Ghana?',
-      answer: 'We focus on China to Ghana. Ask us if you need something else. We will tell you honestly.'
+      question: 'Where do goods arrive in Ghana?',
+      answer:
+        'Imports come into Ghana for clearing, then become ready for pickup or delivery. Your order page shows when that stage is reached.',
     },
     {
       category: 'shipping',
-      question: 'What if nobody is home?',
-      answer: 'We try twice. Then we hold it for pickup. You get a text and email with instructions.'
-    },
-    {
-      category: 'returns',
-      question: 'Can I return an item?',
-      answer: 'Yes, within 14 days if unused and in original packaging. Start a return from your account. Refunds take 5 to 7 days.'
-    },
-    {
-      category: 'returns',
-      question: 'What cannot be returned?',
-      answer: 'Opened personal care items, custom orders, and perishables cannot be returned unless they are defective.'
-    },
-    {
-      category: 'returns',
-      question: 'Who pays return shipping?',
-      answer: 'We cover it if it is our mistake or a defect. For change of mind, you usually pay return shipping.'
-    },
-    {
-      category: 'returns',
-      question: 'Can I swap for a different size?',
-      answer: 'Yes. Choose exchange when you start your return. We send the new one when we get the old one back.'
+      question: 'What if I miss the delivery call?',
+      answer:
+        'We will try again or arrange pickup. Keep your phone number correct so we can reach you.',
     },
     {
       category: 'payment',
       question: 'How can I pay?',
-      answer: 'MOMO, bank transfer, cash in store, or card. We do not accept payment on delivery.'
+      answer:
+        'Smaller carts usually pay with Mobile Money at checkout. Larger carts (about GH¢2,000 and above) get an invoice with bank or MoMo transfer details. Pay the invoice, then tap I’ve paid on your order page.',
     },
     {
       category: 'payment',
-      question: 'Is my card safe?',
-      answer: 'Yes. We use secure encryption. We never store your full card number on our servers.'
+      question: 'I paid the invoice. What next?',
+      answer:
+        'Open your order and tap I’ve paid. That tells us to confirm the transfer. After we confirm, your import journey moves forward.',
+    },
+    {
+      category: 'payment',
+      question: 'Do you accept cash on delivery?',
+      answer:
+        'No. Pay online by Mobile Money or by the invoice transfer details before we source and ship.',
     },
     {
       category: 'payment',
       question: 'Can I pay in parts?',
-      answer: 'Big imports may allow staged payments. We explain the plan before you agree to anything.'
+      answer:
+        'For some larger imports we may agree a plan. Message us on WhatsApp before you checkout so we can confirm what is possible.',
     },
     {
-      category: 'payment',
-      question: 'When am I charged?',
-      answer: 'Right when you pay online or in store. If something is out of stock, we refund you within 24 hours.'
+      category: 'returns',
+      question: 'Can I return an item?',
+      answer:
+        'Import orders are handled case by case. Contact us with your order number and photos if something is wrong, damaged, or not what you ordered. We will tell you the next step clearly.',
     },
     {
-      category: 'payment',
-      question: 'How do refunds work?',
-      answer: 'Money goes back to how you paid. It takes 5 to 7 business days. We email you when it is done.'
-    },
-    {
-      category: 'account',
-      question: 'Do I need an account?',
-      answer: 'No. You can check out as a guest. An account lets you track orders and save your details for next time.'
-    },
-    {
-      category: 'account',
-      question: 'How do I reset my password?',
-      answer: 'Click forgot password on the login page. We email you a link. It works for one hour.'
+      category: 'returns',
+      question: 'What if the item is damaged?',
+      answer:
+        'Tell us quickly with clear photos and your order number. We review it and work out a fix with you.',
     },
     {
       category: 'account',
-      question: 'Can I save more than one address?',
-      answer: 'Yes. Save home, work, or any address. Pick the right one at checkout.'
+      question: 'Do I need an account to buy?',
+      answer:
+        'No. You can checkout as a guest. Creating an account with the same email later lets you reopen invoices, tap I’ve paid, and track orders in one place.',
     },
     {
       category: 'account',
-      question: 'How do I update my details?',
-      answer: 'Log in and go to account settings. Change your name, email, phone, or password anytime.'
+      question: 'How do I create an account?',
+      answer:
+        'Go to Account, then Create account. Enter your name, phone, email, and a strong password. Agree to the terms. You can sign in right away. No email confirmation step.',
     },
     {
       category: 'account',
-      question: 'Do you have loyalty points?',
-      answer: 'If a rewards programme is active, you see your points in your account after you buy.'
-    }
+      question: 'I forgot my password. What do I do?',
+      answer:
+        'On the sign-in page, use forgot password if it is available, or contact us on WhatsApp with the email on the order so we can help you get back in.',
+    },
   ];
 
   const filteredFAQs = faqs.filter(faq => {
@@ -147,7 +139,7 @@ export default function FAQsPage() {
               Quick answers
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-white/80">
-              Common questions about orders, shipping, payments, and returns. Plain and simple.
+              Orders, payments, imports to Ghana, and your account. Plain answers.
             </p>
 
             <div className="relative mt-8">
