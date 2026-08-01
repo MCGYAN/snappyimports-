@@ -1,39 +1,118 @@
 import { Metadata } from 'next';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { SEO } from '@/lib/seo';
-import { generateMetadata as generateSEOMetadata } from '@/components/SEOHead';
+import { formatStoreMoney } from '@/lib/currency';
 import ProductDetailClient from './ProductDetailClient';
 
 type Props = { params: Promise<{ slug: string }> };
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function absolutizeImage(url: string | undefined | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  const base = SEO.siteUrl.replace(/\/+$/, '');
+  return `${base}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+}
+
+function plainText(html: string | null | undefined, max = 150): string {
+  if (!html) return '';
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const { data: product } = await supabase
-    .from('products')
-    .select('name, description, product_images(url), slug')
-    .eq('status', 'active')
-    .or(`id.eq.${slug},slug.eq.${slug}`)
-    .single();
-
-  if (!product) {
+  const decoded = decodeURIComponent(slug || '').trim();
+  if (!decoded) {
     return { title: 'Product Not Found', robots: { index: false, follow: false } };
   }
 
-  const description =
-    (product.description && typeof product.description === 'string'
-      ? product.description.replace(/<[^>]*>/g, '').slice(0, 160)
-      : `${product.name}. Import from China with ${SEO.siteName}.`) + '…';
-  const image =
-    (product.product_images as { url?: string }[])?.[0]?.url ||
-    `${SEO.siteUrl}/opengraph-image`;
+  let query = supabaseAdmin
+    .from('products')
+    .select(
+      'id, name, description, slug, price, compare_at_price, status, product_images(url, position), product_variants(price, quantity)',
+    )
+    .eq('status', 'active');
 
-  return generateSEOMetadata({
-    title: product.name,
+  // Avoid id.eq.<slug> when slug is not a UUID — that breaks the whole query in PostgREST.
+  if (UUID_RE.test(decoded)) {
+    query = query.or(`id.eq.${decoded},slug.eq.${decoded}`);
+  } else {
+    query = query.eq('slug', decoded);
+  }
+
+  const { data: product, error } = await query.maybeSingle();
+
+  if (error || !product) {
+    return { title: 'Product Not Found', robots: { index: false, follow: false } };
+  }
+
+  const images = ([...(product.product_images || [])] as { url?: string; position?: number }[])
+    .slice()
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const productImage =
+    absolutizeImage(images[0]?.url) || `${SEO.siteUrl}/opengraph-image`;
+
+  const variantPrices = (
+    (product.product_variants || []) as { price?: number; quantity?: number }[]
+  )
+    .map((v) => Number(v.price))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  const basePrice = Number(product.price);
+  const priceCandidates = [
+    ...(Number.isFinite(basePrice) && basePrice > 0 ? [basePrice] : []),
+    ...variantPrices,
+  ];
+  const price = priceCandidates.length ? Math.min(...priceCandidates) : null;
+  const priceLabel = price != null ? formatStoreMoney(price) : null;
+
+  const title = `${product.name} for sale`;
+  const descriptionParts = [
+    priceLabel ? `${priceLabel}.` : null,
+    'Order now on Snappy Imports.',
+    plainText(product.description, 100) || 'Import from China to Ghana. Clear price. Easy checkout.',
+  ].filter(Boolean);
+  const description = descriptionParts.join(' ');
+
+  const pageUrl = `${SEO.siteUrl}/product/${encodeURIComponent(product.slug || decoded)}`;
+
+  return {
+    title,
     description,
-    ogImage: image.startsWith('http') ? image : `${SEO.siteUrl}${image.startsWith('/') ? '' : '/'}${image}`,
-    ogType: 'product',
-    keywords: [product.name, product.slug ?? '', 'online store', SEO.siteName],
-  });
+    keywords: [product.name, product.slug || '', 'for sale', 'order now', SEO.siteName],
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      type: 'website',
+      url: pageUrl,
+      title: `${product.name} · Order now`,
+      description,
+      siteName: SEO.siteName,
+      locale: 'en',
+      images: [
+        {
+          url: productImage,
+          width: 1200,
+          height: 630,
+          alt: `${product.name} for sale`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${product.name} · Order now`,
+      description,
+      images: [productImage],
+    },
+  };
 }
 
 export default async function ProductDetailPage({ params }: Props) {
