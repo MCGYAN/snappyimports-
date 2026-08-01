@@ -110,7 +110,6 @@ export default function Footer() {
               <li><Link href="/order-tracking" className={linkClass}>Find my order</Link></li>
               <li><Link href="/exchange/lookup" className={linkClass}>Find RMB invoice</Link></li>
               <li><Link href="/shipping" className={linkClass}>Shipping</Link></li>
-              <li><Link href="/returns" className={linkClass}>Returns</Link></li>
             </ul>
           </div>
 

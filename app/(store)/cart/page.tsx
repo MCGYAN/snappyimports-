@@ -218,8 +218,8 @@ export default function CartPage() {
                         <RefreshCcw className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900">Easy returns</p>
-                        <p className="text-xs text-gray-500 mt-0.5">30-day return policy</p>
+                        <p className="text-sm font-bold text-gray-900">Real support</p>
+                        <p className="mt-0.5 text-xs text-gray-500">Message us if something is wrong</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">

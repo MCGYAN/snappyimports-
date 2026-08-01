@@ -247,13 +247,13 @@ export default function FAQsPage() {
             </p>
           </Link>
 
-          <Link href="/returns" className="bg-gray-50 p-8 rounded-2xl hover:shadow-lg transition-all cursor-pointer">
-            <div className="w-12 h-12 bg-brand-light rounded-full flex items-center justify-center mb-4">
-              <i className="ri-arrow-go-back-line text-2xl text-brand-primary"></i>
+          <Link href="/contact" className="cursor-pointer rounded-2xl bg-gray-50 p-8 transition-all hover:shadow-lg">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-light">
+              <i className="ri-customer-service-2-line text-2xl text-brand-primary"></i>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Returns</h3>
-            <p className="text-gray-600 leading-relaxed">
-              How to return an item and get your money back
+            <h3 className="mb-2 text-xl font-bold text-gray-900">Contact</h3>
+            <p className="leading-relaxed text-gray-600">
+              Ask about an order, payment, or an import issue
             </p>
           </Link>
 

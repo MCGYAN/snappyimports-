@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 const categories = [
   {
@@ -111,9 +109,7 @@ export default function HelpCenterPage() {
     : [];
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
         <div className="bg-gradient-to-br from-brand-primary to-[#050f1f] text-white py-16">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h1 className="text-4xl font-bold mb-4">How can we help?</h1>
@@ -250,15 +246,15 @@ export default function HelpCenterPage() {
             </Link>
 
             <Link
-              href="/returns"
-              className="bg-white rounded-xl shadow-sm p-6 hover:shadow-lg transition-all text-center"
+              href="/contact"
+              className="rounded-xl bg-white p-6 text-center shadow-sm transition-all hover:shadow-lg"
             >
-              <div className="w-16 h-16 flex items-center justify-center bg-purple-100 rounded-full mx-auto mb-4">
-                <i className="ri-arrow-left-right-line text-3xl text-purple-700"></i>
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+                <i className="ri-customer-service-2-line text-3xl text-purple-700"></i>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Start a Return</h3>
-              <p className="text-gray-600 text-sm mb-4">Return or exchange your item</p>
-              <span className="text-purple-700 font-semibold whitespace-nowrap">Initiate Return →</span>
+              <h3 className="mb-2 text-lg font-bold text-gray-900">Order issue?</h3>
+              <p className="mb-4 text-sm text-gray-600">Message us about damage or a wrong item</p>
+              <span className="whitespace-nowrap font-semibold text-purple-700">Contact us →</span>
             </Link>
 
             <Link
@@ -274,8 +270,6 @@ export default function HelpCenterPage() {
             </Link>
           </div>
         </div>
-      </main>
-      <Footer />
-    </>
+    </div>
   );
 }

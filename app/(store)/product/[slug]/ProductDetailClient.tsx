@@ -820,7 +820,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   </div>
                   <div className="flex items-center text-gray-700">
                     <RefreshCcw className="w-5 h-5 text-brand-primary mr-3" />
-                    <span>30-day easy returns and exchanges</span>
+                    <span>Message us if something is wrong with your import</span>
                   </div>
                   <div className="flex items-center text-gray-700">
                     <ShieldCheck className="w-5 h-5 text-brand-primary mr-3" />
