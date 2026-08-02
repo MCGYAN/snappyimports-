@@ -4,8 +4,9 @@ import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-lim
 
 /**
  * POST /api/orders/claim
- * Attach guest orders (same email, no user_id) to the signed-in account.
- * Body optional: { orderNumber } to prefer linking a specific order first.
+ * Attach guest shop orders and RMB exchanges (same email, no user_id)
+ * to the signed-in account.
+ * Body optional: { orderNumber } for shop claim metadata.
  */
 export async function POST(req: Request) {
   try {
@@ -39,7 +40,9 @@ export async function POST(req: Request) {
       orderNumber = undefined;
     }
 
-    // Only claim guest rows that match this account email.
+    const claimedAt = new Date().toISOString();
+
+    // Shop guest orders with matching email
     const { data: guests, error: findError } = await supabaseAdmin
       .from('orders')
       .select('id, order_number, email, user_id, metadata')
@@ -55,39 +58,73 @@ export async function POST(req: Request) {
       (o) => (o.email || '').trim().toLowerCase() === email,
     );
 
-    if (toClaim.length === 0) {
-      return NextResponse.json({ success: true, claimed: 0, orderNumbers: [] });
+    if (toClaim.length > 0) {
+      const updates = await Promise.all(
+        toClaim.map((o) => {
+          const meta = {
+            ...(o.metadata && typeof o.metadata === 'object' ? o.metadata : {}),
+            guest_checkout: false,
+            claimed_at: claimedAt,
+            claimed_from: orderNumber || o.order_number,
+          };
+          return supabaseAdmin
+            .from('orders')
+            .update({ user_id: user.id, metadata: meta })
+            .eq('id', o.id)
+            .is('user_id', null);
+        }),
+      );
+
+      const failed = updates.find((u) => u.error);
+      if (failed?.error) {
+        console.error('[orders/claim] update', failed.error);
+        return NextResponse.json({ error: 'Could not link orders to your account.' }, { status: 500 });
+      }
     }
 
-    const claimedAt = new Date().toISOString();
-    const ids = toClaim.map((o) => o.id);
+    // Guest RMB exchanges with matching email
+    const { data: guestExchanges, error: exFindError } = await supabaseAdmin
+      .from('exchange_orders')
+      .select('id, exchange_number, email, user_id, metadata')
+      .is('user_id', null)
+      .ilike('email', email);
 
-    const updates = await Promise.all(
-      toClaim.map((o) => {
-        const meta = {
-          ...(o.metadata && typeof o.metadata === 'object' ? o.metadata : {}),
-          guest_checkout: false,
-          claimed_at: claimedAt,
-          claimed_from: orderNumber || o.order_number,
-        };
-        return supabaseAdmin
-          .from('orders')
-          .update({ user_id: user.id, metadata: meta })
-          .eq('id', o.id)
-          .is('user_id', null);
-      }),
+    if (exFindError) {
+      console.error('[orders/claim] exchange find', exFindError);
+      return NextResponse.json({ error: 'Could not claim RMB orders.' }, { status: 500 });
+    }
+
+    const exchangesToClaim = (guestExchanges || []).filter(
+      (o) => (o.email || '').trim().toLowerCase() === email,
     );
 
-    const failed = updates.find((u) => u.error);
-    if (failed?.error) {
-      console.error('[orders/claim] update', failed.error);
-      return NextResponse.json({ error: 'Could not link orders to your account.' }, { status: 500 });
+    if (exchangesToClaim.length > 0) {
+      const exUpdates = await Promise.all(
+        exchangesToClaim.map((o) => {
+          const meta = {
+            ...(o.metadata && typeof o.metadata === 'object' ? o.metadata : {}),
+            claimed_at: claimedAt,
+          };
+          return supabaseAdmin
+            .from('exchange_orders')
+            .update({ user_id: user.id, metadata: meta })
+            .eq('id', o.id)
+            .is('user_id', null);
+        }),
+      );
+
+      const exFailed = exUpdates.find((u) => u.error);
+      if (exFailed?.error) {
+        console.error('[orders/claim] exchange update', exFailed.error);
+        return NextResponse.json({ error: 'Could not link RMB orders to your account.' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({
       success: true,
-      claimed: ids.length,
+      claimed: toClaim.length + exchangesToClaim.length,
       orderNumbers: toClaim.map((o) => o.order_number),
+      exchangeNumbers: exchangesToClaim.map((o) => o.exchange_number),
     });
   } catch (e) {
     console.error('[orders/claim]', e);

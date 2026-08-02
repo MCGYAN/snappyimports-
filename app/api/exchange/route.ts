@@ -22,10 +22,19 @@ export async function POST(req: Request) {
     const body = await req.json();
     const customerName = String(body.customerName || '').trim();
     const phone = String(body.phone || '').trim();
-    const email = String(body.email || '').trim() || null;
+    let email = String(body.email || '').trim() || null;
     const businessName = String(body.businessName || '').trim() || null;
     const direction = 'ghs_to_rmb' as const;
     const amountInput = Number(body.amount);
+
+    // Optional: attach to signed-in store account
+    const auth = await verifyAuth(req);
+    const userId = auth.authenticated && auth.user?.id ? (auth.user.id as string) : null;
+    if (userId && !email && auth.user?.email) {
+      email = String(auth.user.email).trim().toLowerCase();
+    } else if (email) {
+      email = email.toLowerCase();
+    }
 
     if (!customerName || !phone) {
       return NextResponse.json({ error: 'Name and phone are required.' }, { status: 400 });
@@ -75,6 +84,7 @@ export async function POST(req: Request) {
         phone,
         email,
         business_name: businessName,
+        user_id: userId,
         direction,
         rate: quote.rate,
         amount_from: quote.amountFrom,
@@ -87,6 +97,7 @@ export async function POST(req: Request) {
         metadata: {
           rate_board_updated_at: board.updated_at,
           payment_ref: paymentRef,
+          guest_checkout: !userId,
         },
       })
       .select()
@@ -104,7 +115,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** GET — lookup by exchange number + phone (customer) or list (admin) */
+/** GET — lookup by exchange number + phone, owner session, or admin list */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const exchangeNumber = (searchParams.get('exchange') || '').trim();
@@ -125,8 +136,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: true, exchanges: data });
   }
 
-  if (!exchangeNumber || !phone) {
-    return NextResponse.json({ error: 'Exchange number and phone required.' }, { status: 400 });
+  if (!exchangeNumber) {
+    return NextResponse.json({ error: 'Exchange number required.' }, { status: 400 });
   }
 
   const { data, error } = await supabaseAdmin
@@ -137,6 +148,24 @@ export async function GET(req: Request) {
 
   if (error || !data) {
     return NextResponse.json({ error: 'Exchange not found.' }, { status: 404 });
+  }
+
+  const auth = await verifyAuth(req);
+  const isOwner =
+    auth.authenticated &&
+    data.user_id &&
+    auth.user?.id &&
+    data.user_id === auth.user.id;
+
+  if (isOwner) {
+    return NextResponse.json({ success: true, exchange: data });
+  }
+
+  if (!phone) {
+    return NextResponse.json(
+      { error: 'Sign in or provide the phone used on this invoice.' },
+      { status: 400 },
+    );
   }
 
   const digits = (s: string) => s.replace(/\D/g, '');

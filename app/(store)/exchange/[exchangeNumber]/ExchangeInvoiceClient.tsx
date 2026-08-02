@@ -7,6 +7,7 @@ import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import PaymentReferenceHint from '@/components/PaymentReferenceHint';
+import { supabase } from '@/lib/supabase';
 import { CheckCircle2, Clock, Download, Printer } from 'lucide-react';
 
 export default function ExchangeInvoiceClient() {
@@ -18,7 +19,7 @@ export default function ExchangeInvoiceClient() {
   const [phone, setPhone] = useState(phoneFromUrl);
   const [exchange, setExchange] = useState<any>(null);
   const [note, setNote] = useState('');
-  const [loading, setLoading] = useState(Boolean(phoneFromUrl));
+  const [loading, setLoading] = useState(Boolean(exchangeNumber));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -27,9 +28,16 @@ export default function ExchangeInvoiceClient() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(
-        `/api/exchange?exchange=${encodeURIComponent(ex)}&phone=${encodeURIComponent(ph)}`,
-      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const qs = new URLSearchParams({ exchange: ex });
+      if (ph) qs.set('phone', ph);
+
+      const res = await fetch(`/api/exchange?${qs.toString()}`, { headers });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Not found');
@@ -37,13 +45,16 @@ export default function ExchangeInvoiceClient() {
         return;
       }
       setExchange(data.exchange);
+      if (!ph && data.exchange?.phone) {
+        setPhone(data.exchange.phone);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (exchangeNumber && phoneFromUrl) load(exchangeNumber, phoneFromUrl);
+    if (exchangeNumber) void load(exchangeNumber, phoneFromUrl);
   }, [exchangeNumber, phoneFromUrl]);
 
   const handlePaid = async () => {
@@ -90,12 +101,16 @@ export default function ExchangeInvoiceClient() {
         <p className="text-xs font-bold uppercase tracking-widest text-brand-accent">Buy RMB invoice</p>
         <h1 className="mt-2 font-heading text-3xl font-bold text-brand-primary">{exchangeNumber}</h1>
 
-        {!exchange && (
+        {loading && !exchange ? (
+          <p className="mt-6 text-sm text-slate-500">Opening invoice…</p>
+        ) : null}
+
+        {!loading && !exchange && (
           <form
             className="store-card mt-6 space-y-3 p-6"
             onSubmit={(e) => {
               e.preventDefault();
-              load(exchangeNumber, phone);
+              void load(exchangeNumber, phone);
             }}
           >
             <input
@@ -107,7 +122,7 @@ export default function ExchangeInvoiceClient() {
             />
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button type="submit" className="rounded-xl bg-brand-primary px-6 py-3 font-bold text-white">
-              {loading ? 'Opening…' : 'Open invoice'}
+              Open invoice
             </button>
           </form>
         )}

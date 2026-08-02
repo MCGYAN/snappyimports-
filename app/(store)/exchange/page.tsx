@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { SNAPPY_BANK_ACCOUNTS } from '@/lib/bank-details';
 import { buildWhatsAppHref, DEFAULT_CONTACT_WHATSAPP } from '@/lib/snappy-import';
 import { isRateValid, quoteGhsToRmb, formatBuyRate, type ExchangeRateBoard } from '@/lib/rmb-exchange';
+import { supabase } from '@/lib/supabase';
 import { ArrowRightLeft, Clock, ShieldCheck } from 'lucide-react';
 
 export default function ExchangePage() {
@@ -28,6 +29,15 @@ export default function ExchangePage() {
       .then((d) => setBoard(d.board))
       .catch(() => setError('Could not load today’s rate'))
       .finally(() => setLoading(false));
+
+    // Prefill account email so signed-in buys land in Order history
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accountEmail = session?.user?.email?.trim();
+      if (accountEmail) {
+        setForm((prev) => (prev.email ? prev : { ...prev, email: accountEmail }));
+      }
+    })();
   }, []);
 
   const quote = useMemo(() => {
@@ -43,9 +53,15 @@ export default function ExchangePage() {
     setError('');
     setSubmitting(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch('/api/exchange', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           ...form,
           direction: 'ghs_to_rmb',
@@ -141,7 +157,7 @@ export default function ExchangePage() {
                 autoComplete="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="Email (optional)"
+                placeholder="Email (optional). Use your account email to save this in Order history"
                 className="w-full rounded-xl border-2 border-slate-200 px-4 py-3"
               />
               <input
