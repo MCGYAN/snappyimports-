@@ -40,7 +40,6 @@ const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null 
   { prefix: '/admin/notifications', module: 'owner' },
   { prefix: '/admin/analytics', module: 'owner' },
   { prefix: '/admin/coupons', module: 'owner' },
-  { prefix: '/admin/blog', module: 'owner' },
   { prefix: '/admin/test-sms', module: 'owner' },
   { prefix: '/admin/orders', module: 'orders' },
   { prefix: '/admin/pos', module: 'orders' },

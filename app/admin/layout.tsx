@@ -195,11 +195,6 @@ export default function AdminLayout({
       path: '/admin/test-sms'
     },
     {
-      title: 'Blog',
-      icon: 'ri-article-line',
-      path: '/admin/blog'
-    },
-    {
       title: 'Team',
       icon: 'ri-user-settings-line',
       path: '/admin/team'
