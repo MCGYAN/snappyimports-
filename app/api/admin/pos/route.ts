@@ -5,7 +5,7 @@ import { verifyAuth } from '@/lib/auth';
 /** POST /api/admin/pos — create POS order (service role bypasses RLS) */
 export async function POST(req: Request) {
   try {
-    const authResult = await verifyAuth(req, { requireAdmin: true });
+    const authResult = await verifyAuth(req, { requireModule: 'orders' });
     if (!authResult.authenticated) {
       return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: 401 });
     }

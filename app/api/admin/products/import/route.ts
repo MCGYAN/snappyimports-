@@ -22,7 +22,7 @@ function sseMessage(event: string, data: object): string {
 }
 
 export async function POST(request: Request) {
-  const auth = await verifyAuth(request, { requireAdmin: true });
+  const auth = await verifyAuth(request, { requireModule: 'products' });
   if (!auth.authenticated || !auth.user) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }

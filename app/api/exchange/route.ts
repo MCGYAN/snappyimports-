@@ -123,7 +123,7 @@ export async function GET(req: Request) {
   const admin = searchParams.get('admin') === '1';
 
   if (admin) {
-    const auth = await verifyAuth(req, { requireAdmin: true });
+    const auth = await verifyAuth(req, { requireModule: 'exchange' });
     if (!auth.authenticated) {
       return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }

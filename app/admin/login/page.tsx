@@ -20,7 +20,8 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     const err = searchParams.get('error');
-    if (err === 'unauthorized') setError('You do not have admin access.');
+    if (err === 'unauthorized') setError('You do not have dashboard access.');
+    else if (err === 'forbidden') setError('You do not have access to that feature.');
     else if (err === 'session_expired') setError('Session expired. Please sign in again.');
   }, [searchParams]);
 

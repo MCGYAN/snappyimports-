@@ -8,7 +8,7 @@ const LOCKED_STATUS = new Set(['shipped', 'delivered', 'cancelled']);
 /** POST — amend an order line item variant (color/option) with price check + history */
 export async function POST(req: Request) {
   try {
-    const auth = await verifyAuth(req, { requireAdmin: true });
+    const auth = await verifyAuth(req, { requireModule: 'orders' });
     if (!auth.authenticated) {
       return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }

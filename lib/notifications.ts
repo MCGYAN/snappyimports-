@@ -4,7 +4,6 @@ import { escapeHtml } from '@/lib/sanitize';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
-const EMAIL_FROM = process.env.EMAIL_FROM || process.env.ADMIN_EMAIL || 'Store <admin@example.com>';
 const BRAND = {
     name: process.env.NEXT_PUBLIC_SITE_NAME || 'Store',
     color: '#2563eb',
@@ -13,6 +12,26 @@ const BRAND = {
     url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, ''),
     phone: process.env.NEXT_PUBLIC_CONTACT_PHONE || '',
 };
+
+/** Accepts "Name <email>", "email", or "<email>" and returns a Resend-safe From. */
+function resolveEmailFrom(): string {
+    const raw = (process.env.EMAIL_FROM || '').trim();
+    const site = BRAND.name;
+
+    if (!raw) {
+        const admin = (process.env.ADMIN_EMAIL || '').trim();
+        return admin.includes('@') ? `${site} <${admin}>` : `${site} <admin@example.com>`;
+    }
+
+    const angleOnly = raw.match(/^<([^<>\s]+@[^<>\s]+)>$/);
+    if (angleOnly) return `${site} <${angleOnly[1]}>`;
+
+    if (/^[^<>\s]+@[^<>\s]+$/.test(raw)) return `${site} <${raw}>`;
+
+    return raw;
+}
+
+const EMAIL_FROM = resolveEmailFrom();
 
 // Reusable branded email layout
 export function emailLayout(body: string, preheader?: string): string {

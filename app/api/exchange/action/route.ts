@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, exchange: updated });
     }
 
-    const auth = await verifyAuth(req, { requireAdmin: true });
+    const auth = await verifyAuth(req, { requireModule: 'exchange' });
     if (!auth.authenticated) {
       return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }

@@ -29,7 +29,7 @@ export async function GET() {
 
 /** PUT — admin updates rate board */
 export async function PUT(req: Request) {
-  const auth = await verifyAuth(req, { requireAdmin: true });
+  const auth = await verifyAuth(req, { requireModule: 'exchange' });
   if (!auth.authenticated) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }

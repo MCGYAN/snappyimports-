@@ -5,7 +5,7 @@ import { verifyAuth } from '@/lib/auth';
 /** POST — admin confirms bank/MoMo payment received */
 export async function POST(req: Request) {
   try {
-    const auth = await verifyAuth(req, { requireAdmin: true });
+    const auth = await verifyAuth(req, { requireModule: 'orders' });
     if (!auth.authenticated) {
       return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }

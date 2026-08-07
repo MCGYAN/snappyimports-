@@ -6,6 +6,14 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { SITE_LOGO_PATH } from '@/lib/brand';
+import {
+  canAccessAdminDashboard,
+  canAccessAdminPath,
+  isOwnerRole,
+  menuItemModule,
+  normalizeAdminPermissions,
+  type AdminPermissions,
+} from '@/lib/admin-permissions';
 
 export default function AdminLayout({
   children,
@@ -15,11 +23,12 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<AdminPermissions>({});
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Module Filtering State
   const [enabledModules, setEnabledModules] = useState<string[]>([]);
@@ -41,10 +50,9 @@ export default function AdminLayout({
       // Ensure auth cookie is set (in case user already had a session from before)
       document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; Secure`;
 
-      // Check user role from profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, admin_permissions')
         .eq('id', session.user.id)
         .single();
 
@@ -54,18 +62,19 @@ export default function AdminLayout({
         return;
       }
 
-      // Only allow admin role (no staff)
-      if (profile.role !== 'admin') {
-        console.warn('User does not have admin role');
+      if (!canAccessAdminDashboard(profile.role)) {
+        console.warn('User does not have admin or staff role');
         document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure';
         await supabase.auth.signOut();
         router.push('/admin/login?error=unauthorized');
         return;
       }
 
+      const perms = normalizeAdminPermissions(profile.admin_permissions);
       setUser(session.user);
       setUserRole(profile.role);
-      setIsAuthenticated(true);
+      setPermissions(perms);
+      setAccessDenied(!canAccessAdminPath(profile.role, perms, pathname));
       setIsLoading(false);
     }
 
@@ -232,13 +241,20 @@ export default function AdminLayout({
       icon: 'ri-puzzle-line',
       path: '/admin/modules'
     },
+    {
+      title: 'Team',
+      icon: 'ri-user-settings-line',
+      path: '/admin/team'
+    },
   ];
 
-  const visibleMenuItems = menuItems.filter(item => {
+  const visibleMenuItems = menuItems.filter((item) => {
     // @ts-ignore
-    if (!item.moduleId) return true;
-    // @ts-ignore
-    return enabledModules.includes(item.moduleId);
+    if (item.moduleId && !enabledModules.includes(item.moduleId)) return false;
+    const gate = menuItemModule(item.path);
+    if (gate === null) return true;
+    if (gate === 'owner') return isOwnerRole(userRole);
+    return canAccessAdminPath(userRole, permissions, item.path);
   });
 
   // Special layout for Login Page
@@ -277,7 +293,7 @@ export default function AdminLayout({
               className="h-auto w-full max-w-[200px] object-contain"
             />
             <span className="mt-2 block text-[11px] font-semibold uppercase tracking-widest text-brand-accent">
-              Admin Dashboard
+              {isOwnerRole(userRole) ? 'Admin Dashboard' : 'Staff Dashboard'}
             </span>
           </Link>
 
@@ -355,7 +371,9 @@ export default function AdminLayout({
                     {user?.email?.charAt(0).toUpperCase() || 'A'}
                   </div>
                   <div className="hidden text-left md:block">
-                    <p className="text-sm font-semibold capitalize text-brand-primary">{userRole || 'Admin'}</p>
+                    <p className="text-sm font-semibold capitalize text-brand-primary">
+                      {isOwnerRole(userRole) ? 'Owner' : 'Staff'}
+                    </p>
                     <p className="max-w-[100px] truncate text-xs text-slate-500">{user?.email}</p>
                   </div>
                   <i className="ri-arrow-down-s-line hidden text-brand-primary/60 sm:block" />
@@ -378,7 +396,22 @@ export default function AdminLayout({
         </header>
 
         <main className="p-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-4 lg:p-6">
-          {children}
+          {accessDenied ? (
+            <div className="mx-auto max-w-lg rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+              <h2 className="text-lg font-bold text-brand-primary">You do not have access</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Ask the owner to turn on this feature for your staff account.
+              </p>
+              <Link
+                href="/admin"
+                className="mt-4 inline-block rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white"
+              >
+                Back to dashboard
+              </Link>
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

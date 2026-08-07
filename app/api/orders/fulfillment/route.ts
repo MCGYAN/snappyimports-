@@ -10,7 +10,7 @@ import {
 /** POST — admin updates China→Ghana fulfillment stage */
 export async function POST(req: Request) {
   try {
-    const auth = await verifyAuth(req, { requireAdmin: true });
+    const auth = await verifyAuth(req, { requireModule: 'orders' });
     if (!auth.authenticated) {
       return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }

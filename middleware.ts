@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { canAccessAdminPath } from '@/lib/admin-permissions';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -87,10 +88,10 @@ export async function middleware(request: NextRequest) {
                     return NextResponse.redirect(loginUrl);
                 }
 
-                // Check role
+                // Check role + staff module permissions
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('role')
+                    .select('role, admin_permissions')
                     .eq('id', user.id)
                     .single();
 
@@ -99,6 +100,12 @@ export async function middleware(request: NextRequest) {
                     const loginUrl = new URL('/admin/login', request.url);
                     loginUrl.searchParams.set('error', 'unauthorized');
                     return NextResponse.redirect(loginUrl);
+                }
+
+                if (!canAccessAdminPath(role, profile.admin_permissions, pathname)) {
+                    const homeUrl = new URL('/admin', request.url);
+                    homeUrl.searchParams.set('error', 'forbidden');
+                    return NextResponse.redirect(homeUrl);
                 }
 
                 // Auth passed — set user info in headers for downstream use

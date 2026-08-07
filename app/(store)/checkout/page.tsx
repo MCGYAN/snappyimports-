@@ -526,7 +526,7 @@ export default function CheckoutPage() {
                 {paymentMethod === 'invoice' ? (
                   <>
                     Cart total is GH¢{total.toFixed(2)} (at or above GH¢{INVOICE_PAYMENT_THRESHOLD.toFixed(0)}).
-                    You will get a downloadable invoice with bank details. Pay by transfer, then tap “I’ve paid”.
+                    You get the invoice now with bank details. Pay by transfer, then tap “I’ve paid”.
                   </>
                 ) : (
                   <>
@@ -549,11 +549,16 @@ export default function CheckoutPage() {
                     Processing...
                   </>
                 ) : paymentMethod === 'invoice' ? (
-                  `Get invoice for GH¢${total.toFixed(2)}`
+                  `Get invoice and pay GH¢${total.toFixed(2)}`
                 ) : (
                   `Pay GH¢${total.toFixed(2)} with Mobile Money`
                 )}
               </button>
+              {paymentMethod === 'invoice' ? (
+                <p className="mt-2 text-center text-xs text-gray-500">
+                  You’ll get the invoice now. Pay by bank transfer, then tap I’ve paid.
+                </p>
+              ) : null}
             </div>
           </div>
 

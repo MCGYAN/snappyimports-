@@ -41,7 +41,11 @@ export async function POST(request: Request) {
         const requiresAdminAuth = adminOnlyTypes.includes(type);
 
         if (requiresAdminAuth) {
-            const auth = await verifyAuth(request, { requireAdmin: true });
+            // Campaigns are owner-only; order messages need the Orders module
+            const auth =
+                type === 'campaign'
+                    ? await verifyAuth(request, { requireOwner: true })
+                    : await verifyAuth(request, { requireModule: 'orders' });
             if (!auth.authenticated) {
                 return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
             }

@@ -7,7 +7,7 @@ const HARD_LOCK = new Set(['shipped', 'delivered']);
 /** POST — gated admin cancel. Keeps the order record. Never deletes. */
 export async function POST(req: Request) {
   try {
-    const auth = await verifyAuth(req, { requireAdmin: true });
+    const auth = await verifyAuth(req, { requireModule: 'orders' });
     if (!auth.authenticated) {
       return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }

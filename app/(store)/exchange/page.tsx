@@ -124,7 +124,9 @@ export default function ExchangePage() {
 
           <section className="rounded-3xl bg-white p-6 text-slate-900 shadow-2xl">
             <h2 className="text-xl font-bold text-brand-primary">Buy RMB</h2>
-            <p className="mt-1 text-sm text-slate-500">Enter how much you want to spend in cedis. Invoice only. Bank transfer.</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Enter how much you want to spend in cedis. Get the invoice now and pay by bank transfer.
+            </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-3">
               <input
@@ -190,17 +192,22 @@ export default function ExchangePage() {
               {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
               {rateOk ? (
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full rounded-xl bg-brand-accent py-4 text-lg font-bold text-white disabled:opacity-50"
-                >
-                  {submitting
-                    ? 'Creating invoice…'
-                    : quote
-                      ? `Lock rate. Get invoice for GH¢${quote.amountFrom.toFixed(2)}`
-                      : 'Lock rate and get my invoice'}
-                </button>
+                <>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full rounded-xl bg-brand-accent py-4 text-lg font-bold text-white disabled:opacity-50"
+                  >
+                    {submitting
+                      ? 'Getting your invoice…'
+                      : quote
+                        ? `Lock rate. Get invoice and pay GH¢${quote.amountFrom.toFixed(2)}`
+                        : 'Lock today’s rate. Get invoice and pay'}
+                  </button>
+                  <p className="text-center text-xs text-slate-500">
+                    You’ll get the invoice now. Pay by bank transfer, then tap I’ve paid.
+                  </p>
+                </>
               ) : (
                 <a
                   href={buildWhatsAppHref(DEFAULT_CONTACT_WHATSAPP)}
