@@ -37,7 +37,6 @@ export const EMPTY_STAFF_PERMISSIONS: AdminPermissions = {
 
 const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null }[] = [
   { prefix: '/admin/team', module: 'owner' },
-  { prefix: '/admin/modules', module: 'owner' },
   { prefix: '/admin/notifications', module: 'owner' },
   { prefix: '/admin/analytics', module: 'owner' },
   { prefix: '/admin/coupons', module: 'owner' },

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import ChartContainer from '@/components/admin/ChartContainer';
+import { downloadCsv } from '@/lib/csv-download';
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('30days');
@@ -163,6 +164,27 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
+  const handleExport = () => {
+    const date = new Date().toISOString().split('T')[0];
+    const rangeLabel =
+      timeRange === '7days' ? '7days' :
+      timeRange === '90days' ? '90days' :
+      timeRange === 'year' ? 'year' : '30days';
+
+    downloadCsv(`analytics-${rangeLabel}-${date}.csv`, [
+      ['Section', 'Label', 'Value'],
+      ['Summary', 'Shop revenue (GHS)', metrics.revenue.toFixed(2)],
+      ['Summary', 'Total Orders', metrics.orders],
+      ['Summary', 'Avg Order Value (GHS)', metrics.aov.toFixed(2)],
+      ['Summary', 'Conversion Rate', metrics.conversion || 'N/A'],
+      ...salesData.map((d) => ['Daily Sales', d.date, Number(d.sales || 0).toFixed(2)]),
+      ...salesData.map((d) => ['Daily Orders', d.date, d.orders || 0]),
+      ...categoryRevenue.map((c) => ['Category Revenue (GHS)', c.name, Number(c.value || 0).toFixed(2)]),
+      ...topProducts.map((p) => ['Top Product Revenue (GHS)', p.name, Number(p.revenue || 0).toFixed(2)]),
+      ...topProducts.map((p) => ['Top Product Units', p.name, p.units || 0]),
+    ]);
+  };
+
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
@@ -184,7 +206,11 @@ export default function AnalyticsPage() {
               <option value="90days">Last 90 Days</option>
               <option value="year">This Year</option>
             </select>
-            <button className="bg-brand-primary hover:bg-brand-accent text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center">
+            <button
+              type="button"
+              onClick={handleExport}
+              className="bg-brand-primary hover:bg-brand-accent text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center"
+            >
               <i className="ri-download-line mr-2"></i>
               Export
             </button>

@@ -30,9 +30,6 @@ export default function AdminLayout({
   const [permissions, setPermissions] = useState<AdminPermissions>({});
   const [accessDenied, setAccessDenied] = useState(false);
 
-  // Module Filtering State
-  const [enabledModules, setEnabledModules] = useState<string[]>([]);
-
   useEffect(() => {
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -106,40 +103,10 @@ export default function AdminLayout({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showUserMenu]);
 
-  // Fetch Modules Effect
   useEffect(() => {
-    async function fetchModules() {
-      try {
-        const { data, error } = await supabase.from('store_modules').select('id, enabled');
-        if (error) {
-          console.warn('Error fetching modules:', error);
-          return;
-        }
-        if (data) {
-          setEnabledModules(data.filter((m: any) => m.enabled).map((m: any) => m.id));
-        }
-      } catch (err) {
-        console.warn('Fetch modules failed:', err);
-      }
-    }
-    fetchModules();
-  }, []);
-
-  // Screen size check for initial state
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        // Only set to false if it's currently true? 
-        // Actually, let's just default to open on desktop, closed on mobile on mount only
-      }
-    };
-
-    // Set initial state based on width
     if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
-
-    // Optional: Auto-close on resize to mobile? For now, leave as is.
   }, []);
 
   const handleLogout = async () => {
@@ -215,31 +182,22 @@ export default function AdminLayout({
     {
       title: 'Customer Insights',
       icon: 'ri-user-search-line',
-      path: '/admin/customer-insights',
-      moduleId: 'customer-insights'
+      path: '/admin/customer-insights'
     },
     {
       title: 'Notifications',
       icon: 'ri-notification-3-line',
-      path: '/admin/notifications',
-      moduleId: 'notifications'
+      path: '/admin/notifications'
     },
     {
       title: 'SMS Debugger',
       icon: 'ri-message-2-line',
       path: '/admin/test-sms'
     },
-
     {
       title: 'Blog',
       icon: 'ri-article-line',
-      path: '/admin/blog',
-      moduleId: 'blog'
-    },
-    {
-      title: 'Modules',
-      icon: 'ri-puzzle-line',
-      path: '/admin/modules'
+      path: '/admin/blog'
     },
     {
       title: 'Team',
@@ -249,8 +207,6 @@ export default function AdminLayout({
   ];
 
   const visibleMenuItems = menuItems.filter((item) => {
-    // @ts-ignore
-    if (item.moduleId && !enabledModules.includes(item.moduleId)) return false;
     const gate = menuItemModule(item.path);
     if (gate === null) return true;
     if (gate === 'owner') return isOwnerRole(userRole);

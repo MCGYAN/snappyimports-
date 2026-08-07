@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { downloadCsv, parseCsv } from '@/lib/csv-download';
 
 export default function InventoryManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [stockFilter, setStockFilter] = useState('all');
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchInventory();
@@ -41,7 +44,6 @@ export default function InventoryManagementPage() {
           if (stock === 0) status = 'out';
           else if (stock < 10) status = 'low';
 
-          // categories is an array from the join
           const categoryData = p.categories as { name: string }[] | null;
           return {
             id: p.id,
@@ -49,12 +51,12 @@ export default function InventoryManagementPage() {
             sku: p.sku || 'N/A',
             category: categoryData?.[0]?.name || 'Uncategorized',
             currentStock: stock,
-            reorderLevel: 10, // Default
-            reorderQuantity: 50, // Default
+            reorderLevel: 10,
+            reorderQuantity: 50,
             price: p.price || 0,
-            cost: 0, // Not in DB
+            cost: 0,
             status,
-            supplier: 'Standard Supplier' // Default
+            supplier: 'Standard Supplier'
           };
         });
         setProducts(mapped);
@@ -78,7 +80,7 @@ export default function InventoryManagementPage() {
 
   const lowStockCount = products.filter(p => p.status === 'low').length;
   const outOfStockCount = products.filter(p => p.status === 'out').length;
-  const totalValue = products.reduce((sum, p) => sum + (p.currentStock * p.price), 0); // Using Price as Value
+  const totalValue = products.reduce((sum, p) => sum + (p.currentStock * p.price), 0);
 
   const toggleProductSelection = (id: string) => {
     setSelectedProducts(prev =>
@@ -95,32 +97,108 @@ export default function InventoryManagementPage() {
   };
 
   const handleBulkRestock = () => {
-    // Placeholder for bulk restock logic
-    alert("Bulk restock feature coming soon (requires backend logic).");
+    alert('Bulk restock feature coming soon (requires backend logic).');
     setSelectedProducts([]);
   };
 
   const handleExportCSV = () => {
-    const csvData = [
+    const rows = selectedProducts.length > 0
+      ? products.filter((p) => selectedProducts.includes(p.id))
+      : filteredProducts;
+
+    if (rows.length === 0) {
+      alert('No products to export.');
+      return;
+    }
+
+    const date = new Date().toISOString().split('T')[0];
+    downloadCsv(`inventory-export-${date}.csv`, [
       ['SKU', 'Product Name', 'Category', 'Current Stock', 'Price', 'Status'],
-      ...products.map(p => [
+      ...rows.map((p) => [
         p.sku,
         p.name,
         p.category,
-        p.currentStock.toString(),
-        p.price.toFixed(2),
-        p.status
-      ])
-    ];
+        p.currentStock,
+        Number(p.price).toFixed(2),
+        p.status,
+      ]),
+    ]);
+  };
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `inventory-export-GH¢{new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    setShowExportModal(false);
+  const handleDownloadTemplate = () => {
+    downloadCsv('inventory-stock-template.csv', [
+      ['SKU', 'Current Stock'],
+      ...products.slice(0, 3).map((p) => [p.sku, p.currentStock]),
+    ]);
+  };
+
+  const handleImportFile = async (file: File) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length < 2) {
+        throw new Error('CSV needs a header row and at least one data row.');
+      }
+
+      const header = rows[0].map((h) => h.toLowerCase().trim());
+      const skuIdx = header.findIndex((h) => h === 'sku');
+      const stockIdx = header.findIndex((h) =>
+        ['current stock', 'stock', 'quantity', 'qty'].includes(h)
+      );
+
+      if (skuIdx < 0 || stockIdx < 0) {
+        throw new Error('CSV must include SKU and Current Stock (or Stock / Quantity) columns.');
+      }
+
+      let updated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const sku = (row[skuIdx] || '').trim();
+        const stockRaw = (row[stockIdx] || '').trim();
+        if (!sku) {
+          skipped++;
+          continue;
+        }
+        const quantity = Number(stockRaw);
+        if (!Number.isFinite(quantity) || quantity < 0) {
+          errors.push(`Row ${i + 1}: invalid stock for ${sku}`);
+          skipped++;
+          continue;
+        }
+
+        const { data, error } = await supabase
+          .from('products')
+          .update({ quantity: Math.floor(quantity) })
+          .eq('sku', sku)
+          .select('id');
+
+        if (error) {
+          errors.push(`Row ${i + 1}: ${error.message}`);
+          skipped++;
+          continue;
+        }
+        if (!data || data.length === 0) {
+          errors.push(`Row ${i + 1}: no product with SKU ${sku}`);
+          skipped++;
+          continue;
+        }
+        updated++;
+      }
+
+      await fetchInventory();
+      const summary = `Updated ${updated} product${updated === 1 ? '' : 's'}. Skipped ${skipped}.`;
+      setImportResult(errors.length ? `${summary} ${errors.slice(0, 5).join(' ')}` : summary);
+    } catch (err: any) {
+      setImportResult(err?.message || 'Import failed.');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -224,7 +302,11 @@ export default function InventoryManagementPage() {
               </div>
 
               <button
-                onClick={() => setShowImportModal(true)}
+                type="button"
+                onClick={() => {
+                  setImportResult(null);
+                  setShowImportModal(true);
+                }}
                 className="bg-brand-primary hover:bg-brand-accent text-white px-4 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer"
               >
                 <i className="ri-upload-line"></i>
@@ -232,7 +314,8 @@ export default function InventoryManagementPage() {
               </button>
 
               <button
-                onClick={() => setShowExportModal(true)}
+                type="button"
+                onClick={handleExportCSV}
                 className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-4 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer"
               >
                 <i className="ri-download-line"></i>
@@ -252,6 +335,13 @@ export default function InventoryManagementPage() {
                   className="bg-brand-primary hover:bg-brand-accent text-white px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Bulk Restock
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="border border-gray-300 hover:border-gray-400 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  Export Selected
                 </button>
                 <button
                   onClick={() => setSelectedProducts([])}
@@ -340,18 +430,20 @@ export default function InventoryManagementPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
-                          <button
+                          <Link
+                            href={`/admin/products/${product.id}`}
                             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent transition-colors cursor-pointer"
                             title="Edit"
                           >
                             <i className="ri-edit-line text-lg"></i>
-                          </button>
-                          <button
+                          </Link>
+                          <Link
+                            href={`/admin/products/${product.id}`}
                             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent transition-colors cursor-pointer"
                             title="View Details"
                           >
                             <i className="ri-eye-line text-lg"></i>
-                          </button>
+                          </Link>
                         </div>
                       </td>
                     </tr>
@@ -362,8 +454,71 @@ export default function InventoryManagementPage() {
           </div>
         </div>
       </div>
-      {showImportModal && <div className="hidden">Mock Modal</div>}
-      {showExportModal && <div className="hidden">Mock Export</div>}
+
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Import stock CSV</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Update product quantities by SKU. Required columns: SKU and Current Stock.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="text-gray-500 hover:text-gray-800"
+                aria-label="Close"
+              >
+                <i className="ri-close-line text-2xl"></i>
+              </button>
+            </div>
+
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="rounded-lg border-2 border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:border-gray-400"
+              >
+                Download template
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-accent disabled:opacity-60"
+              >
+                {importing ? 'Importing…' : 'Choose CSV file'}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleImportFile(file);
+                }}
+              />
+            </div>
+
+            {importResult && (
+              <p className="mb-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{importResult}</p>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="rounded-lg border-2 border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:border-gray-400"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

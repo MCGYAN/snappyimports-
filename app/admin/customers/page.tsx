@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { downloadCsv } from '@/lib/csv-download';
 import CustomerEmailModal, { type EmailRecipient } from '@/components/admin/CustomerEmailModal';
 
 export default function AdminCustomersPage() {
@@ -297,6 +298,35 @@ export default function AdminCustomersPage() {
     openEmailTo(list);
   };
 
+  const exportCustomerRows = (rows: typeof filteredCustomers) => {
+    if (rows.length === 0) {
+      alert('No customers to export.');
+      return;
+    }
+    const date = new Date().toISOString().split('T')[0];
+    downloadCsv(`customers-export-${date}.csv`, [
+      ['Name', 'Email', 'Phone', 'Orders', 'Total Spent', 'Joined', 'Last Order', 'Status', 'Type'],
+      ...rows.map((c) => [
+        c.name,
+        c.email,
+        c.phone,
+        c.orders,
+        Number(c.totalSpent).toFixed(2),
+        c.joined,
+        c.lastOrder,
+        c.status,
+        c.isGuest ? 'Guest' : 'Registered',
+      ]),
+    ]);
+  };
+
+  const handleExportAll = () => exportCustomerRows(filteredCustomers);
+
+  const handleExportSelected = () => {
+    const rows = filteredCustomers.filter((c) => selectedCustomers.includes(c.id));
+    exportCustomerRows(rows);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -304,7 +334,11 @@ export default function AdminCustomersPage() {
           <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
           <p className="text-gray-600 mt-1">Manage your customer base and relationships</p>
         </div>
-        <button className="bg-brand-primary hover:bg-brand-accent text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer">
+        <button
+          type="button"
+          onClick={handleExportAll}
+          className="bg-brand-primary hover:bg-brand-accent text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
+        >
           <i className="ri-download-line mr-2"></i>
           Export Customers
         </button>
@@ -389,7 +423,11 @@ export default function AdminCustomersPage() {
                 <i className="ri-vip-crown-line mr-2"></i>
                 Mark as VIP
               </button>
-              <button className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer">
+              <button
+                type="button"
+                onClick={handleExportSelected}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+              >
                 <i className="ri-download-line mr-2"></i>
                 Export
               </button>

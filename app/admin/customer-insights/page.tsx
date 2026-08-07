@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { downloadCsv } from '@/lib/csv-download';
 
 // Helper for currency formatting
 const formatCurrency = (amount: number) => {
@@ -157,6 +158,30 @@ export default function CustomerInsightsPage() {
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading Insights...</div>;
 
+  const handleExportList = () => {
+    if (filteredCustomers.length === 0) {
+      alert('No customers to export.');
+      return;
+    }
+    const date = new Date().toISOString().split('T')[0];
+    downloadCsv(`customer-insights-${date}.csv`, [
+      ['Name', 'Email', 'Phone', 'Segment', 'Orders', 'Total Spent', 'Avg Order Value', 'Lifetime Value', 'Join Date', 'Last Order', 'Risk'],
+      ...filteredCustomers.map((c) => [
+        c.name,
+        c.email,
+        c.phone,
+        c.segment,
+        c.orders,
+        Number(c.totalSpent).toFixed(2),
+        Number(c.avgOrderValue).toFixed(2),
+        Number(c.lifetimeValue).toFixed(2),
+        new Date(c.joinDate).toLocaleDateString(),
+        new Date(c.lastOrder).toLocaleDateString(),
+        c.riskLevel,
+      ]),
+    ]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -166,7 +191,11 @@ export default function CustomerInsightsPage() {
             <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">Deep dive into customer behavior and lifetime value</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap flex items-center justify-center">
+            <button
+              type="button"
+              onClick={handleExportList}
+              className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap flex items-center justify-center"
+            >
               <i className="ri-download-line mr-2"></i>
               Export List
             </button>
