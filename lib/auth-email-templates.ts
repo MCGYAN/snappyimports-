@@ -12,6 +12,10 @@
  *   Site URL: https://snappyimports.vercel.app
  *   Redirect URLs: https://snappyimports.vercel.app/**
  *                https://snappyimports.vercel.app/auth/callback
+ *                https://snappyimports.vercel.app/auth/callback?next=/auth/reset-password
+ *
+ * Auth emails (confirm, reset, etc.) are sent via Resend SMTP on free tier:
+ *   node scripts/update-auth-email-templates.mjs
  */
 
 export const AUTH_EMAIL_TEMPLATES = {

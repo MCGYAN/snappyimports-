@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 /**
  * Handles email confirm / password recovery redirects from Supabase.
  * Works with ?code= (PKCE) and hash tokens.
+ * Recovery links go to /auth/reset-password so the customer can set a new password.
  */
 function AuthCallbackInner() {
   const router = useRouter();
@@ -16,17 +17,36 @@ function AuthCallbackInner() {
 
   useEffect(() => {
     let cancelled = false;
+    let recoveryDetected = false;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        recoveryDetected = true;
+      }
+    });
 
     (async () => {
       try {
+        const nextParam = searchParams.get('next') || '';
+        const typeParam = (searchParams.get('type') || '').toLowerCase();
         const code = searchParams.get('code');
+
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         } else if (typeof window !== 'undefined' && window.location.hash) {
-          // Implicit hash tokens are parsed by the client automatically on getSession
+          const hash = window.location.hash.replace(/^#/, '');
+          const hashParams = new URLSearchParams(hash);
+          if ((hashParams.get('type') || '').toLowerCase() === 'recovery') {
+            recoveryDetected = true;
+          }
           await supabase.auth.getSession();
         }
+
+        // Give PASSWORD_RECOVERY a brief moment to fire after exchange
+        await new Promise((r) => setTimeout(r, 150));
 
         const {
           data: { session },
@@ -52,8 +72,20 @@ function AuthCallbackInner() {
           /* non-blocking */
         }
 
+        const wantsReset =
+          recoveryDetected ||
+          typeParam === 'recovery' ||
+          nextParam === '/auth/reset-password' ||
+          nextParam.startsWith('/auth/reset-password');
+
+        const destination = wantsReset
+          ? '/auth/reset-password'
+          : nextParam.startsWith('/') && !nextParam.startsWith('//')
+            ? nextParam
+            : '/account';
+
         if (!cancelled) {
-          router.replace('/account');
+          router.replace(destination);
           router.refresh();
         }
       } catch (err: any) {
@@ -66,6 +98,7 @@ function AuthCallbackInner() {
 
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, [router, searchParams]);
 
