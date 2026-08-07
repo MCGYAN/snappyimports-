@@ -12,7 +12,7 @@ import PageHero from '@/components/PageHero';
 import { Filter, X, Star, Inbox, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function ShopContent() {
-  usePageTitle('Browse featured products | Snappy Import Ghana');
+  usePageTitle('Shop imports from China');
   const searchParams = useSearchParams();
 
   // State

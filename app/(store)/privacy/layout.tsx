@@ -1,0 +1,9 @@
+import { pageMetadata } from '@/lib/page-metadata';
+
+export const metadata = pageMetadata('privacy', {
+  path: '/privacy',
+});
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return children;
+}

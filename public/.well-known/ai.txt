@@ -1,0 +1,9 @@
+# Snappy Imports Global — AI / agent discovery
+# https://snappyimports.vercel.app/llms.txt
+
+contact: snappyimportsgh@gmail.com
+preferred-name: Snappy Imports Global
+description: China to Ghana imports, ecommerce storefront, and Buy RMB with Ghana Cedis.
+llms-txt: https://snappyimports.vercel.app/llms.txt
+llms-full-txt: https://snappyimports.vercel.app/llms-full.txt
+sitemap: https://snappyimports.vercel.app/sitemap.xml

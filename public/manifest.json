@@ -1,16 +1,16 @@
 {
-  "name": "Snappy Import Ghana",
-  "short_name": "Snappy Import",
-  "description": "Snappy Imports Global: browse products, checkout securely, and track China to Ghana orders.",
+  "name": "Snappy Imports Global",
+  "short_name": "Snappy Imports",
+  "description": "Import cars, gadgets, and equipment from China to Ghana. Clear prices, order tracking, and Buy RMB with Ghana Cedis.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
+  "background_color": "#0B1F3A",
   "theme_color": "#0B1F3A",
   "dir": "ltr",
-  "lang": "en",
-  "categories": ["shopping"],
+  "lang": "en-GH",
+  "categories": ["shopping", "business"],
   "icons": [
     {
       "src": "/favicon/android-chrome-512x512.png",
@@ -23,20 +23,26 @@
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/og/square.png",
+      "sizes": "1080x1080",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
     {
       "name": "Shop",
       "short_name": "Shop",
-      "description": "Browse the catalogue",
+      "description": "Browse China to Ghana imports",
       "url": "/shop?source=pwa-shortcut"
     },
     {
-      "name": "Cart",
-      "short_name": "Cart",
-      "description": "View your cart",
-      "url": "/cart?source=pwa-shortcut"
+      "name": "Buy RMB",
+      "short_name": "Buy RMB",
+      "description": "Pay cedis. Get RMB for China.",
+      "url": "/exchange?source=pwa-shortcut"
     },
     {
       "name": "Track order",
@@ -45,10 +51,10 @@
       "url": "/order-tracking?source=pwa-shortcut"
     },
     {
-      "name": "Account",
-      "short_name": "Account",
-      "description": "Your account",
-      "url": "/account?source=pwa-shortcut"
+      "name": "Contact",
+      "short_name": "Contact",
+      "description": "WhatsApp and support",
+      "url": "/contact?source=pwa-shortcut"
     }
   ],
   "screenshots": [],

@@ -4,14 +4,11 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import PageHero from '@/components/PageHero';
 import { Search, HeadphonesIcon, ArrowRight, Inbox } from 'lucide-react';
-import { SEO } from '@/lib/seo';
+import { pageMetadata } from '@/lib/page-metadata';
 
 export const revalidate = 0;
 
-export const metadata: Metadata = {
-  title: SEO.pages.categories.title,
-  description: SEO.pages.categories.description,
-};
+export const metadata: Metadata = pageMetadata('categories', { path: '/categories' });
 
 const PLACEHOLDER_BGS = [
   'bg-gradient-to-br from-brand-primary via-[#0d2747] to-[#050f1f]',

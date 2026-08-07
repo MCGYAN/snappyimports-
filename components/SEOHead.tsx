@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { SEO } from '@/lib/seo';
+import { pageMetadata } from '@/lib/page-metadata';
 
 interface SEOProps {
   title?: string;
@@ -7,6 +8,7 @@ interface SEOProps {
   keywords?: string[];
   ogImage?: string;
   ogType?: 'website' | 'product' | 'article';
+  path?: string;
   price?: number;
   currency?: string;
   availability?: string;
@@ -16,74 +18,40 @@ interface SEOProps {
   noindex?: boolean;
 }
 
+/** Prefer `pageMetadata` from `@/lib/page-metadata` for route layouts. */
 export function generateMetadata({
-  title = SEO.defaultTitle,
-  description = SEO.defaultDescription,
+  title,
+  description,
   keywords = [],
   ogImage,
-  ogType = 'website',
-  price,
-  currency = 'GHS',
-  availability,
-  category,
+  path = '/',
   publishedTime,
   author,
-  noindex = false
+  noindex = false,
+  ogType = 'website',
 }: SEOProps): Metadata {
-  const siteUrl = SEO.siteUrl;
-  const defaultOgImage = `${siteUrl}/opengraph-image`;
-  const resolvedOgImage = ogImage || defaultOgImage;
-  const siteName = SEO.siteName;
-  const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
+  const base = pageMetadata(undefined, {
+    title: title || SEO.defaultTitle,
+    description: description || SEO.defaultDescription,
+    keywords,
+    ogImage,
+    path,
+    noindex,
+  });
 
-  const allKeywords = [...new Set([...keywords, ...SEO.keywords])];
+  if (author) {
+    base.authors = [{ name: author }];
+  }
 
-  const metadata: Metadata = {
-    title: fullTitle,
-    description,
-    keywords: allKeywords.join(', '),
-    authors: author ? [{ name: author }] : undefined,
-    openGraph: {
-      title: fullTitle,
-      description,
-      images: [{ url: resolvedOgImage, width: 1200, height: 630, alt: title }],
-      type: ogType as any,
-      siteName,
-      locale: 'en'
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: fullTitle,
-      description,
-      images: [resolvedOgImage]
-    },
-    robots: noindex ? {
-      index: false,
-      follow: false
-    } : {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-image-preview': 'large',
-        'max-snippet': -1
-      }
-    },
-    alternates: {
-      canonical: siteUrl
-    }
-  };
-
-  if (ogType === 'article' && publishedTime) {
-    metadata.openGraph = {
-      ...metadata.openGraph,
+  if (ogType === 'article' && publishedTime && base.openGraph) {
+    base.openGraph = {
+      ...base.openGraph,
       type: 'article',
-      publishedTime
+      publishedTime,
     };
   }
 
-  return metadata;
+  return base;
 }
 
 export function generateProductSchema(product: {

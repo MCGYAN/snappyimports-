@@ -86,11 +86,18 @@ export function buildTelHref(raw: string | undefined | null): string {
 }
 
 export const SNAPPY_SEO_KEYWORDS = [
+  'Snappy Imports Global',
+  'Snappy Imports Ghana',
   'Snappy Import Ghana',
   'import cars from China Ghana',
   'buy gadgets from China Ghana',
+  'import from China to Ghana',
   'affordable imports Ghana',
   'China to Ghana shipping',
   'Tema port clearing',
   'import equipment Ghana',
+  'Buy RMB Ghana',
+  'RMB with Ghana Cedis',
+  'China sourcing Ghana',
+  'reliable China importer Ghana',
 ];

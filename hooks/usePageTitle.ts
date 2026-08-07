@@ -1,11 +1,16 @@
 'use client';
 
 import { useEffect } from 'react';
+import { SEO } from '@/lib/seo';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'Store';
-
+/** Client title helper. Prefer server `pageMetadata` for crawlers. */
 export function usePageTitle(title: string) {
   useEffect(() => {
-    document.title = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} | Shop Online`;
+    const site = SEO.siteName;
+    if (!title) {
+      document.title = SEO.defaultTitle;
+      return;
+    }
+    document.title = title.includes(site) ? title : `${title} | ${site}`;
   }, [title]);
 }

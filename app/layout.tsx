@@ -4,6 +4,7 @@ import { Inter, Poppins } from "next/font/google";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { SEO } from "@/lib/seo";
+import { buildSiteJsonLdGraph } from "@/lib/structured-data";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,7 +16,6 @@ const inter = Inter({
 
 const poppins = Poppins({
   subsets: ["latin"],
-  // Fewer weights = smaller font download on first visit
   weight: ["400", "600", "700"],
   variable: "--font-poppins",
   display: "swap",
@@ -31,7 +31,6 @@ export const viewport: Viewport = {
 
 const siteUrl = SEO.siteUrl;
 
-// Site-wide SEO defaults from lib/seo.ts. OG/twitter images: app/opengraph-image.tsx & twitter-image.tsx
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -40,10 +39,10 @@ export const metadata: Metadata = {
   },
   description: SEO.defaultDescription,
   keywords: SEO.keywords,
-  authors: [{ name: SEO.siteName }],
-  creator: SEO.siteName,
-  publisher: SEO.siteName,
-  applicationName: SEO.siteName,
+  authors: [{ name: SEO.brandName }],
+  creator: SEO.brandName,
+  publisher: SEO.brandName,
+  applicationName: SEO.brandName,
   referrer: "origin-when-cross-origin",
   robots: {
     index: true,
@@ -64,7 +63,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: SEO.siteName,
+    title: SEO.brandName,
   },
   formatDetection: {
     telephone: true,
@@ -76,18 +75,25 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    locale: "en",
+    locale: SEO.locale,
     url: siteUrl,
     title: SEO.defaultTitle,
     description: SEO.defaultDescription,
-    siteName: SEO.siteName,
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: SEO.taglineLong }],
+    siteName: SEO.brandName,
+    images: [
+      {
+        url: SEO.ogImages.default,
+        width: 1200,
+        height: 630,
+        alt: SEO.taglineLong,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: SEO.defaultTitle,
     description: SEO.defaultDescription,
-    images: ['/opengraph-image'],
+    images: [SEO.ogImages.twitter],
     creator: SEO.social.twitter || undefined,
   },
   alternates: {
@@ -104,64 +110,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const organizationNode: Record<string, unknown> = {
-    "@type": "Organization",
-    "@id": `${siteUrl}/#organization`,
-    name: SEO.siteName,
-    url: siteUrl,
-    description: SEO.defaultDescription,
-    areaServed: "Worldwide",
-    knowsAbout: ["E-commerce", "Online retail"],
-  };
-  if (SEO.logoUrl) {
-    organizationNode.logo = { "@type": "ImageObject", url: SEO.logoUrl };
-  }
-  if (SEO.contact.phone) organizationNode.telephone = SEO.contact.phone;
-  if (SEO.contact.email) organizationNode.email = SEO.contact.email;
-  const sameAs = Object.values(SEO.social).filter(Boolean);
-  if (sameAs.length) organizationNode.sameAs = sameAs;
-  if (SEO.contact.phone) {
-    organizationNode.contactPoint = {
-      "@type": "ContactPoint",
-      contactType: "customer service",
-      telephone: SEO.contact.phone,
-      areaServed: "Worldwide",
-      availableLanguage: "English",
-    };
-  }
-
-  const websiteNode = {
-    "@type": "WebSite",
-    "@id": `${siteUrl}/#website`,
-    url: siteUrl,
-    name: SEO.siteName,
-    description: SEO.defaultDescription,
-    publisher: { "@id": `${siteUrl}/#organization` },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${siteUrl}/shop?search={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
-    },
-  };
+  const jsonLd = buildSiteJsonLdGraph();
 
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
+    <html lang="en-GH" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#0B1F3A" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content={SEO.siteName} />
+        <meta name="apple-mobile-web-app-title" content={SEO.brandName} />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#0B1F3A" />
         <meta name="msapplication-tap-highlight" content="no" />
+        <meta name="geo.region" content="GH" />
+        <meta name="geo.placename" content="Ghana" />
+        <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
 
         <link rel="icon" href="/icon" type="image/png" sizes="any" />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-        {/* Non-blocking RemixIcon: load as print, then switch to all */}
         <link
           id="remixicon-css"
           rel="stylesheet"
@@ -182,10 +149,7 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@graph": [organizationNode, websiteNode],
-            }),
+            __html: JSON.stringify(jsonLd),
           }}
         />
       </head>

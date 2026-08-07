@@ -22,29 +22,29 @@ export default function PaymentPage() {
   useEffect(() => {
     async function fetchOrder() {
       try {
-        // Fetch order by ID (UUID) or order_number
-        let query = supabase
-          .from('orders')
-          .select('*')
-          .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-          .single();
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(
+          `/api/orders/pay-context?order=${encodeURIComponent(orderId)}`,
+          {
+            headers: session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : undefined,
+          },
+        );
+        const payload = await res.json();
 
-        const { data, error: fetchError } = await query;
-
-        if (fetchError || !data) {
+        if (!res.ok || !payload?.order) {
           setError('Order not found. Please check your link and try again.');
           setLoading(false);
           return;
         }
 
-        setOrder(data);
+        setOrder(payload.order);
 
-        // If already paid, redirect to success page
-        if (data.payment_status === 'paid') {
-          router.push(`/order-success?order=${data.order_number}`);
+        if (payload.order.payment_status === 'paid') {
+          router.push(`/order-success?order=${payload.order.order_number}`);
           return;
         }
-
       } catch (err) {
         console.error('Error fetching order:', err);
         setError('Failed to load order details.');

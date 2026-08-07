@@ -29,7 +29,7 @@ const FALLBACK_CATEGORIES = [
 ];
 
 export default function Home() {
-  usePageTitle('Snappy Import Ghana | Home');
+  usePageTitle('China to Ghana Imports');
   const { getSetting } = useCMS();
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);

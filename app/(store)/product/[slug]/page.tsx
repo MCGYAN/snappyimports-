@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .slice()
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const productImage =
-    absolutizeImage(images[0]?.url) || `${SEO.siteUrl}/opengraph-image`;
+    absolutizeImage(images[0]?.url) || `${SEO.siteUrl}${SEO.ogImages.default}`;
 
   const variantPrices = (
     (product.product_variants || []) as { price?: number; quantity?: number }[]
@@ -73,10 +73,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const price = priceCandidates.length ? Math.min(...priceCandidates) : null;
   const priceLabel = price != null ? formatStoreMoney(price) : null;
 
-  const title = `${product.name} for sale`;
+  const title = `${product.name} | Import to Ghana`;
   const descriptionParts = [
     priceLabel ? `${priceLabel}.` : null,
-    'Order now on Snappy Imports.',
+    `Order from ${SEO.brandName}.`,
     plainText(product.description, 100) || 'Import from China to Ghana. Clear price. Easy checkout.',
   ].filter(Boolean);
   const description = descriptionParts.join(' ');
@@ -86,29 +86,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    keywords: [product.name, product.slug || '', 'for sale', 'order now', SEO.siteName],
+    keywords: [
+      product.name,
+      product.slug || '',
+      'import Ghana',
+      'China to Ghana',
+      SEO.brandName,
+      ...SEO.keywords.slice(0, 8),
+    ],
     alternates: {
       canonical: pageUrl,
     },
     openGraph: {
       type: 'website',
       url: pageUrl,
-      title: `${product.name} · Order now`,
+      title: `${product.name} | ${SEO.brandName}`,
       description,
-      siteName: SEO.siteName,
-      locale: 'en',
+      siteName: SEO.brandName,
+      locale: SEO.locale,
       images: [
         {
           url: productImage,
           width: 1200,
           height: 630,
-          alt: `${product.name} for sale`,
+          alt: `${product.name} for sale on ${SEO.brandName}`,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${product.name} · Order now`,
+      title: `${product.name} | ${SEO.brandName}`,
       description,
       images: [productImage],
     },
