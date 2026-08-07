@@ -5,10 +5,10 @@ import { escapeHtml } from '@/lib/sanitize';
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
 const BRAND = {
-    name: process.env.NEXT_PUBLIC_SITE_NAME || 'Store',
-    color: '#2563eb',
+    name: process.env.NEXT_PUBLIC_SITE_NAME || 'Snappy Imports Global',
+    color: '#0B1F3A',
     colorLight: '#eff6ff',
-    colorDark: '#064e3b',
+    colorDark: '#061325',
     url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, ''),
     phone: process.env.NEXT_PUBLIC_CONTACT_PHONE || '',
 };
@@ -105,7 +105,17 @@ function maskPhone(phone: string): string {
     return phone.slice(0, 4) + '****' + phone.slice(-2);
 }
 
-export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+export async function sendEmail({
+    to,
+    subject,
+    html,
+    replyTo,
+}: {
+    to: string;
+    subject: string;
+    html: string;
+    replyTo?: string;
+}) {
     if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'missing_api_key') {
         console.warn('[Email] RESEND_API_KEY not configured');
         throw new Error('Email is not configured. Please set RESEND_API_KEY.');
@@ -116,6 +126,7 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
             to,
             subject,
             html,
+            ...(replyTo ? { replyTo } : ADMIN_EMAIL ? { replyTo: ADMIN_EMAIL } : {}),
         });
         if (data.error) {
             const errMsg = (data.error as { message?: string }).message || String(data.error);
