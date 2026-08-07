@@ -37,15 +37,25 @@ export async function POST(request: Request) {
         // 'order_created' requires a valid order to exist (verified below)
         // 'contact' is public but rate-limited
         // ============================================================
-        const adminOnlyTypes = ['campaign', 'order_updated', 'order_status', 'payment_link', 'welcome'];
+        const adminOnlyTypes = [
+            'campaign',
+            'customer_email',
+            'order_updated',
+            'order_status',
+            'payment_link',
+            'welcome',
+        ];
         const requiresAdminAuth = adminOnlyTypes.includes(type);
 
         if (requiresAdminAuth) {
-            // Campaigns are owner-only; order messages need the Orders module
+            // Customer emails need Customers access. Campaigns stay owner-only.
+            // Order messages need the Orders module.
             const auth =
                 type === 'campaign'
                     ? await verifyAuth(request, { requireOwner: true })
-                    : await verifyAuth(request, { requireModule: 'orders' });
+                    : type === 'customer_email'
+                      ? await verifyAuth(request, { requireModule: 'customers' })
+                      : await verifyAuth(request, { requireModule: 'orders' });
             if (!auth.authenticated) {
                 return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
             }
@@ -227,6 +237,75 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: true,
                 message: `Campaign sent: ${results.email} emails, ${results.sms} SMS.${results.errors > 0 ? ` (${results.errors} failed)` : ''}`
+            });
+        }
+
+        // ============================================================
+        // customer_email — email one or more customers from admin Customers
+        // ============================================================
+        if (type === 'customer_email') {
+            const { recipients, subject, message } = payload;
+
+            if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+                return NextResponse.json({ error: 'Recipients required' }, { status: 400 });
+            }
+            if (!subject || !String(subject).trim()) {
+                return NextResponse.json({ error: 'Subject required' }, { status: 400 });
+            }
+            if (!message || !String(message).trim()) {
+                return NextResponse.json({ error: 'Message required' }, { status: 400 });
+            }
+            if (String(subject).length > 200 || String(message).length > 5000) {
+                return NextResponse.json({ error: 'Subject or message too long' }, { status: 400 });
+            }
+
+            const seenEmails = new Set<string>();
+            const results = { email: 0, errors: 0 };
+            const safeSubject = escapeHtml(subject);
+            const safeMessage = escapeHtml(message);
+
+            for (const recipient of recipients) {
+                try {
+                    if (!recipient?.email || !isValidEmail(recipient.email)) {
+                        results.errors++;
+                        continue;
+                    }
+                    const emailKey = String(recipient.email).toLowerCase().trim();
+                    if (seenEmails.has(emailKey)) continue;
+                    seenEmails.add(emailKey);
+
+                    const recipientName = escapeHtml(recipient.name || 'Valued Customer');
+                    const brandedHtml = emailLayout(`
+<h2 style="margin:0 0 16px;color:#111827;font-size:22px;text-align:center;">${safeSubject}</h2>
+<p style="color:#374151;font-size:14px;line-height:1.7;margin:16px 0;">Hi ${recipientName},</p>
+<p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px;">${safeMessage.replace(/\n/g, '</p><p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px;">')}</p>
+`, safeSubject);
+
+                    await sendEmail({
+                        to: recipient.email,
+                        subject: String(subject).trim(),
+                        html: brandedHtml,
+                    });
+                    results.email++;
+                } catch (err: any) {
+                    console.error(`[Customer email] Failed for ${recipient?.email}:`, err.message);
+                    results.errors++;
+                }
+            }
+
+            if (results.email === 0) {
+                return NextResponse.json(
+                    { error: 'Could not send email. Check the address and Resend settings.' },
+                    { status: 500 },
+                );
+            }
+
+            return NextResponse.json({
+                success: true,
+                message:
+                    results.email === 1
+                        ? 'Email sent.'
+                        : `Sent ${results.email} emails.${results.errors > 0 ? ` (${results.errors} failed)` : ''}`,
             });
         }
 

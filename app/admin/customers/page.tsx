@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import CustomerEmailModal, { type EmailRecipient } from '@/components/admin/CustomerEmailModal';
 
 export default function AdminCustomersPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,6 +12,8 @@ export default function AdminCustomersPage() {
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState('Sort by Join Date');
   const [filterStatus, setFilterStatus] = useState('All Customers');
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailRecipients, setEmailRecipients] = useState<EmailRecipient[]>([]);
 
   useEffect(() => {
     fetchCustomers();
@@ -273,6 +276,27 @@ export default function AdminCustomersPage() {
     avgLTV: customers.length > 0 ? (customers.reduce((sum, c) => sum + c.totalSpent, 0) / customers.length) : 0
   }), [customers]);
 
+  const openEmailTo = (list: EmailRecipient[]) => {
+    const valid = list.filter((r) => r.email && String(r.email).includes('@') && r.email !== 'N/A');
+    if (valid.length === 0) {
+      alert('This customer has no email address.');
+      return;
+    }
+    setEmailRecipients(valid);
+    setEmailOpen(true);
+  };
+
+  const openEmailForCustomer = (customer: any) => {
+    openEmailTo([{ email: customer.email, name: customer.name }]);
+  };
+
+  const openEmailForSelected = () => {
+    const list = customers
+      .filter((c) => selectedCustomers.includes(c.id))
+      .map((c) => ({ email: c.email, name: c.name }));
+    openEmailTo(list);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -353,7 +377,11 @@ export default function AdminCustomersPage() {
               {selectedCustomers.length} customer{selectedCustomers.length > 1 ? 's' : ''} selected
             </p>
             <div className="flex items-center space-x-2">
-              <button className="px-4 py-2 bg-brand-primary hover:bg-brand-accent text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer">
+              <button
+                type="button"
+                onClick={openEmailForSelected}
+                className="px-4 py-2 bg-brand-primary hover:bg-brand-accent text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+              >
                 <i className="ri-mail-line mr-2"></i>
                 Send Email
               </button>
@@ -446,7 +474,12 @@ export default function AdminCustomersPage() {
                         >
                           <i className="ri-eye-line text-lg"></i>
                         </Link>
-                        <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent hover:bg-brand-primary/5 rounded-lg transition-colors cursor-pointer">
+                        <button
+                          type="button"
+                          onClick={() => openEmailForCustomer(customer)}
+                          title="Send email"
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-brand-accent hover:bg-brand-primary/5 rounded-lg transition-colors cursor-pointer"
+                        >
                           <i className="ri-mail-line text-lg"></i>
                         </button>
                         <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
@@ -468,6 +501,12 @@ export default function AdminCustomersPage() {
           </div>
         </div>
       </div>
+
+      <CustomerEmailModal
+        open={emailOpen}
+        recipients={emailRecipients}
+        onClose={() => setEmailOpen(false)}
+      />
     </div>
   );
 }

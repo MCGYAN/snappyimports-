@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import CustomerEmailModal from '@/components/admin/CustomerEmailModal';
 
 export default function CustomerDetailsPage() {
     const router = useRouter();
@@ -13,6 +14,7 @@ export default function CustomerDetailsPage() {
     const [customer, setCustomer] = useState<any>(null);
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [emailOpen, setEmailOpen] = useState(false);
 
     const fetchCustomerData = useCallback(async () => {
         try {
@@ -73,7 +75,11 @@ export default function CustomerDetailsPage() {
                     </div>
                 </div>
                 <div className="flex space-x-3">
-                    <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 cursor-pointer">
+                    <button
+                        type="button"
+                        onClick={() => setEmailOpen(true)}
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 cursor-pointer"
+                    >
                         <i className="ri-mail-send-line mr-2"></i>
                         Send Email
                     </button>
@@ -155,6 +161,17 @@ export default function CustomerDetailsPage() {
                     </table>
                 )}
             </div>
+
+            <CustomerEmailModal
+                open={emailOpen}
+                recipients={[
+                    {
+                        email: customer.email,
+                        name: customer.full_name || customer.email,
+                    },
+                ]}
+                onClose={() => setEmailOpen(false)}
+            />
         </div>
     );
 }
