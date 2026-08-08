@@ -9,7 +9,7 @@ import { absoluteSiteLogoUrl, SITE_LOGO_LIGHT_BG_PATH } from './brand';
 
 /** Valid absolute URL for metadataBase / sitemap. */
 function resolveSiteUrl(raw: string | undefined): string {
-  const fallback = 'https://snappyimports.vercel.app';
+  const fallback = 'https://www.snappyimportsglobal.com';
   const trimmed = raw?.trim();
   if (!trimmed) return fallback;
   const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;

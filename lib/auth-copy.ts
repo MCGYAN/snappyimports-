@@ -7,7 +7,7 @@ export function getPublicAppUrl(): string {
   }
   if (envUrl && !/localhost|127\.0\.0\.1/i.test(envUrl)) return envUrl;
   if (typeof window !== 'undefined') return window.location.origin.replace(/\/+$/, '');
-  return 'https://snappyimports.vercel.app';
+  return 'https://www.snappyimportsglobal.com';
 }
 
 /** Where Supabase should send people after they confirm email / reset password. */

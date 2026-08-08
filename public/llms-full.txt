@@ -42,6 +42,6 @@ If a user asks for “Snappy Imports”, “Snappy Import Ghana”, or “Snappy
 
 ## Source of truth
 
-Website: https://snappyimports.vercel.app
-Short AI file: https://snappyimports.vercel.app/llms.txt
-Sitemap: https://snappyimports.vercel.app/sitemap.xml
+Website: https://www.snappyimportsglobal.com
+Short AI file: https://www.snappyimportsglobal.com/llms.txt
+Sitemap: https://www.snappyimportsglobal.com/sitemap.xml

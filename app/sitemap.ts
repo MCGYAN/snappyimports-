@@ -2,11 +2,26 @@ import { MetadataRoute } from 'next';
 import { SEO } from '@/lib/seo';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+async function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T | null> {
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
+/** Always return a valid sitemap, even if the database is slow. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = SEO.siteUrl;
+  const baseUrl = (SEO.siteUrl || 'https://www.snappyimportsglobal.com').replace(/\/+$/, '');
 
   const staticPages: MetadataRoute.Sitemap = [
-    { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
+    { url: `${baseUrl}/`, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${baseUrl}/shop`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
     { url: `${baseUrl}/exchange`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
     { url: `${baseUrl}/categories`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.85 },
@@ -19,49 +34,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/returns`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
     { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${baseUrl}/llms.txt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
   ];
 
-  let productPages: MetadataRoute.Sitemap = [];
-  let categoryPages: MetadataRoute.Sitemap = [];
+  if (!isSupabaseConfigured) {
+    return staticPages;
+  }
 
   try {
-    if (!isSupabaseConfigured) {
-      return [...staticPages];
-    }
+    const result = await withTimeout(
+      supabase.from('products').select('slug, updated_at').eq('status', 'active'),
+      4000,
+    );
 
-    const { data: products } = await supabase
-      .from('products')
-      .select('slug, updated_at')
-      .eq('status', 'active');
+    const products = result && 'data' in result ? result.data : null;
+    if (!products?.length) return staticPages;
 
-    if (products) {
-      productPages = products.map((product) => ({
+    const productPages: MetadataRoute.Sitemap = products
+      .filter((product) => Boolean(product?.slug))
+      .map((product) => ({
         url: `${baseUrl}/product/${product.slug}`,
-        lastModified: new Date(product.updated_at),
+        lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
         changeFrequency: 'weekly' as const,
         priority: 0.7,
       }));
-    }
 
-    const { data: categories } = await supabase
-      .from('categories')
-      .select('slug, updated_at')
-      .eq('status', 'active');
-
-    if (categories) {
-      categoryPages = categories
-        .filter((c) => c.slug)
-        .map((category) => ({
-          url: `${baseUrl}/shop?category=${encodeURIComponent(category.slug)}`,
-          lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),
-          changeFrequency: 'weekly' as const,
-          priority: 0.65,
-        }));
-    }
+    return [...staticPages, ...productPages];
   } catch (error) {
-    console.error('Error generating sitemap:', error);
+    console.error('Error generating sitemap products:', error);
+    return staticPages;
   }
-
-  return [...staticPages, ...categoryPages, ...productPages];
 }
