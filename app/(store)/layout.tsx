@@ -10,11 +10,8 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import NavigationProgress from '@/components/NavigationProgress';
 import { CMSProvider } from '@/context/CMSContext';
 
-// Defer non-critical chrome so first paint / navigation stay light
-const CookieConsent = dynamic(() => import('@/components/CookieConsent'), { ssr: false });
+// Silent PWA registration only. No cookie / install / update popups on first visit.
 const PWAInstaller = dynamic(() => import('@/components/PWAInstaller'), { ssr: false });
-const PWAPrompt = dynamic(() => import('@/components/PWAPrompt'), { ssr: false });
-const UpdatePrompt = dynamic(() => import('@/components/UpdatePrompt'), { ssr: false });
 const OfflineIndicator = dynamic(() => import('@/components/OfflineIndicator'), { ssr: false });
 
 export default function StoreLayout({
@@ -38,10 +35,7 @@ export default function StoreLayout({
         </ErrorBoundary>
         <Footer />
         <MobileBottomNav />
-        <PWAPrompt />
         <OfflineIndicator />
-        <UpdatePrompt />
-        <CookieConsent />
       </div>
     </CMSProvider>
   );
