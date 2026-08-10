@@ -267,22 +267,32 @@ export default function Home() {
                 Pick a category. We help you import it.
               </p>
             </div>
-            <div className="hidden gap-3 md:flex lg:hidden">
-              <button
-                type="button"
-                onClick={() => scrollCategorySlider('left')}
-                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
-                aria-label="Scroll categories left"
+            <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end">
+              <div className="hidden gap-3 md:flex lg:hidden">
+                <button
+                  type="button"
+                  onClick={() => scrollCategorySlider('left')}
+                  className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+                  aria-label="Scroll categories left"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollCategorySlider('right')}
+                  className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+                  aria-label="Scroll categories right"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              </div>
+              <Link
+                href="/categories"
+                prefetch
+                className="btn-interactive inline-flex min-h-[44px] items-center justify-center rounded-xl border border-brand-primary/15 bg-white px-5 py-2.5 text-sm font-bold text-brand-primary shadow-sm hover:border-brand-accent/40 hover:text-brand-accent"
               >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollCategorySlider('right')}
-                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
+                View all categories
+              </Link>
             </div>
           </div>
           <div
@@ -298,11 +308,6 @@ export default function Home() {
                 index={idx}
               />
             ))}
-          </div>
-          <div className="mt-5 md:mt-8 md:hidden">
-            <Link href="/categories" className="text-sm font-semibold text-brand-primary active:text-brand-accent">
-              View all categories
-            </Link>
           </div>
         </div>
       </section>
@@ -323,24 +328,35 @@ export default function Home() {
                   : 'Hand picked for you. See the price up front. Or ask for a quote.'}
               </p>
             </div>
-            {showCategoryFallback && (
-            <div className="hidden gap-3 md:flex lg:hidden">
-              <button
-                type="button"
-                onClick={() => scrollSlider('left')}
-                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+            <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end">
+              {showCategoryFallback ? (
+                <div className="hidden gap-3 md:flex lg:hidden">
+                  <button
+                    type="button"
+                    onClick={() => scrollSlider('left')}
+                    className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+                    aria-label="Scroll products left"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollSlider('right')}
+                    className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
+                    aria-label="Scroll products right"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </button>
+                </div>
+              ) : null}
+              <Link
+                href={showCategoryFallback ? '/categories' : '/shop'}
+                prefetch
+                className="btn-interactive inline-flex min-h-[44px] items-center justify-center rounded-xl border border-brand-primary/15 bg-white px-5 py-2.5 text-sm font-bold text-brand-primary shadow-sm hover:border-brand-accent/40 hover:text-brand-accent"
               >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollSlider('right')}
-                className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
+                {showCategoryFallback ? 'View all categories' : 'View all products'}
+              </Link>
             </div>
-            )}
           </div>
 
           {loading ? (
