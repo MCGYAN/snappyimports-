@@ -13,6 +13,22 @@ function parsePermissions(raw: unknown): AdminPermissions {
   return normalizeAdminPermissions(raw);
 }
 
+async function upsertStaffPassword(profileId: string, password: string) {
+  const { error } = await supabaseAdmin.from('staff_login_secrets').upsert(
+    {
+      profile_id: profileId,
+      password_plain: password,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'profile_id' },
+  );
+  return error;
+}
+
+async function deleteStaffPassword(profileId: string) {
+  await supabaseAdmin.from('staff_login_secrets').delete().eq('profile_id', profileId);
+}
+
 export async function GET(req: Request) {
   const auth = await verifyAuth(req, { requireOwner: true });
   if (!auth.authenticated) {
@@ -30,10 +46,30 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Could not load team.' }, { status: 500 });
   }
 
+  const ids = (data || []).map((row) => row.id);
+  const passwordById = new Map<string, string>();
+
+  if (ids.length > 0) {
+    const { data: secrets, error: secretsError } = await supabaseAdmin
+      .from('staff_login_secrets')
+      .select('profile_id, password_plain')
+      .in('profile_id', ids);
+
+    if (secretsError) {
+      console.error('[admin/team] secrets', secretsError);
+      return NextResponse.json({ error: 'Could not load team passwords.' }, { status: 500 });
+    }
+
+    for (const row of secrets || []) {
+      passwordById.set(row.profile_id, row.password_plain);
+    }
+  }
+
   const staff = (data || []).map((row) => ({
     id: row.id,
     email: row.email,
     fullName: row.full_name,
+    password: passwordById.get(row.id) || null,
     permissions: normalizeAdminPermissions(row.admin_permissions),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -182,10 +218,19 @@ export async function POST(req: Request) {
     }
   }
 
+  const secretError = await upsertStaffPassword(userId, password);
+  if (secretError) {
+    console.error('[admin/team] save password', secretError);
+    return NextResponse.json(
+      { error: 'Staff created, but password could not be saved for viewing. Edit them and set it again.' },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     success: true,
-    staff: { id: userId, email, fullName: fullName || null, permissions },
-    message: 'Staff account ready. Share the email and password so they can sign in at /admin/login.',
+    staff: { id: userId, email, fullName: fullName || null, password, permissions },
+    message: 'Staff account ready. Tell them their email and password. They sign in at /admin/login.',
   });
 }
 
@@ -250,14 +295,28 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Could not update staff.' }, { status: 500 });
   }
 
-  if (body.password && String(body.password).length >= 8) {
+  const nextPassword = body.password ? String(body.password) : '';
+  if (nextPassword) {
+    if (nextPassword.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
+    }
+
     const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(id, {
-      password: String(body.password),
+      password: nextPassword,
     });
     if (pwError) {
       console.error('[admin/team] password', pwError);
       return NextResponse.json(
         { error: 'Permissions saved, but password reset failed.' },
+        { status: 500 },
+      );
+    }
+
+    const secretError = await upsertStaffPassword(id, nextPassword);
+    if (secretError) {
+      console.error('[admin/team] save password', secretError);
+      return NextResponse.json(
+        { error: 'Password updated for login, but could not save it for viewing on Team.' },
         { status: 500 },
       );
     }
@@ -305,6 +364,8 @@ export async function DELETE(req: Request) {
     console.error('[admin/team] delete', error);
     return NextResponse.json({ error: 'Could not remove staff access.' }, { status: 500 });
   }
+
+  await deleteStaffPassword(id);
 
   return NextResponse.json({ success: true });
 }

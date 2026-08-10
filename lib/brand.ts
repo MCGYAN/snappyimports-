@@ -1,7 +1,7 @@
 /**
  * Storefront & admin logos — served from `public/images/`.
  * `SITE_LOGO_PATH` — white wordmark on transparent (navy header/footer).
- * `SITE_LOGO_LIGHT_BG_PATH` — navy wordmark on transparent (light admin login).
+ * `SITE_LOGO_LIGHT_BG_PATH` — navy wordmark (light admin sidebar + login).
  */
 export const SITE_LOGO_PATH = '/images/snappy-imports-global-logo.png' as const;
 export const SITE_LOGO_LIGHT_BG_PATH = '/images/snappy-imports-global-logo-light-bg.png' as const;

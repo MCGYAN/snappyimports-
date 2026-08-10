@@ -13,6 +13,7 @@ type StaffRow = {
   id: string;
   email: string | null;
   fullName: string | null;
+  password: string | null;
   permissions: AdminPermissions;
 };
 
@@ -25,6 +26,38 @@ async function authHeaders(): Promise<HeadersInit> {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${session.access_token}`,
   };
+}
+
+function StaffCredentials({ email, password }: { email: string | null; password: string | null }) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="mt-3 space-y-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-sm">
+      <p className="text-slate-700">
+        <span className="font-medium text-slate-500">Login email:</span>{' '}
+        <span className="font-mono text-brand-primary">{email || '—'}</span>
+      </p>
+      <p className="flex flex-wrap items-center gap-2 text-slate-700">
+        <span className="font-medium text-slate-500">Password:</span>{' '}
+        {password ? (
+          <>
+            <span className="font-mono text-brand-primary">
+              {showPassword ? password : '••••••••'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="text-xs font-semibold text-brand-accent hover:underline"
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </>
+        ) : (
+          <span className="text-slate-500">Not saved yet. Set a password when you edit them.</span>
+        )}
+      </p>
+    </div>
+  );
 }
 
 export default function AdminTeamPage() {
@@ -108,7 +141,7 @@ export default function AdminTeamPage() {
     setEditingId(row.id);
     setEditName(row.fullName || '');
     setEditPermissions({ ...EMPTY_STAFF_PERMISSIONS, ...row.permissions });
-    setEditPassword('');
+    setEditPassword(row.password || '');
     setSuccess('');
     setError('');
   };
@@ -120,6 +153,10 @@ export default function AdminTeamPage() {
     setSuccess('');
     try {
       const headers = await authHeaders();
+      const current = staff.find((s) => s.id === editingId);
+      const passwordChanged =
+        Boolean(editPassword) && editPassword !== (current?.password || '');
+
       const res = await fetch('/api/admin/team', {
         method: 'PATCH',
         headers,
@@ -127,7 +164,7 @@ export default function AdminTeamPage() {
           id: editingId,
           fullName: editName,
           permissions: editPermissions,
-          password: editPassword || undefined,
+          password: passwordChanged ? editPassword : undefined,
         }),
       });
       const data = await res.json();
@@ -206,7 +243,7 @@ export default function AdminTeamPage() {
       <div>
         <h1 className="font-heading text-2xl font-bold text-brand-primary">Team</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Add staff with their own login. Choose which dashboard features they can use.
+          Add staff with an email and password. You can see their login details below anytime.
         </p>
       </div>
 
@@ -230,7 +267,7 @@ export default function AdminTeamPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Staff email"
+              placeholder="Login email"
               className="store-input"
               autoComplete="off"
             />
@@ -247,7 +284,7 @@ export default function AdminTeamPage() {
             type="text"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Temporary password (min 8 characters)"
+            placeholder="Password (min 8 characters)"
             className="store-input"
             autoComplete="new-password"
             minLength={8}
@@ -264,7 +301,8 @@ export default function AdminTeamPage() {
             {saving ? 'Saving…' : 'Add staff'}
           </button>
           <p className="text-xs text-slate-500">
-            Share the email and password with them. They sign in at /admin/login.
+            Tell them this email and password. They sign in at /admin/login. You can look it up again
+            under Active staff.
           </p>
         </form>
       </section>
@@ -283,16 +321,18 @@ export default function AdminTeamPage() {
               return (
                 <li key={row.id} className="rounded-xl border border-slate-200 bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-semibold text-brand-primary">{label}</p>
-                      <p className="text-sm text-slate-500">{row.email}</p>
                       {!isEditing ? (
-                        <p className="mt-2 text-xs text-slate-600">
-                          Access:{' '}
-                          {ADMIN_MODULE_KEYS.filter((k) => row.permissions[k])
-                            .map((k) => ADMIN_MODULES[k].label)
-                            .join(', ') || 'None'}
-                        </p>
+                        <>
+                          <StaffCredentials email={row.email} password={row.password} />
+                          <p className="mt-2 text-xs text-slate-600">
+                            Access:{' '}
+                            {ADMIN_MODULE_KEYS.filter((k) => row.permissions[k])
+                              .map((k) => ADMIN_MODULES[k].label)
+                              .join(', ') || 'None'}
+                          </p>
+                        </>
                       ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -329,11 +369,15 @@ export default function AdminTeamPage() {
                         type="text"
                         value={editPassword}
                         onChange={(e) => setEditPassword(e.target.value)}
-                        placeholder="New password (optional)"
+                        placeholder="Password (min 8 characters)"
                         className="store-input"
                         autoComplete="new-password"
                         minLength={8}
                       />
+                      <p className="text-xs text-slate-500">
+                        Change this only if you want a new password. It stays visible on this staff
+                        card after you save.
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
