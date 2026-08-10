@@ -15,8 +15,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-const TrustSection = dynamic(() => import('@/components/snappy/TrustSection'), { loading: () => null });
-const ProcessSteps = dynamic(() => import('@/components/snappy/ProcessSteps'), { loading: () => null });
 const ImportJourneyTimeline = dynamic(() => import('@/components/snappy/ImportJourneyTimeline'), { loading: () => null });
 const ImportCta = dynamic(() => import('@/components/snappy/ImportCta'), { loading: () => null });
 
@@ -376,8 +374,6 @@ export default function Home() {
         </div>
       </section>
 
-      <TrustSection />
-      <ProcessSteps />
       <ImportJourneyTimeline />
 
       <ImportCta whatsAppHref={waHeroPrefilled || undefined} />
