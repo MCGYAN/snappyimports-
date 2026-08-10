@@ -230,12 +230,6 @@ export default function CheckoutPage() {
       const paymentChannel = (placeData.paymentChannel || channel) as 'moolre' | 'invoice';
 
       if (paymentChannel === 'invoice') {
-        fetch('/api/notifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'order_created', payload: placeData.order }),
-        }).catch(() => {});
-
         // Desktop only: save PDF in this same click. Mobile/Safari often hangs
         // on html2canvas, which left the button stuck on Processing…
         const skipPdf = shouldSkipAutoInvoicePdf();

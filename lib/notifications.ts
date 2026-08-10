@@ -408,6 +408,110 @@ ${emailButton('Track Your Order', trackingUrl)}
     }
 }
 
+/** Admin-only: customer tapped “I’ve paid” and payment needs review. */
+export async function sendPaymentAwaitingAdminAlert(order: {
+    id: string;
+    email?: string | null;
+    phone?: string | null;
+    total?: number | string | null;
+    order_number?: string | null;
+    shipping_address?: any;
+    metadata?: any;
+}) {
+    const { id, email, phone: orderPhone, shipping_address, total, order_number, metadata } = order;
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+
+    const name = (() => {
+        if (shipping_address?.full_name) return shipping_address.full_name;
+        if (shipping_address?.firstName) {
+            return shipping_address.lastName
+                ? `${shipping_address.firstName} ${shipping_address.lastName}`
+                : shipping_address.firstName;
+        }
+        if (metadata?.first_name) {
+            return metadata.last_name
+                ? `${metadata.first_name} ${metadata.last_name}`
+                : metadata.first_name;
+        }
+        return 'Customer';
+    })();
+    const phone = orderPhone || shipping_address?.phone || '';
+    const note = metadata?.payment_sent_note || '';
+    const amount = Number(total || 0).toFixed(2);
+
+    await sendEmail({
+        to: ADMIN_EMAIL,
+        subject: `Payment to confirm #${order_number || id}`,
+        html: emailLayout(`
+<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Customer says they have paid</h2>
+<p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+  Check the bank or MoMo transfer, then confirm payment in admin.
+</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:16px 0;">
+  ${emailInfoRow('Order', `#${order_number || id}`)}
+  ${emailInfoRow('Customer', escapeHtml(String(name)))}
+  ${emailInfoRow('Email', escapeHtml(String(email || '')))}
+  ${phone ? emailInfoRow('Phone', escapeHtml(String(phone))) : ''}
+  ${emailInfoRow('Amount', `GH¢${amount}`)}
+  ${note ? emailInfoRow('Customer note', escapeHtml(String(note))) : ''}
+</table>
+
+${emailButton('Confirm payment in admin', `${baseUrl}/admin/orders/${id}`)}
+`, `Payment awaiting confirmation for #${order_number || id}`),
+    });
+}
+
+/** Admin-only: Buy RMB customer tapped “I’ve paid”. */
+export async function sendExchangePaymentAwaitingAdminAlert(exchange: {
+    id: string;
+    exchange_number?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    full_name?: string | null;
+    amount_from?: number | string | null;
+    amount_to?: number | string | null;
+    payment_note?: string | null;
+}) {
+    const {
+        id,
+        exchange_number,
+        email,
+        phone,
+        full_name,
+        amount_from,
+        amount_to,
+        payment_note,
+    } = exchange;
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const ref = exchange_number || id;
+    const gh = Number(amount_from || 0).toFixed(2);
+    const rmb = Number(amount_to || 0).toFixed(2);
+
+    await sendEmail({
+        to: ADMIN_EMAIL,
+        subject: `Buy RMB payment to confirm #${ref}`,
+        html: emailLayout(`
+<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Buy RMB. Customer says they have paid</h2>
+<p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+  Check the transfer, then confirm in admin.
+</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:16px 0;">
+  ${emailInfoRow('Exchange', `#${escapeHtml(String(ref))}`)}
+  ${emailInfoRow('Customer', escapeHtml(String(full_name || 'Customer')))}
+  ${email ? emailInfoRow('Email', escapeHtml(String(email))) : ''}
+  ${phone ? emailInfoRow('Phone', escapeHtml(String(phone))) : ''}
+  ${emailInfoRow('GH¢', gh)}
+  ${emailInfoRow('RMB', rmb)}
+  ${payment_note ? emailInfoRow('Customer note', escapeHtml(String(payment_note))) : ''}
+</table>
+
+${emailButton('Open Buy RMB admin', `${baseUrl}/admin/exchange`)}
+`, `Buy RMB payment awaiting confirmation for #${ref}`),
+    });
+}
+
 export async function sendWelcomeMessage(user: { email: string, firstName: string, phone?: string }) {
     const { email, firstName, phone } = user;
 

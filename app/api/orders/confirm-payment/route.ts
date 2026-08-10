@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
+import { sendOrderStatusUpdate } from '@/lib/notifications';
 
 /** POST — admin confirms bank/MoMo payment received */
 export async function POST(req: Request) {
@@ -65,6 +66,13 @@ export async function POST(req: Request) {
       if (updateError) {
         return NextResponse.json({ error: 'Failed to confirm payment.' }, { status: 500 });
       }
+
+      try {
+        await sendOrderStatusUpdate(updated, 'processing');
+      } catch (notifyErr) {
+        console.error('[confirm-payment] buyer notify failed', notifyErr);
+      }
+
       return NextResponse.json({ success: true, order: updated });
     }
 
@@ -78,6 +86,14 @@ export async function POST(req: Request) {
       .eq('id', order.id)
       .select('*, order_items(*)')
       .single();
+
+    if (updated) {
+      try {
+        await sendOrderStatusUpdate(updated, updated.status || 'processing');
+      } catch (notifyErr) {
+        console.error('[confirm-payment] buyer notify failed', notifyErr);
+      }
+    }
 
     return NextResponse.json({ success: true, order: updated });
   } catch (e) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { verifyAuth } from '@/lib/auth';
+import { sendExchangePaymentAwaitingAdminAlert } from '@/lib/notifications';
 
 /** POST — customer: I've paid | admin: confirm / complete */
 export async function POST(req: Request) {
@@ -59,6 +60,13 @@ export async function POST(req: Request) {
         .single();
 
       if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+      try {
+        await sendExchangePaymentAwaitingAdminAlert(updated);
+      } catch (notifyErr) {
+        console.error('[exchange action] admin alert failed', notifyErr);
+      }
+
       return NextResponse.json({ success: true, exchange: updated });
     }
 

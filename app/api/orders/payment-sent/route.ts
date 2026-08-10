@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { isInvoiceExpired } from '@/lib/payment-routing';
+import { sendPaymentAwaitingAdminAlert } from '@/lib/notifications';
 
 /** POST — customer marks bank/MoMo payment as sent */
 export async function POST(req: Request) {
@@ -69,6 +70,12 @@ export async function POST(req: Request) {
     if (updateError) {
       console.error('[payment-sent]', updateError);
       return NextResponse.json({ error: 'Could not update order.' }, { status: 500 });
+    }
+
+    try {
+      await sendPaymentAwaitingAdminAlert(updated);
+    } catch (notifyErr) {
+      console.error('[payment-sent] admin alert failed', notifyErr);
     }
 
     return NextResponse.json({
