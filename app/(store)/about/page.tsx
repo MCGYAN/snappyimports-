@@ -81,21 +81,47 @@ export default function AboutPage() {
       <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-b from-white via-[#f8fafc] to-[#f1f5f9]">
         <div className="pointer-events-none absolute -right-24 top-0 h-64 w-64 rounded-full bg-brand-accent/5 blur-3xl" aria-hidden />
         <div className="store-container relative">
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto max-w-3xl text-center">
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Our story</p>
             <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
               Importing should not keep you up at night
             </h2>
-            <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
-              You see something you want online. Maybe a car. Maybe a phone. Maybe tools for work.
-              You want it here in Ghana. But you also worry. Will the seller disappear? Will the
-              price change? Will your order get stuck?
-            </p>
-            <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
-              <strong className="font-semibold text-brand-primary">{siteName}</strong> exists for
-              that worry. We sit between you and China. We check. We explain. We move your order.
-              We update you along the way. So you feel safe, not scared.
-            </p>
+            <div className="mt-5 space-y-4 text-left text-base leading-relaxed text-slate-600 md:text-lg">
+              <p>
+                You see something you want online. Maybe a car for the family. Maybe a phone for
+                your shop. Maybe a machine that will help your business grow. You want it here in
+                Ghana. The price looks good. The photos look right. Then the questions start.
+              </p>
+              <p>
+                Will the seller disappear after you pay? Will the price change halfway? Will your
+                goods get stuck in China, at the port, or in clearing? Who do you call when nobody
+                answers? That fear is real. Many people in Ghana have felt it. Some have lost money
+                to it.
+              </p>
+              <p>
+                <strong className="font-semibold text-brand-primary">Snappy Imports Global</strong>{' '}
+                exists for that worry. We sit between you and China on purpose. We are not a random
+                middleman with a temporary WhatsApp number. We are a Ghana-based import company you
+                can find, call, and follow up with.
+              </p>
+              <p>
+                Before money moves, we help you understand what you are buying and what it should
+                cost. We check the seller and the deal. We explain shipping, timing, and the steps
+                ahead in plain language. When you are ready, we create your order, take payment
+                through clear channels, and keep you updated as the goods move.
+              </p>
+              <p>
+                From sourcing in China to the ship, to Tema and clearing, to pickup or delivery, you
+                should always know where things stand. If something changes, we say so. If you have a
+                question, a real person answers. That is how importing becomes calm instead of
+                scary.
+              </p>
+              <p>
+                Whether you need one item or many, a family purchase or stock for your shop, the
+                goal is the same. Bring good things home. Stay informed. Feel safe, not stuck alone
+                with a stranger overseas.
+              </p>
+            </div>
           </div>
         </div>
       </section>
