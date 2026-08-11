@@ -7,7 +7,6 @@ import {
   captureElementPng,
   downloadBlob,
   shareRateCardFile,
-  whatsappShareUrl,
 } from '@/lib/rate-card-share';
 
 type ShareBuyRmbRateProps = {
