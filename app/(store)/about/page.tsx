@@ -6,6 +6,7 @@ import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { ArrowRight, MessageCircle } from 'lucide-react';
 import { buildWhatsAppHref } from '@/lib/snappy-import';
+import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 
 const OUTCOMES = [
   {
@@ -40,11 +41,33 @@ const PROMISES = [
   },
 ];
 
+const WHAT_WE_DO = [
+  {
+    title: 'Import from China to Ghana',
+    text: 'Cars, gadgets, appliances, equipment, and spare parts. Browse the store or ask us for a quote.',
+  },
+  {
+    title: 'Clear checkout and tracking',
+    text: 'Pay by MoMo or invoice. Then follow your order from payment to sourcing, shipping, Ghana clearing, and delivery.',
+  },
+  {
+    title: 'Buy RMB desk',
+    text: 'Pay Ghana cedis. Get RMB for your China suppliers at today’s locked buy rate, with an invoice you can keep.',
+  },
+  {
+    title: 'Human support',
+    text: 'WhatsApp and phone help for quotes, payment questions, and where your order is right now.',
+  },
+];
+
 export default function AboutPage() {
   usePageTitle('About Us');
   const { getSetting } = useCMS();
-  const siteName = getSetting('site_name') || 'Snappy Import';
+  const siteName = getSetting('site_name') || 'Snappy Imports Global';
   const whatsApp = buildWhatsAppHref(getSetting('contact_whatsapp'));
+  const founderName = SNAPPY_INVOICE_ISSUER.contactName.split(' ')[0] || 'Sampson';
+  const founderFullName = SNAPPY_INVOICE_ISSUER.contactName;
+  const locationLine = SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 3).join(', ');
 
   return (
     <div className="min-h-screen bg-brand-surface">
@@ -72,6 +95,106 @@ export default function AboutPage() {
               <strong className="font-semibold text-brand-primary">{siteName}</strong> exists for
               that worry. We sit between you and China. We check. We explain. We move your order.
               We update you along the way. So you feel safe, not scared.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Who we are */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-white">
+        <div className="store-container">
+          <div className="mx-auto max-w-3xl">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Who we are</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              Snappy Imports Global
+            </h2>
+            <div className="mt-5 space-y-4 text-base leading-relaxed text-slate-600 md:text-lg">
+              <p>
+                Snappy Imports Global is a China-to-Ghana import company and online store. We help
+                people and businesses in Ghana buy from China with clear prices, honest updates, and
+                support you can reach.
+              </p>
+              <p>
+                Our trading name is {SNAPPY_INVOICE_ISSUER.legalName}. Customers also know us as
+                Snappy Imports and Snappy Import Ghana. Same team. Same promise. Bring good things
+                home without the stress.
+              </p>
+              <p>
+                We source and move vehicles, gadgets, home appliances, equipment, and spare parts.
+                You can shop on our website, pay in Ghana cedis, and follow your import from payment
+                through China, shipping, Tema clearing, and delivery or pickup in Ghana.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Founder */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-white">
+        <div className="store-container">
+          <div className="mx-auto max-w-3xl">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Founder</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              Meet {founderName}
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-slate-600 md:text-lg">
+              Snappy Imports Global was founded by{' '}
+              <strong className="font-semibold text-brand-primary">{founderFullName}</strong>.
+              {founderName} built this business so Ghanaians can import from China with a real person
+              on their side. Someone who checks the deal, explains the cost, and stays reachable on
+              WhatsApp and phone.
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
+              When you message us, you are talking to a team led by {founderName}. Not a faceless
+              middleman. That is the heart of Snappy.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* What we do */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-b from-white via-[#f8fafc] to-[#eef2f8]">
+        <div className="store-container">
+          <div className="max-w-xl">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">What we do</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              How Snappy helps you
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 md:text-base">
+              Four practical ways we make China-to-Ghana importing simpler.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:mt-10">
+            {WHAT_WE_DO.map((item) => (
+              <div
+                key={item.title}
+                className="liquid-glass-card p-5 transition-all duration-300 hover:-translate-y-0.5 sm:p-6"
+              >
+                <h3 className="font-heading text-base font-bold text-brand-primary sm:text-lg">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Location */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-white">
+        <div className="store-container">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Where we are</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              Based in Accra. Serving Ghana.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
+              Our home base is in Accra at {locationLine}. We serve customers across Ghana. Imports
+              move from China into Ghana for clearing, then pickup or delivery.
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
+              Need a quote or an update? Reach us on WhatsApp or phone. We answer like neighbours,
+              not like a call centre script.
             </p>
           </div>
         </div>

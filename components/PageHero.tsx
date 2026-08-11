@@ -29,7 +29,7 @@ export default function PageHero({ title, subtitle, size = 'compact' }: PageHero
 
       <div className="store-container relative z-10">
         <div className={`${isLarge ? 'max-w-3xl' : 'max-w-2xl'} max-md:mobile-editorial-inset`}>
-          <p className="mobile-editorial-kicker mb-2 md:store-eyebrow md:mb-3">Snappy Import Ghana</p>
+          <p className="mobile-editorial-kicker mb-2 md:store-eyebrow md:mb-3">Snappy Imports Global</p>
           <h1
             className={`font-heading font-bold tracking-tight text-white ${
               isLarge
