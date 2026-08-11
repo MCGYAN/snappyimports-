@@ -27,9 +27,6 @@ export default function BuyRmbRateCard({
       ? `Valid until ${new Date(validUntil).toLocaleString()}`
       : 'Official Snappy RMB desk rate';
 
-  // Light-bg lockup is wide (icon + wordmark). Show only the circular mark.
-  const markSize = Math.round(size * 0.17);
-
   return (
     <div
       className={`relative overflow-hidden bg-white ${className}`}
@@ -66,55 +63,29 @@ export default function BuyRmbRateCard({
 
       <div
         className="relative z-10 flex h-full flex-col items-center"
-        style={{ padding: size * 0.1 }}
+        style={{ padding: `${size * 0.08}px ${size * 0.09}px ${size * 0.07}px` }}
       >
-        <div
+        <img
+          src={SITE_LOGO_LIGHT_BG_PATH}
+          alt="Snappy Imports Global"
+          crossOrigin="anonymous"
+          width={545}
+          height={221}
+          decoding="sync"
           style={{
-            width: markSize,
-            height: markSize,
-            overflow: 'hidden',
-            borderRadius: '50%',
+            display: 'block',
+            height: size * 0.13,
+            width: 'auto',
+            maxWidth: '78%',
+            objectFit: 'contain',
+            objectPosition: 'center',
             marginTop: size * 0.04,
-            background: '#fff',
-            flexShrink: 0,
           }}
-        >
-          {/*
-            Crop the left circular mark from the wide lockup.
-            Lockup aspect ~545×221; left square ≈ the badge.
-          */}
-          <img
-            src={SITE_LOGO_LIGHT_BG_PATH}
-            alt=""
-            crossOrigin="anonymous"
-            draggable={false}
-            style={{
-              height: markSize,
-              width: 'auto',
-              maxWidth: 'none',
-              display: 'block',
-              objectFit: 'cover',
-              objectPosition: 'left center',
-            }}
-          />
-        </div>
-
-        <p
-          style={{
-            marginTop: size * 0.028,
-            color: BRAND_PRIMARY,
-            fontWeight: 800,
-            fontSize: size * 0.038,
-            letterSpacing: '0.12em',
-            textAlign: 'center',
-          }}
-        >
-          SNAPPY IMPORTS GLOBAL
-        </p>
+        />
 
         <div
           className="flex items-center justify-center"
-          style={{ width: '72%', marginTop: size * 0.035, marginBottom: size * 0.05 }}
+          style={{ width: '72%', marginTop: size * 0.045, marginBottom: size * 0.05 }}
         >
           <span style={{ flex: 1, height: 1.5, background: BRAND_PRIMARY, opacity: 0.35 }} />
           <span
@@ -193,8 +164,9 @@ export default function BuyRmbRateCard({
             marginTop: size * 0.012,
             color: BRAND_ACCENT,
             fontWeight: 800,
-            fontSize: size * 0.026,
-            letterSpacing: '0.04em',
+            fontSize: size * 0.024,
+            letterSpacing: '0.03em',
+            textAlign: 'center',
           }}
         >
           BUY RMB. PAY CEDIS. GET RMB IN CHINA

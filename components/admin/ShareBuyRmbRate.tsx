@@ -15,8 +15,11 @@ type ShareBuyRmbRateProps = {
   validUntil?: string | null;
 };
 
+const EXPORT_SIZE = 720;
+
 export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRateProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const exportCardRef = useRef<HTMLDivElement>(null);
+  const previewCardRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<'idle' | 'png' | 'share' | 'copy'>('idle');
   const [toast, setToast] = useState<string | null>(null);
@@ -35,13 +38,19 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
     window.setTimeout(() => setToast(null), 3200);
   };
 
-  const ensureCard = () => {
-    const el = cardRef.current?.querySelector('[data-rate-card]') as HTMLElement | null;
+  const ensureExportCard = () => {
+    const el = exportCardRef.current?.querySelector('[data-rate-card]') as HTMLElement | null;
     if (!el) throw new Error('Rate card not ready');
     return el;
   };
 
-  const makePng = async () => captureElementPng(ensureCard(), 2);
+  /** Always export the full-size card so WhatsApp matches the studio preview layout. */
+  const makePng = async () => {
+    // Let the export card paint (logo included) before capture.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    return captureElementPng(ensureExportCard(), 2);
+  };
 
   const onDownload = async () => {
     setBusy('png');
@@ -157,17 +166,21 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
         ) : null}
       </div>
 
-      {/*
-        Off-screen capture target. Do not use CSS transform here.
-        html2canvas mis-clips images inside transformed ancestors (broken logo).
-      */}
+      {/* Full-size export target. Kept in-layout (opacity 0) so html2canvas matches the preview. */}
       <div
-        ref={cardRef}
+        ref={exportCardRef}
         aria-hidden
-        className="pointer-events-none fixed top-0 -z-50"
-        style={{ left: -10000, width: 720, height: 720, overflow: 'hidden' }}
+        className="pointer-events-none fixed overflow-hidden"
+        style={{
+          left: 0,
+          top: 0,
+          width: EXPORT_SIZE,
+          height: EXPORT_SIZE,
+          opacity: 0,
+          zIndex: -1,
+        }}
       >
-        <BuyRmbRateCard buyRate={buyRate || 0} validUntil={validUntil} size={720} />
+        <BuyRmbRateCard buyRate={buyRate || 0} validUntil={validUntil} size={EXPORT_SIZE} />
       </div>
 
       {open ? (
@@ -195,7 +208,10 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
 
             <div className="grid gap-6 p-5 md:grid-cols-2 md:p-6">
               <div className="flex justify-center rounded-2xl bg-slate-50 p-4">
-                <div className="overflow-hidden rounded-xl shadow-md ring-1 ring-black/5">
+                <div
+                  ref={previewCardRef}
+                  className="overflow-hidden rounded-xl shadow-md ring-1 ring-black/5"
+                >
                   <BuyRmbRateCard buyRate={buyRate} validUntil={validUntil} size={320} />
                 </div>
               </div>
