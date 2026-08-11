@@ -36,115 +36,137 @@ export function whatsappShareUrl(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
-/** Inline images as data URLs so html2canvas matches the on-screen preview. */
-async function inlineImagesAsDataUrls(root: HTMLElement): Promise<() => void> {
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, ms);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+async function waitForImages(root: HTMLElement, ms = 4000): Promise<void> {
   const images = Array.from(root.querySelectorAll('img'));
-  const restores: Array<() => void> = [];
-
   await Promise.all(
-    images.map(async (img) => {
-      const original = img.getAttribute('src') || '';
-      if (!original || original.startsWith('data:')) return;
-
-      try {
-        const res = await fetch(original, { cache: 'force-cache' });
-        if (!res.ok) return;
-        const blob = await res.blob();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || ''));
-          reader.onerror = () => reject(new Error('read failed'));
-          reader.readAsDataURL(blob);
-        });
-        if (!dataUrl) return;
-        img.setAttribute('src', dataUrl);
-        restores.push(() => img.setAttribute('src', original));
-        if (!img.complete) {
-          await new Promise<void>((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-          });
-        }
-      } catch {
-        /* keep original src */
-      }
-    }),
+    images.map(
+      (img) =>
+        img.complete && img.naturalWidth > 0
+          ? Promise.resolve()
+          : withTimeout(
+              new Promise<void>((resolve) => {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+              }),
+              ms,
+              'image load',
+            ).catch(() => undefined),
+    ),
   );
-
-  return () => {
-    for (const restore of restores) restore();
-  };
 }
 
 /**
  * Capture a rate card DOM node to PNG.
- * Prefer a visible preview node. Off-screen transforms break logo rendering.
+ * Renders a temporary on-screen clone so html2canvas does not hang on hidden nodes.
  */
 export async function captureElementPng(
   element: HTMLElement,
   scale = 2,
 ): Promise<Blob> {
-  const width = element.offsetWidth || Number.parseInt(element.style.width, 10) || 720;
-  const height = element.offsetHeight || Number.parseInt(element.style.height, 10) || 720;
+  const width =
+    element.offsetWidth ||
+    Number.parseInt(String(element.style.width).replace('px', ''), 10) ||
+    720;
+  const height =
+    element.offsetHeight ||
+    Number.parseInt(String(element.style.height).replace('px', ''), 10) ||
+    720;
 
   const host = document.createElement('div');
   host.setAttribute('data-rate-card-capture-host', '1');
+  // Keep it on-screen and tiny-opacity so browsers still paint images/fonts.
   host.style.cssText = [
     'position:fixed',
     'left:0',
     'top:0',
-    'width:' + width + 'px',
-    'height:' + height + 'px',
-    'opacity:0',
+    `width:${width}px`,
+    `height:${height}px`,
+    'opacity:0.01',
     'pointer-events:none',
-    'z-index:-1',
+    'z-index:2147483646',
     'overflow:hidden',
+    'background:#ffffff',
   ].join(';');
 
   const clone = element.cloneNode(true) as HTMLElement;
   clone.style.transform = 'none';
   clone.style.margin = '0';
-  clone.removeAttribute('class');
+  clone.style.opacity = '1';
+  // Drop crossOrigin so same-origin logo never trips CORS waits.
+  clone.querySelectorAll('img').forEach((img) => {
+    img.removeAttribute('crossorigin');
+    img.decoding = 'sync';
+  });
+
   host.appendChild(clone);
   document.body.appendChild(host);
 
-  const restoreImages = await inlineImagesAsDataUrls(clone);
-
   try {
-    const { default: html2canvas } = await import('html2canvas');
-    const canvas = await html2canvas(clone, {
-      scale,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width,
-      height,
-      windowWidth: width,
-      windowHeight: height,
-      scrollX: 0,
-      scrollY: 0,
-      x: 0,
-      y: 0,
-      foreignObjectRendering: false,
-      imageTimeout: 15000,
-    });
+    await waitForImages(clone, 3000);
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
 
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error('Could not create rate card image'));
-            return;
-          }
-          resolve(blob);
-        },
-        'image/png',
-        1,
-      );
-    });
+    const { default: html2canvas } = await import('html2canvas');
+    const canvas = await withTimeout(
+      html2canvas(clone, {
+        scale,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width,
+        height,
+        windowWidth: width,
+        windowHeight: height,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        x: 0,
+        y: 0,
+        foreignObjectRendering: false,
+        imageTimeout: 5000,
+        removeContainer: true,
+      }),
+      12000,
+      'Poster capture',
+    );
+
+    const blob = await withTimeout(
+      new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => {
+            if (!b) {
+              reject(new Error('Could not create rate card image'));
+              return;
+            }
+            resolve(b);
+          },
+          'image/png',
+          1,
+        );
+      }),
+      5000,
+      'PNG encode',
+    );
+
+    return blob;
   } finally {
-    restoreImages();
     host.remove();
   }
 }
@@ -160,6 +182,21 @@ export function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function canUseFileShare(): boolean {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+    return false;
+  }
+  // Desktop Web Share with files often hangs or never returns. Prefer download + WhatsApp there.
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  if (!mobile) return false;
+  try {
+    const probe = new File([new Uint8Array([1])], 'probe.png', { type: 'image/png' });
+    return Boolean(navigator.canShare?.({ files: [probe] }));
+  } catch {
+    return false;
+  }
+}
+
 export async function shareRateCardFile(opts: {
   blob: Blob;
   filename: string;
@@ -167,13 +204,17 @@ export async function shareRateCardFile(opts: {
 }): Promise<'shared' | 'downloaded_and_whatsapp' | 'whatsapp_only'> {
   const file = new File([opts.blob], opts.filename, { type: 'image/png' });
 
-  if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
+  if (canUseFileShare()) {
     try {
-      await navigator.share({
-        files: [file],
-        text: opts.caption,
-        title: 'Snappy Buy RMB rate',
-      });
+      await withTimeout(
+        navigator.share({
+          files: [file],
+          text: opts.caption,
+          title: 'Snappy Buy RMB rate',
+        }),
+        20000,
+        'WhatsApp share',
+      );
       return 'shared';
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {

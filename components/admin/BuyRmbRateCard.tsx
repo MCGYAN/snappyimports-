@@ -68,18 +68,17 @@ export default function BuyRmbRateCard({
         <img
           src={SITE_LOGO_LIGHT_BG_PATH}
           alt="Snappy Imports Global"
-          crossOrigin="anonymous"
           width={545}
           height={221}
           decoding="sync"
           style={{
             display: 'block',
-            height: size * 0.13,
+            height: size * 0.17,
             width: 'auto',
-            maxWidth: '78%',
+            maxWidth: '86%',
             objectFit: 'contain',
             objectPosition: 'center',
-            marginTop: size * 0.04,
+            marginTop: size * 0.03,
           }}
         />
 

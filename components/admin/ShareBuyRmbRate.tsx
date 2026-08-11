@@ -44,11 +44,16 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
     return el;
   };
 
-  /** Always export the full-size card so WhatsApp matches the studio preview layout. */
+  /** Prefer the visible studio preview when open; otherwise the full-size export card. */
   const makePng = async () => {
-    // Let the export card paint (logo included) before capture.
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const previewEl = open
+      ? (previewCardRef.current?.querySelector('[data-rate-card]') as HTMLElement | null)
+      : null;
+    // Visible preview is more reliable; scale up so WhatsApp still gets a sharp PNG.
+    if (previewEl && previewEl.offsetWidth > 0) {
+      return captureElementPng(previewEl, 3);
+    }
     return captureElementPng(ensureExportCard(), 2);
   };
 
