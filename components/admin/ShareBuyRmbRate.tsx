@@ -157,12 +157,15 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
         ) : null}
       </div>
 
-      {/* Off-screen capture target (always mounted for one-tap share) */}
+      {/*
+        Off-screen capture target. Do not use CSS transform here.
+        html2canvas mis-clips images inside transformed ancestors (broken logo).
+      */}
       <div
         ref={cardRef}
         aria-hidden
-        className="pointer-events-none fixed left-0 top-0 -z-50"
-        style={{ transform: 'translateY(-12000px)' }}
+        className="pointer-events-none fixed top-0 -z-50"
+        style={{ left: -10000, width: 720, height: 720, overflow: 'hidden' }}
       >
         <BuyRmbRateCard buyRate={buyRate || 0} validUntil={validUntil} size={720} />
       </div>

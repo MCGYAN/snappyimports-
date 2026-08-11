@@ -16,7 +16,7 @@ export function posterRateNumber(buyRate: number): string {
 export function buildRateShareCaption(input: RateCardShareInput): string {
   const rateLine = formatBuyRate(input.buyRate, 3);
   const lines = [
-    'Snappy Imports Global · Buy RMB',
+    'Snappy Imports Global. Buy RMB',
     `Today's rate: ${rateLine}`,
   ];
   if (input.validUntil) {
@@ -36,32 +36,76 @@ export function whatsappShareUrl(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
+async function waitForImages(element: HTMLElement): Promise<void> {
+  const images = Array.from(element.querySelectorAll('img'));
+  await Promise.all(
+    images.map(async (img) => {
+      if (img.complete && img.naturalWidth > 0) return;
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+        // Force decode when already cached but not painted yet
+        if (typeof img.decode === 'function') {
+          img.decode().then(done).catch(done);
+        }
+      });
+    }),
+  );
+}
+
+/** Inline <img> sources as data URLs so html2canvas never clips remote/cached assets. */
+async function inlineImagesAsDataUrls(root: HTMLElement): Promise<void> {
+  const images = Array.from(root.querySelectorAll('img'));
+  await Promise.all(
+    images.map(async (img) => {
+      const src = img.currentSrc || img.src;
+      if (!src || src.startsWith('data:')) return;
+      try {
+        const res = await fetch(src, { cache: 'force-cache' });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        if (dataUrl) img.src = dataUrl;
+      } catch {
+        // Keep original src; capture may still work same-origin
+      }
+    }),
+  );
+}
+
 export async function captureElementPng(
   element: HTMLElement,
   scale = 2,
 ): Promise<Blob> {
-  const images = Array.from(element.querySelectorAll('img'));
-  await Promise.all(
-    images.map(
-      (img) =>
-        img.complete
-          ? Promise.resolve()
-          : new Promise<void>((resolve) => {
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
-            }),
-    ),
-  );
+  await waitForImages(element);
+  await inlineImagesAsDataUrls(element);
+  // Let the browser paint inlined images before snapshot
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
   const { default: html2canvas } = await import('html2canvas');
+  const width = element.offsetWidth || element.clientWidth;
+  const height = element.offsetHeight || element.clientHeight;
+
   const canvas = await html2canvas(element, {
     scale,
     useCORS: true,
-    allowTaint: true,
+    allowTaint: false,
     backgroundColor: '#ffffff',
     logging: false,
-    width: element.offsetWidth,
-    height: element.offsetHeight,
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
+    scrollX: 0,
+    scrollY: 0,
+    x: 0,
+    y: 0,
   });
 
   return new Promise((resolve, reject) => {

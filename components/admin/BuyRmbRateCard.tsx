@@ -27,6 +27,9 @@ export default function BuyRmbRateCard({
       ? `Valid until ${new Date(validUntil).toLocaleString()}`
       : 'Official Snappy RMB desk rate';
 
+  // Light-bg lockup is wide (icon + wordmark). Show only the circular mark.
+  const markSize = Math.round(size * 0.17);
+
   return (
     <div
       className={`relative overflow-hidden bg-white ${className}`}
@@ -45,14 +48,8 @@ export default function BuyRmbRateCard({
         viewBox="0 0 300 200"
         aria-hidden
       >
-        <path
-          d="M0 0 H220 C160 20 90 70 0 155 Z"
-          fill={BRAND_ACCENT}
-        />
-        <path
-          d="M0 0 H165 C120 35 55 85 0 130 Z"
-          fill={BRAND_PRIMARY}
-        />
+        <path d="M0 0 H220 C160 20 90 70 0 155 Z" fill={BRAND_ACCENT} />
+        <path d="M0 0 H165 C120 35 55 85 0 130 Z" fill={BRAND_PRIMARY} />
       </svg>
 
       {/* Bottom-right swoosh */}
@@ -63,30 +60,44 @@ export default function BuyRmbRateCard({
         viewBox="0 0 300 200"
         aria-hidden
       >
-        <path
-          d="M300 200 H80 C140 180 210 130 300 45 Z"
-          fill={BRAND_PRIMARY}
-        />
-        <path
-          d="M300 200 H135 C180 165 245 115 300 70 Z"
-          fill={BRAND_ACCENT}
-        />
+        <path d="M300 200 H80 C140 180 210 130 300 45 Z" fill={BRAND_PRIMARY} />
+        <path d="M300 200 H135 C180 165 245 115 300 70 Z" fill={BRAND_ACCENT} />
       </svg>
 
       <div
         className="relative z-10 flex h-full flex-col items-center"
         style={{ padding: size * 0.1 }}
       >
-        <img
-          src={SITE_LOGO_LIGHT_BG_PATH}
-          alt="Snappy Imports Global"
+        <div
           style={{
-            height: size * 0.14,
-            width: 'auto',
-            objectFit: 'contain',
-            marginTop: size * 0.06,
+            width: markSize,
+            height: markSize,
+            overflow: 'hidden',
+            borderRadius: '50%',
+            marginTop: size * 0.04,
+            background: '#fff',
+            flexShrink: 0,
           }}
-        />
+        >
+          {/*
+            Crop the left circular mark from the wide lockup.
+            Lockup aspect ~545×221; left square ≈ the badge.
+          */}
+          <img
+            src={SITE_LOGO_LIGHT_BG_PATH}
+            alt=""
+            crossOrigin="anonymous"
+            draggable={false}
+            style={{
+              height: markSize,
+              width: 'auto',
+              maxWidth: 'none',
+              display: 'block',
+              objectFit: 'cover',
+              objectPosition: 'left center',
+            }}
+          />
+        </div>
 
         <p
           style={{
@@ -186,7 +197,7 @@ export default function BuyRmbRateCard({
             letterSpacing: '0.04em',
           }}
         >
-          BUY RMB · PAY CEDIS · GET RMB IN CHINA
+          BUY RMB. PAY CEDIS. GET RMB IN CHINA
         </p>
       </div>
     </div>
