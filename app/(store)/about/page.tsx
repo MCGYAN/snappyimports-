@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useCMS } from '@/context/CMSContext';
 import PageHero from '@/components/PageHero';
@@ -41,29 +42,60 @@ const PROMISES = [
   },
 ];
 
-const WHAT_WE_DO = [
+const PROCESS_STEPS = [
   {
-    title: 'Import from China to Ghana',
-    text: 'Cars, gadgets, appliances, equipment, and spare parts. Browse the store or ask us for a quote.',
+    number: '01',
+    title: 'Sourcing in China',
+    text: 'Tell us what you need. We find the right saloon, SUV, bus, pick-up, truck, bulldozer, gadget, or equipment from trusted China channels.',
   },
   {
-    title: 'Clear checkout and tracking',
-    text: 'Pay by MoMo or invoice. Then follow your order from payment to sourcing, shipping, Ghana clearing, and delivery.',
+    number: '02',
+    title: 'Confirming quality',
+    text: 'We check the product details, condition, and deal before money moves. You should know what you are buying, not guess from photos alone.',
+  },
+  {
+    number: '03',
+    title: 'On-site inspection',
+    text: 'Where it matters, we support inspection on the ground in China so issues are caught early, not after the goods leave for Ghana.',
+  },
+  {
+    number: '04',
+    title: 'Ship, clear, deliver',
+    text: 'We move the order toward Ghana, support Tema clearing, and keep you updated until pickup or delivery.',
+  },
+];
+
+const VEHICLE_TYPES = [
+  'Saloon cars',
+  'SUVs',
+  'Buses',
+  'Pick-ups',
+  'Trucks',
+  'Bulldozers',
+];
+
+const WHAT_WE_DO = [
+  {
+    title: 'Vehicle and machinery imports',
+    text: 'Get strong car and equipment deals from China. From family cars to work trucks and heavy machines.',
+  },
+  {
+    title: 'Gadgets, appliances, and parts',
+    text: 'Phones, home appliances, equipment, and spare parts through the same clear import process.',
   },
   {
     title: 'Buy RMB desk',
-    text: 'Pay Ghana cedis. Get RMB for your China suppliers at today’s locked buy rate, with an invoice you can keep.',
+    text: 'Pay Ghana cedis. Get RMB for China suppliers at today’s locked buy rate, with an invoice you can keep.',
   },
   {
     title: 'Human support',
-    text: 'WhatsApp and phone help for quotes, payment questions, and where your order is right now.',
+    text: 'WhatsApp and phone help for quotes, payment questions, inspections, and where your order is right now.',
   },
 ];
 
 export default function AboutPage() {
   usePageTitle('About Us');
   const { getSetting } = useCMS();
-  const siteName = getSetting('site_name') || 'Snappy Imports Global';
   const whatsApp = buildWhatsAppHref(getSetting('contact_whatsapp'));
   const founderName = SNAPPY_INVOICE_ISSUER.contactName.split(' ')[0] || 'Sampson';
   const founderFullName = SNAPPY_INVOICE_ISSUER.contactName;
@@ -146,9 +178,116 @@ export default function AboutPage() {
                 home without the stress.
               </p>
               <p>
-                We source and move vehicles, gadgets, home appliances, equipment, and spare parts.
-                You can shop on our website, pay in Ghana cedis, and follow your import from payment
-                through China, shipping, Tema clearing, and delivery or pickup in Ghana.
+                We are known for strong car deals from China, and we also move gadgets, home
+                appliances, equipment, and spare parts. You can shop on our website, pay in Ghana
+                cedis, and follow your import from payment through China, shipping, Tema clearing,
+                and delivery or pickup in Ghana.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Process */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-b from-[#f8fafc] via-[#eef2f8] to-white">
+        <div className="store-container">
+          <div className="max-w-2xl">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">What we do</p>
+            <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
+              Source. Check. Inspect. Deliver.
+            </h2>
+            <p className="mt-3 text-base leading-relaxed text-slate-600 md:text-lg">
+              This is the work behind every Snappy import. Not just posting a price. Real sourcing,
+              quality confirmation, and on-site care before your goods head to Ghana.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:mt-10 lg:grid-cols-4">
+            {PROCESS_STEPS.map((item) => (
+              <div
+                key={item.number}
+                className="liquid-glass-card p-5 transition-all duration-300 hover:-translate-y-0.5 sm:p-6"
+              >
+                <span className="font-heading text-3xl font-black tabular-nums text-brand-accent/30">
+                  {item.number}
+                </span>
+                <h3 className="mt-3 font-heading text-base font-bold text-brand-primary sm:text-lg">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Flyer + vehicles */}
+      <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-br from-[#0B1F3A] via-[#0d2747] to-[#061224]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_80%_20%,rgba(242,107,29,0.18),transparent)]" aria-hidden />
+        <div className="store-container relative">
+          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">
+                From our flyer
+              </p>
+              <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-white md:text-[2.25rem]">
+                Get the best car deals from China
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-white/80 md:text-lg">
+                Snappy Imports Global sources vehicles and machinery for Ghana. Saloon cars, SUVs,
+                buses, pick-ups, trucks, and bulldozers. We confirm quality and support inspection
+                so you are not buying blind.
+              </p>
+              <ul className="mt-6 grid grid-cols-2 gap-2 sm:gap-3">
+                {VEHICLE_TYPES.map((type) => (
+                  <li
+                    key={type}
+                    className="rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm font-semibold text-white"
+                  >
+                    {type}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-6 text-sm leading-relaxed text-white/70">
+                Accra base: {locationLine}. Ghana lines and a China line, so you can reach us on both
+                sides of the journey.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/shop"
+                  className="btn-interactive inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-brand-accent px-5 py-3 text-sm font-bold text-white"
+                >
+                  Browse vehicles
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                {whatsApp ? (
+                  <a
+                    href={whatsApp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-interactive inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/5 px-5 py-3 text-sm font-semibold text-white"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Ask for a car quote
+                  </a>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mx-auto w-full max-w-md lg:max-w-none">
+              <div className="overflow-hidden rounded-2xl bg-white p-2 shadow-2xl shadow-black/30 ring-1 ring-white/20">
+                <Image
+                  src="/images/snappy-vehicle-flyer.png"
+                  alt="Snappy Imports Global flyer. Best car deals from China. Saloon cars, SUVs, buses, pick-ups, trucks, and bulldozers."
+                  width={900}
+                  height={1200}
+                  className="h-auto w-full rounded-xl object-contain"
+                  sizes="(max-width: 1024px) 90vw, 480px"
+                  priority={false}
+                />
+              </div>
+              <p className="mt-3 text-center text-xs text-white/55">
+                Official Snappy Imports Global vehicle flyer
               </p>
             </div>
           </div>
@@ -165,7 +304,7 @@ export default function AboutPage() {
             </h2>
             <p className="mt-5 text-base leading-relaxed text-slate-600 md:text-lg">
               Snappy Imports Global was founded by{' '}
-              <strong className="font-semibold text-brand-primary">{founderFullName}</strong>.
+              <strong className="font-semibold text-brand-primary">{founderFullName}</strong>.{' '}
               {founderName} built this business so Ghanaians can import from China with a real person
               on their side. Someone who checks the deal, explains the cost, and stays reachable on
               WhatsApp and phone.
@@ -178,16 +317,16 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* What we do */}
+      {/* Services */}
       <section className="store-section relative overflow-hidden border-b border-slate-100/80 bg-gradient-to-b from-white via-[#f8fafc] to-[#eef2f8]">
         <div className="store-container">
           <div className="max-w-xl">
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">What we do</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">Services</p>
             <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem]">
               How Snappy helps you
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600 md:text-base">
-              Four practical ways we make China-to-Ghana importing simpler.
+              Practical ways we make China-to-Ghana importing simpler.
             </p>
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:mt-10">
@@ -215,8 +354,8 @@ export default function AboutPage() {
               Based in Accra. Serving Ghana.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
-              Our home base is in Accra at {locationLine}. We serve customers across Ghana. Imports
-              move from China into Ghana for clearing, then pickup or delivery.
+              Our home base is in Accra at {locationLine}. Close to TV Africa. We serve customers
+              across Ghana. Imports move from China into Ghana for clearing, then pickup or delivery.
             </p>
             <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
               Need a quote or an update? Reach us on WhatsApp or phone. We answer like neighbours,
