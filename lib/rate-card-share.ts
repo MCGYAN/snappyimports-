@@ -182,21 +182,29 @@ export function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function canUseFileShare(): boolean {
+/** True when the browser can hand image + caption to WhatsApp via the OS share sheet. */
+export function canShareImageAndCaption(file: File): boolean {
   if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
     return false;
   }
-  // Desktop Web Share with files often hangs or never returns. Prefer download + WhatsApp there.
-  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-  if (!mobile) return false;
   try {
-    const probe = new File([new Uint8Array([1])], 'probe.png', { type: 'image/png' });
-    return Boolean(navigator.canShare?.({ files: [probe] }));
+    if (typeof navigator.canShare === 'function') {
+      return (
+        navigator.canShare({ files: [file], text: 'x' }) ||
+        navigator.canShare({ files: [file] })
+      );
+    }
+    // Older Web Share: attempt share; callers still catch failures.
+    return true;
   } catch {
     return false;
   }
 }
 
+/**
+ * Prefer OS share sheet so WhatsApp receives image + caption together.
+ * wa.me links can only carry text, so download+caption is last-resort only.
+ */
 export async function shareRateCardFile(opts: {
   blob: Blob;
   filename: string;
@@ -204,23 +212,25 @@ export async function shareRateCardFile(opts: {
 }): Promise<'shared' | 'downloaded_and_whatsapp' | 'whatsapp_only'> {
   const file = new File([opts.blob], opts.filename, { type: 'image/png' });
 
-  if (canUseFileShare()) {
+  if (canShareImageAndCaption(file)) {
     try {
-      await withTimeout(
-        navigator.share({
-          files: [file],
-          text: opts.caption,
-          title: 'Snappy Buy RMB rate',
-        }),
-        20000,
-        'WhatsApp share',
-      );
+      // Do not timeout while the share sheet is open. User may take time to pick WhatsApp.
+      const payload: ShareData = {
+        files: [file],
+        text: opts.caption,
+        title: 'Snappy Buy RMB rate',
+      };
+      if (navigator.canShare?.(payload)) {
+        await navigator.share(payload);
+      } else {
+        await navigator.share({ files: [file], text: opts.caption });
+      }
       return 'shared';
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         throw err;
       }
-      // Fall through to download + WhatsApp
+      // Fall through only if share truly failed (unsupported target, etc.)
     }
   }
 

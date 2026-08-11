@@ -83,17 +83,18 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
         caption,
       });
       if (result === 'shared') {
-        flash('Shared. Pick your WhatsApp group and send.');
+        flash('Share sheet opened. Choose WhatsApp to send the image and caption together.');
       } else if (result === 'downloaded_and_whatsapp') {
-        flash('Image downloaded. WhatsApp opened with the caption. Attach the PNG and send.');
+        flash(
+          'This browser cannot attach images to WhatsApp automatically. PNG downloaded. Paste the caption and attach the image in WhatsApp.',
+        );
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         flash('Share cancelled.');
       } else {
         console.error(err);
-        window.open(whatsappShareUrl(caption), '_blank', 'noopener,noreferrer');
-        flash('WhatsApp opened with the caption. Download the card to attach the image.');
+        flash('Could not open share. Try Download PNG, then attach it in WhatsApp.');
       }
     } finally {
       setBusy('idle');
@@ -258,8 +259,8 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
                 </div>
 
                 <p className="text-xs leading-relaxed text-slate-500">
-                  Tip: On desktop, attach the downloaded PNG in the WhatsApp group after the caption
-                  opens. On phone, the share sheet can send both together.
+                  Opens your device share sheet with the poster image and caption together. Choose
+                  WhatsApp, then pick the group or chat.
                 </p>
               </div>
             </div>
