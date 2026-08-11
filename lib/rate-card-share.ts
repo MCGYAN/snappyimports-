@@ -8,6 +8,11 @@ export type RateCardShareInput = {
   buyUrl?: string;
 };
 
+export type RateShareResult =
+  | 'shared'
+  | 'downloaded_and_whatsapp'
+  | 'whatsapp_only';
+
 /** Clean 3-decimal poster number (e.g. 0.552). */
 export function posterRateNumber(buyRate: number): string {
   return (Number(buyRate) || 0).toFixed(3);
@@ -34,6 +39,12 @@ export function buildRateShareCaption(input: RateCardShareInput): string {
 
 export function whatsappShareUrl(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+function isMobileUa(): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(
+    typeof navigator !== 'undefined' ? navigator.userAgent || '' : '',
+  );
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -92,7 +103,6 @@ export async function captureElementPng(
 
   const host = document.createElement('div');
   host.setAttribute('data-rate-card-capture-host', '1');
-  // Keep it on-screen and tiny-opacity so browsers still paint images/fonts.
   host.style.cssText = [
     'position:fixed',
     'left:0',
@@ -110,7 +120,6 @@ export async function captureElementPng(
   clone.style.transform = 'none';
   clone.style.margin = '0';
   clone.style.opacity = '1';
-  // Drop crossOrigin so same-origin logo never trips CORS waits.
   clone.querySelectorAll('img').forEach((img) => {
     img.removeAttribute('crossorigin');
     img.decoding = 'sync';
@@ -147,7 +156,7 @@ export async function captureElementPng(
       'Poster capture',
     );
 
-    const blob = await withTimeout(
+    return await withTimeout(
       new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
           (b) => {
@@ -164,8 +173,6 @@ export async function captureElementPng(
       5000,
       'PNG encode',
     );
-
-    return blob;
   } finally {
     host.remove();
   }
@@ -182,8 +189,34 @@ export function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/** True when the browser can hand image + caption to WhatsApp via the OS share sheet. */
-export function canShareImageAndCaption(file: File): boolean {
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Open WhatsApp Desktop/app with caption prefilled when possible. */
+function openWhatsAppCaption(caption: string) {
+  const encoded = encodeURIComponent(caption);
+  if (isMobileUa()) {
+    window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  // Prefer installed WhatsApp Desktop on Windows/Mac.
+  const protocolLink = document.createElement('a');
+  protocolLink.href = `whatsapp://send?text=${encoded}`;
+  protocolLink.rel = 'noopener';
+  protocolLink.style.display = 'none';
+  document.body.appendChild(protocolLink);
+  protocolLink.click();
+  protocolLink.remove();
+}
+
+function canShareImageAndCaption(file: File): boolean {
   if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
     return false;
   }
@@ -194,31 +227,43 @@ export function canShareImageAndCaption(file: File): boolean {
         navigator.canShare({ files: [file] })
       );
     }
-    // Older Web Share: attempt share; callers still catch failures.
     return true;
   } catch {
     return false;
   }
 }
 
+async function fallbackDownloadAndWhatsApp(opts: {
+  blob: Blob;
+  filename: string;
+  caption: string;
+}): Promise<RateShareResult> {
+  downloadBlob(opts.blob, opts.filename);
+  await copyText(opts.caption);
+  openWhatsAppCaption(opts.caption);
+  return 'downloaded_and_whatsapp';
+}
+
 /**
- * Prefer OS share sheet so WhatsApp receives image + caption together.
- * wa.me links can only carry text, so download+caption is last-resort only.
+ * Send poster to WhatsApp.
+ * Mobile: OS share sheet with image + caption together when supported.
+ * Desktop: Windows share often aborts; fall back to download + copied caption + WhatsApp open.
+ * Never dead-end on "Share cancelled."
  */
 export async function shareRateCardFile(opts: {
   blob: Blob;
   filename: string;
   caption: string;
-}): Promise<'shared' | 'downloaded_and_whatsapp' | 'whatsapp_only'> {
+}): Promise<RateShareResult> {
   const file = new File([opts.blob], opts.filename, { type: 'image/png' });
+  const mobile = isMobileUa();
 
   if (canShareImageAndCaption(file)) {
     try {
-      // Do not timeout while the share sheet is open. User may take time to pick WhatsApp.
+      const started = Date.now();
       const payload: ShareData = {
         files: [file],
         text: opts.caption,
-        title: 'Snappy Buy RMB rate',
       };
       if (navigator.canShare?.(payload)) {
         await navigator.share(payload);
@@ -227,14 +272,14 @@ export async function shareRateCardFile(opts: {
       }
       return 'shared';
     } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
+      const aborted = err instanceof DOMException && err.name === 'AbortError';
+      // On mobile, a real user cancel should stop. On desktop, AbortError is often a false fail.
+      if (aborted && mobile) {
         throw err;
       }
-      // Fall through only if share truly failed (unsupported target, etc.)
+      // Desktop abort / other share failures → practical fallback.
     }
   }
 
-  downloadBlob(opts.blob, opts.filename);
-  window.open(whatsappShareUrl(opts.caption), '_blank', 'noopener,noreferrer');
-  return 'downloaded_and_whatsapp';
+  return fallbackDownloadAndWhatsApp(opts);
 }

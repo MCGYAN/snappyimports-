@@ -82,18 +82,18 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
         caption,
       });
       if (result === 'shared') {
-        flash('Share sheet opened. Choose WhatsApp to send the image and caption together.');
+        flash('Choose WhatsApp in the share sheet to send the image and caption together.');
       } else if (result === 'downloaded_and_whatsapp') {
         flash(
-          'This browser cannot attach images to WhatsApp automatically. PNG downloaded. Paste the caption and attach the image in WhatsApp.',
+          'PNG downloaded and caption copied. In WhatsApp, paste the caption and attach the image from Downloads.',
         );
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        flash('Share cancelled.');
+        flash('Share closed. Nothing was sent.');
       } else {
         console.error(err);
-        flash('Could not open share. Try Download PNG, then attach it in WhatsApp.');
+        flash('Could not prepare the poster. Try Download PNG.');
       }
     } finally {
       setBusy('idle');
@@ -130,8 +130,9 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
               Drop today&apos;s rate in the group in one tap
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-white/75">
-              Builds a branded card like your poster, plus a ready caption. On phone it can share
-              image and text together. On desktop it downloads the PNG and opens WhatsApp.
+              Builds a branded rate card plus caption. On phone, share image and text together. On
+              desktop, the PNG downloads, the caption is copied, and WhatsApp opens so you can paste
+              and attach.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button
@@ -258,8 +259,9 @@ export default function ShareBuyRmbRate({ buyRate, validUntil }: ShareBuyRmbRate
                 </div>
 
                 <p className="text-xs leading-relaxed text-slate-500">
-                  Opens your device share sheet with the poster image and caption together. Choose
-                  WhatsApp, then pick the group or chat.
+                  On phone: pick WhatsApp in the share sheet to send image and caption together. On
+                  computer: PNG downloads, caption is copied, WhatsApp opens. Paste, then attach the
+                  image from Downloads.
                 </p>
               </div>
             </div>
