@@ -7,7 +7,7 @@ import { SNAPPY_BANK_ACCOUNTS } from '@/lib/bank-details';
 import { buildWhatsAppHref, DEFAULT_CONTACT_WHATSAPP } from '@/lib/snappy-import';
 import { isRateValid, quoteGhsToRmb, formatBuyRate, type ExchangeRateBoard } from '@/lib/rmb-exchange';
 import { supabase } from '@/lib/supabase';
-import { ArrowRightLeft, Clock, ShieldCheck } from 'lucide-react';
+import { ArrowRightLeft, Clock, ShieldCheck, Upload } from 'lucide-react';
 
 export default function ExchangePage() {
   const router = useRouter();
@@ -18,7 +18,10 @@ export default function ExchangePage() {
     phone: '',
     email: '',
     businessName: '',
+    alipayAccountName: '',
   });
+  const [alipayFile, setAlipayFile] = useState<File | null>(null);
+  const [alipayPreview, setAlipayPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -30,15 +33,26 @@ export default function ExchangePage() {
       .catch(() => setError('Could not load today’s rate'))
       .finally(() => setLoading(false));
 
-    // Prefill account email so signed-in buys land in Order history
     void (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const accountEmail = session?.user?.email?.trim();
       if (accountEmail) {
         setForm((prev) => (prev.email ? prev : { ...prev, email: accountEmail }));
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!alipayFile) {
+      setAlipayPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(alipayFile);
+    setAlipayPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [alipayFile]);
 
   const quote = useMemo(() => {
     const n = Number(amount);
@@ -48,25 +62,53 @@ export default function ExchangePage() {
 
   const rateOk = isRateValid(board);
 
+  const onPickQr = (file: File | null) => {
+    setError('');
+    if (!file) {
+      setAlipayFile(null);
+      return;
+    }
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Upload a JPG, PNG, or WebP screenshot of your Alipay receive QR.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be under 5MB.');
+      return;
+    }
+    setAlipayFile(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!alipayFile) {
+      setError('Upload your Alipay receive QR screenshot before locking the rate.');
+      return;
+    }
     setSubmitting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
       if (session?.access_token) {
         headers.Authorization = `Bearer ${session.access_token}`;
       }
 
+      const body = new FormData();
+      body.set('customerName', form.customerName);
+      body.set('phone', form.phone);
+      body.set('email', form.email);
+      body.set('businessName', form.businessName);
+      body.set('alipayAccountName', form.alipayAccountName);
+      body.set('amount', String(Number(amount)));
+      body.set('alipayQr', alipayFile);
+
       const res = await fetch('/api/exchange', {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          ...form,
-          direction: 'ghs_to_rmb',
-          amount: Number(amount),
-        }),
+        body,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -89,7 +131,8 @@ export default function ExchangePage() {
           Pay cedis. Get RMB in China.
         </h1>
         <p className="mt-4 max-w-2xl text-white/80">
-          Official buy rate. Lock today’s rate, get an electronic invoice, pay by bank transfer, and we send your RMB.
+          Lock today’s rate, upload your Alipay receive QR, get an invoice, pay by bank or MoMo, then
+          we send your RMB after we confirm payment.
         </p>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
@@ -118,6 +161,15 @@ export default function ExchangePage() {
                   <p className="text-sm text-amber-300">Rate expired. WhatsApp Snappy for an update.</p>
                 ) : null}
                 {board?.notes ? <p className="text-sm text-white/60">{board.notes}</p> : null}
+
+                <div className="rounded-2xl border border-white/10 bg-black/15 p-4 text-sm text-white/75">
+                  <p className="font-semibold text-white">How Alipay works here</p>
+                  <ol className="mt-2 list-decimal space-y-1.5 pl-4">
+                    <li>Open Alipay and your receive money QR.</li>
+                    <li>Screenshot or save that QR.</li>
+                    <li>Upload it below so Snappy can scan and send your RMB.</li>
+                  </ol>
+                </div>
               </div>
             )}
           </section>
@@ -125,7 +177,7 @@ export default function ExchangePage() {
           <section className="rounded-3xl bg-white p-6 text-slate-900 shadow-2xl">
             <h2 className="text-xl font-bold text-brand-primary">Buy RMB</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Enter how much you want to spend in cedis. Get the invoice now and pay by bank transfer.
+              Enter cedis amount and your Alipay receive QR. Then get the invoice and pay Snappy.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-3">
@@ -134,7 +186,7 @@ export default function ExchangePage() {
                 autoComplete="name"
                 value={form.customerName}
                 onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-                placeholder="Full name"
+                placeholder="Full name (same name as on payment)"
                 className="w-full rounded-xl border-2 border-slate-200 px-4 py-3"
               />
               <input
@@ -159,7 +211,7 @@ export default function ExchangePage() {
                 autoComplete="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="Email (optional). Use your account email to save this in Order history"
+                placeholder="Email (optional). Use your account email for Order history"
                 className="w-full rounded-xl border-2 border-slate-200 px-4 py-3"
               />
               <input
@@ -171,19 +223,49 @@ export default function ExchangePage() {
                 className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-lg font-semibold"
               />
 
+              <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-brand-primary">Alipay receive QR</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  Required. Screenshot your Alipay receive QR (not the pay-at-shop code).
+                </p>
+                <label className="mt-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-5 text-center hover:border-brand-accent/40">
+                  <Upload className="h-5 w-5 text-brand-accent" />
+                  <span className="text-sm font-semibold text-brand-primary">
+                    {alipayFile ? 'Change QR image' : 'Upload QR screenshot'}
+                  </span>
+                  <span className="text-xs text-slate-400">JPG, PNG, or WebP. Max 5MB.</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => onPickQr(e.target.files?.[0] || null)}
+                  />
+                </label>
+                {alipayPreview ? (
+                  <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={alipayPreview}
+                      alt="Alipay QR preview"
+                      className="mx-auto max-h-48 w-auto object-contain"
+                    />
+                  </div>
+                ) : null}
+                <input
+                  value={form.alipayAccountName}
+                  onChange={(e) => setForm({ ...form, alipayAccountName: e.target.value })}
+                  placeholder="Name shown on your Alipay (optional, helps us verify)"
+                  className="mt-3 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm"
+                />
+              </div>
+
               {quote ? (
                 <div className="rounded-xl bg-brand-light px-4 py-3 text-sm text-brand-primary">
                   <p>
-                    You pay:{' '}
-                    <strong>
-                      GH¢{quote.amountFrom.toFixed(2)}
-                    </strong>
+                    You pay: <strong>GH¢{quote.amountFrom.toFixed(2)}</strong>
                   </p>
                   <p>
-                    You get:{' '}
-                    <strong>
-                      {quote.amountTo.toFixed(2)} RMB
-                    </strong>
+                    You get: <strong>{quote.amountTo.toFixed(2)} RMB</strong>
                   </p>
                   <p className="text-xs opacity-80">Rate lock: {formatBuyRate(quote.rate, 4)}</p>
                 </div>
@@ -205,7 +287,8 @@ export default function ExchangePage() {
                         : 'Lock today’s rate. Get invoice and pay'}
                   </button>
                   <p className="text-center text-xs text-slate-500">
-                    You’ll get the invoice now. Pay by bank transfer, then tap I’ve paid.
+                    You’ll get the invoice now. Pay by bank or MoMo, then tap I’ve paid. We send RMB
+                    to your Alipay after confirming your cedis.
                   </p>
                 </>
               ) : (

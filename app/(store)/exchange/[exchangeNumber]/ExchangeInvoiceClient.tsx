@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import ExchangeInvoiceDocument from '@/components/ExchangeInvoiceDocument';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle2, Clock, Download, Printer } from 'lucide-react';
+import { CheckCircle2, Clock, Download, Printer, Upload } from 'lucide-react';
 
 export default function ExchangeInvoiceClient() {
   const params = useParams();
@@ -20,6 +20,8 @@ export default function ExchangeInvoiceClient() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const [alipayName, setAlipayName] = useState('');
 
   const load = async (ex: string, ph: string) => {
     setLoading(true);
@@ -44,6 +46,9 @@ export default function ExchangeInvoiceClient() {
       setExchange(data.exchange);
       if (!ph && data.exchange?.phone) {
         setPhone(data.exchange.phone);
+      }
+      if (data.exchange?.alipay_account_name) {
+        setAlipayName(data.exchange.alipay_account_name);
       }
     } finally {
       setLoading(false);
@@ -92,6 +97,44 @@ export default function ExchangeInvoiceClient() {
       setDownloading(false);
     }
   }, [exchangeNumber]);
+
+  const uploadQr = async (file: File) => {
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Upload a JPG, PNG, or WebP screenshot.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB.');
+      return;
+    }
+    setUploadingQr(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const body = new FormData();
+      body.set('exchangeNumber', exchangeNumber);
+      body.set('phone', phone);
+      body.set('alipayAccountName', alipayName);
+      body.set('alipayQr', file);
+      const headers: Record<string, string> = {};
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+      const res = await fetch('/api/exchange/alipay-qr', {
+        method: 'POST',
+        headers,
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Could not upload Alipay QR');
+        return;
+      }
+      setExchange(data.exchange);
+    } finally {
+      setUploadingQr(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f8fafc] via-white to-[#eef2f7]">
@@ -165,6 +208,56 @@ export default function ExchangeInvoiceClient() {
             </section>
 
             <section className="store-card space-y-3 p-6 print:hidden">
+              <h3 className="font-semibold text-brand-primary">Alipay payout</h3>
+              {exchange.has_alipay_qr ? (
+                <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">
+                  Your Alipay receive QR is saved
+                  {exchange.alipay_account_name ? (
+                    <>
+                      {' '}
+                      for <strong>{exchange.alipay_account_name}</strong>
+                    </>
+                  ) : null}
+                  . After your cedis payment is confirmed, Snappy will scan it and send{' '}
+                  <strong>{Number(exchange.amount_to).toFixed(2)} RMB</strong>.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-amber-700">
+                    No Alipay QR on this request yet. Upload a fresh receive QR screenshot so Snappy can
+                    send your RMB.
+                  </p>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-slate-600">Alipay name (optional)</span>
+                    <input
+                      value={alipayName}
+                      onChange={(e) => setAlipayName(e.target.value)}
+                      placeholder="Name shown on Alipay"
+                      className="mt-1 w-full rounded-xl border-2 border-slate-200 px-4 py-3"
+                    />
+                  </label>
+                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                    <Upload className="mb-2 h-6 w-6 text-brand-primary" />
+                    <span className="text-sm font-semibold text-brand-primary">
+                      {uploadingQr ? 'Uploading…' : 'Upload Alipay QR screenshot'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      className="hidden"
+                      disabled={uploadingQr}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        e.target.value = '';
+                        if (file) void uploadQr(file);
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
+            </section>
+
+            <section className="store-card space-y-3 p-6 print:hidden">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <Clock className="h-4 w-4" />
                 Status:{' '}
@@ -176,7 +269,9 @@ export default function ExchangeInvoiceClient() {
                 <div className="flex items-start gap-2 rounded-xl bg-green-50 px-4 py-3 text-green-800">
                   <CheckCircle2 className="h-5 w-5 shrink-0" />
                   <p className="text-sm font-medium">
-                    Payment confirmed. Snappy is completing your RMB side.
+                    {exchange.status === 'completed'
+                      ? 'RMB sent. This Buy RMB request is complete.'
+                      : 'Cedis payment confirmed. Snappy is sending your RMB to Alipay.'}
                   </p>
                 </div>
               ) : exchange.status === 'payment_sent' ? (

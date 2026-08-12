@@ -2,7 +2,19 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { verifyAuth } from '@/lib/auth';
-import { sendExchangePaymentAwaitingAdminAlert } from '@/lib/notifications';
+import {
+  sendExchangePaymentAwaitingAdminAlert,
+  sendExchangeBuyerStatusEmail,
+} from '@/lib/notifications';
+
+function sanitizeExchange(row: any) {
+  if (!row) return row;
+  const { alipay_qr_path, ...rest } = row;
+  return {
+    ...rest,
+    has_alipay_qr: Boolean(alipay_qr_path),
+  };
+}
 
 /** POST — customer: I've paid | admin: confirm / complete */
 export async function POST(req: Request) {
@@ -67,7 +79,7 @@ export async function POST(req: Request) {
         console.error('[exchange action] admin alert failed', notifyErr);
       }
 
-      return NextResponse.json({ success: true, exchange: updated });
+      return NextResponse.json({ success: true, exchange: sanitizeExchange(updated) });
     }
 
     const auth = await verifyAuth(req, { requireModule: 'exchange' });
@@ -89,7 +101,12 @@ export async function POST(req: Request) {
         .select()
         .single();
       if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-      return NextResponse.json({ success: true, exchange: updated });
+      try {
+        await sendExchangeBuyerStatusEmail(updated, 'confirmed');
+      } catch (notifyErr) {
+        console.error('[exchange action] buyer confirm email failed', notifyErr);
+      }
+      return NextResponse.json({ success: true, exchange: sanitizeExchange(updated) });
     }
 
     if (action === 'complete') {
@@ -105,7 +122,12 @@ export async function POST(req: Request) {
         .select()
         .single();
       if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-      return NextResponse.json({ success: true, exchange: updated });
+      try {
+        await sendExchangeBuyerStatusEmail(updated, 'completed');
+      } catch (notifyErr) {
+        console.error('[exchange action] buyer complete email failed', notifyErr);
+      }
+      return NextResponse.json({ success: true, exchange: sanitizeExchange(updated) });
     }
 
     return NextResponse.json({ error: 'Unknown action.' }, { status: 400 });

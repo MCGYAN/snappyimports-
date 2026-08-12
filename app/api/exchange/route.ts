@@ -10,7 +10,55 @@ import {
 } from '@/lib/rmb-exchange';
 import { createPaymentReference } from '@/lib/payment-reference';
 
-/** POST — create exchange request (invoice only) */
+const ALIPAY_BUCKET = 'exchange-alipay';
+const ALLOWED_QR = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+
+function sanitizeExchange(row: any) {
+  if (!row) return row;
+  const { alipay_qr_path, ...rest } = row;
+  return {
+    ...rest,
+    has_alipay_qr: Boolean(alipay_qr_path),
+  };
+}
+
+async function readCreatePayload(req: Request): Promise<{
+  customerName: string;
+  phone: string;
+  email: string | null;
+  businessName: string | null;
+  amountInput: number;
+  alipayAccountName: string | null;
+  alipayFile: File | null;
+}> {
+  const contentType = req.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    const form = await req.formData();
+    const file = form.get('alipayQr');
+    return {
+      customerName: String(form.get('customerName') || '').trim(),
+      phone: String(form.get('phone') || '').trim(),
+      email: String(form.get('email') || '').trim() || null,
+      businessName: String(form.get('businessName') || '').trim() || null,
+      amountInput: Number(form.get('amount')),
+      alipayAccountName: String(form.get('alipayAccountName') || '').trim() || null,
+      alipayFile: file instanceof File ? file : null,
+    };
+  }
+
+  const body = await req.json();
+  return {
+    customerName: String(body.customerName || '').trim(),
+    phone: String(body.phone || '').trim(),
+    email: String(body.email || '').trim() || null,
+    businessName: String(body.businessName || '').trim() || null,
+    amountInput: Number(body.amount),
+    alipayAccountName: String(body.alipayAccountName || '').trim() || null,
+    alipayFile: null,
+  };
+}
+
+/** POST — create exchange request (invoice + Alipay receive QR) */
 export async function POST(req: Request) {
   try {
     const clientId = getClientIdentifier(req);
@@ -19,15 +67,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
     }
 
-    const body = await req.json();
-    const customerName = String(body.customerName || '').trim();
-    const phone = String(body.phone || '').trim();
-    let email = String(body.email || '').trim() || null;
-    const businessName = String(body.businessName || '').trim() || null;
-    const direction = 'ghs_to_rmb' as const;
-    const amountInput = Number(body.amount);
+    const payload = await readCreatePayload(req);
+    let { customerName, phone, email, businessName, amountInput, alipayAccountName, alipayFile } =
+      payload;
 
-    // Optional: attach to signed-in store account
     const auth = await verifyAuth(req);
     const userId = auth.authenticated && auth.user?.id ? (auth.user.id as string) : null;
     if (userId && !email && auth.user?.email) {
@@ -41,6 +84,24 @@ export async function POST(req: Request) {
     }
     if (!Number.isFinite(amountInput) || amountInput <= 0) {
       return NextResponse.json({ error: 'Enter a valid amount in cedis.' }, { status: 400 });
+    }
+    if (!alipayFile) {
+      return NextResponse.json(
+        {
+          error:
+            'Upload your Alipay receive QR screenshot. Open Alipay, open receive money, screenshot, then upload.',
+        },
+        { status: 400 },
+      );
+    }
+    if (!ALLOWED_QR.has(alipayFile.type)) {
+      return NextResponse.json(
+        { error: 'Alipay QR must be a JPG, PNG, or WebP image.' },
+        { status: 400 },
+      );
+    }
+    if (alipayFile.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Alipay QR image must be under 5MB.' }, { status: 400 });
     }
 
     const { data: board } = await supabaseAdmin
@@ -76,6 +137,23 @@ export async function POST(req: Request) {
     const paymentRef = createPaymentReference('SN');
     const dueAt = new Date(Date.now() + EXCHANGE_DUE_HOURS * 3600000).toISOString();
 
+    const ext =
+      alipayFile.type.includes('png') ? 'png' : alipayFile.type.includes('webp') ? 'webp' : 'jpg';
+    const qrPath = `${exchangeNumber}/${crypto.randomUUID()}.${ext}`;
+    const buffer = Buffer.from(await alipayFile.arrayBuffer());
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(ALIPAY_BUCKET)
+      .upload(qrPath, buffer, {
+        contentType: alipayFile.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('[exchange create] alipay upload', uploadError);
+      return NextResponse.json({ error: 'Could not save your Alipay QR. Try another screenshot.' }, { status: 500 });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('exchange_orders')
       .insert({
@@ -85,7 +163,7 @@ export async function POST(req: Request) {
         email,
         business_name: businessName,
         user_id: userId,
-        direction,
+        direction: 'ghs_to_rmb',
         rate: quote.rate,
         amount_from: quote.amountFrom,
         amount_to: quote.amountTo,
@@ -94,10 +172,13 @@ export async function POST(req: Request) {
         status: 'awaiting_payment',
         payment_status: 'pending',
         due_at: dueAt,
+        alipay_qr_path: qrPath,
+        alipay_account_name: alipayAccountName,
         metadata: {
           rate_board_updated_at: board.updated_at,
           payment_ref: paymentRef,
           guest_checkout: !userId,
+          alipay_qr_uploaded_at: new Date().toISOString(),
         },
       })
       .select()
@@ -105,10 +186,11 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error('[exchange create]', error);
+      await supabaseAdmin.storage.from(ALIPAY_BUCKET).remove([qrPath]);
       return NextResponse.json({ error: 'Could not create exchange order.' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, exchange: data });
+    return NextResponse.json({ success: true, exchange: sanitizeExchange(data) });
   } catch (e) {
     console.error('[exchange create]', e);
     return NextResponse.json({ error: 'Failed to create exchange.' }, { status: 500 });
@@ -133,7 +215,10 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, exchanges: data });
+    return NextResponse.json({
+      success: true,
+      exchanges: (data || []).map(sanitizeExchange),
+    });
   }
 
   if (!exchangeNumber) {
@@ -157,8 +242,14 @@ export async function GET(req: Request) {
     auth.user?.id &&
     data.user_id === auth.user.id;
 
+  // Staff with exchange module can open any invoice
+  const staffAuth = await verifyAuth(req, { requireModule: 'exchange' });
+  if (staffAuth.authenticated) {
+    return NextResponse.json({ success: true, exchange: sanitizeExchange(data), adminView: true });
+  }
+
   if (isOwner) {
-    return NextResponse.json({ success: true, exchange: data });
+    return NextResponse.json({ success: true, exchange: sanitizeExchange(data) });
   }
 
   if (!phone) {
@@ -173,5 +264,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Phone does not match this exchange.' }, { status: 403 });
   }
 
-  return NextResponse.json({ success: true, exchange: data });
+  return NextResponse.json({ success: true, exchange: sanitizeExchange(data) });
 }

@@ -22,6 +22,8 @@ type Props = {
     currency_from?: string;
     currency_to?: string;
     due_at?: string | null;
+    alipay_account_name?: string | null;
+    has_alipay_qr?: boolean;
     metadata?: Record<string, any> | null;
   };
 };
@@ -156,6 +158,9 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
                 <span className="font-medium">{description}</span>
                 <span className="block text-[10px] text-slate-600 sm:text-[11px]">
                   You receive {formatAmount(amountTo)} RMB
+                  {exchange.has_alipay_qr
+                    ? ` via Alipay${exchange.alipay_account_name ? ` (${exchange.alipay_account_name})` : ''}`
+                    : ''}
                 </span>
               </td>
               <td className="py-1.5 text-center">1</td>
@@ -286,7 +291,12 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             <tr className="border-b border-slate-300 align-top">
               <td className="py-1 pr-2">
                 <span className="font-medium">{description}</span>
-                <span className="block text-[10px]">You receive {formatAmount(amountTo)} RMB</span>
+                <span className="block text-[10px]">
+                  You receive {formatAmount(amountTo)} RMB
+                  {exchange.has_alipay_qr
+                    ? ` via Alipay${exchange.alipay_account_name ? ` (${exchange.alipay_account_name})` : ''}`
+                    : ''}
+                </span>
               </td>
               <td className="py-1 text-center">1</td>
               <td className="py-1 text-right">{formatAmount(amountFrom)}</td>

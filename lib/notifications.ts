@@ -468,25 +468,36 @@ export async function sendExchangePaymentAwaitingAdminAlert(exchange: {
     exchange_number?: string | null;
     email?: string | null;
     phone?: string | null;
+    customer_name?: string | null;
     full_name?: string | null;
     amount_from?: number | string | null;
     amount_to?: number | string | null;
     payment_note?: string | null;
+    alipay_account_name?: string | null;
+    has_alipay_qr?: boolean;
+    alipay_qr_path?: string | null;
 }) {
     const {
         id,
         exchange_number,
         email,
         phone,
+        customer_name,
         full_name,
         amount_from,
         amount_to,
         payment_note,
+        alipay_account_name,
+        has_alipay_qr,
+        alipay_qr_path,
     } = exchange;
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
     const ref = exchange_number || id;
+    const detailUrl = `${baseUrl}/admin/exchange/${encodeURIComponent(String(ref))}`;
     const gh = Number(amount_from || 0).toFixed(2);
     const rmb = Number(amount_to || 0).toFixed(2);
+    const customerLabel = customer_name || full_name || 'Customer';
+    const qrReady = has_alipay_qr || Boolean(alipay_qr_path);
 
     await sendEmail({
         to: ADMIN_EMAIL,
@@ -494,22 +505,74 @@ export async function sendExchangePaymentAwaitingAdminAlert(exchange: {
         html: emailLayout(`
 <h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Buy RMB. Customer says they have paid</h2>
 <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
-  Check the transfer, then confirm in admin.
+  Check the cedis transfer, open the invoice with Alipay QR, then confirm and send RMB.
 </p>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:16px 0;">
   ${emailInfoRow('Exchange', `#${escapeHtml(String(ref))}`)}
-  ${emailInfoRow('Customer', escapeHtml(String(full_name || 'Customer')))}
+  ${emailInfoRow('Customer', escapeHtml(String(customerLabel)))}
   ${email ? emailInfoRow('Email', escapeHtml(String(email))) : ''}
   ${phone ? emailInfoRow('Phone', escapeHtml(String(phone))) : ''}
   ${emailInfoRow('GH¢', gh)}
   ${emailInfoRow('RMB', rmb)}
+  ${emailInfoRow('Alipay QR', qrReady ? 'On file' : 'Missing')}
+  ${alipay_account_name ? emailInfoRow('Alipay name', escapeHtml(String(alipay_account_name))) : ''}
   ${payment_note ? emailInfoRow('Customer note', escapeHtml(String(payment_note))) : ''}
 </table>
 
-${emailButton('Open Buy RMB admin', `${baseUrl}/admin/exchange`)}
+${emailButton('Open invoice + Alipay QR', detailUrl)}
 `, `Buy RMB payment awaiting confirmation for #${ref}`),
     });
+}
+
+export async function sendExchangeBuyerStatusEmail(
+  exchange: {
+    exchange_number?: string | null;
+    email?: string | null;
+    customer_name?: string | null;
+    amount_from?: number | string | null;
+    amount_to?: number | string | null;
+  },
+  stage: 'confirmed' | 'completed',
+) {
+  const email = (exchange.email || '').trim();
+  if (!email) return;
+
+  const ref = exchange.exchange_number || '';
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  const invoiceUrl = `${baseUrl}/exchange/${encodeURIComponent(ref)}`;
+  const name = exchange.customer_name || 'there';
+  const rmb = Number(exchange.amount_to || 0).toFixed(2);
+  const gh = Number(exchange.amount_from || 0).toFixed(2);
+
+  if (stage === 'confirmed') {
+    await sendEmail({
+      to: email,
+      subject: `Cedis confirmed. Sending your RMB #${ref}`,
+      html: emailLayout(`
+<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Payment confirmed</h2>
+<p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+  Hi ${escapeHtml(name)}, we confirmed your GH¢${gh} transfer for Buy RMB <strong>#${escapeHtml(ref)}</strong>.
+  We are sending <strong>${rmb} RMB</strong> to your Alipay receive QR.
+</p>
+${emailButton('View your invoice', invoiceUrl)}
+`, `Cedis confirmed for Buy RMB #${ref}`),
+    });
+    return;
+  }
+
+  await sendEmail({
+    to: email,
+    subject: `RMB sent #${ref}`,
+    html: emailLayout(`
+<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Your RMB is on the way</h2>
+<p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+  Hi ${escapeHtml(name)}, we sent <strong>${rmb} RMB</strong> to your Alipay for Buy RMB <strong>#${escapeHtml(ref)}</strong>.
+  Check Alipay for the credit. If anything looks off, reply on WhatsApp with your invoice number.
+</p>
+${emailButton('View your invoice', invoiceUrl)}
+`, `RMB sent for Buy RMB #${ref}`),
+  });
 }
 
 export async function sendWelcomeMessage(user: { email: string, firstName: string, phone?: string }) {

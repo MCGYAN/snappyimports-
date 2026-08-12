@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import ShareBuyRmbRate from '@/components/admin/ShareBuyRmbRate';
@@ -109,7 +110,7 @@ export default function AdminExchangePage() {
       <div>
         <h1 className="text-2xl font-bold text-brand-primary">Buy RMB Desk</h1>
         <p className="text-sm text-slate-500">
-          When cedis land in your bank or MoMo, click Confirm payment. After you send the RMB, click Mark RMB sent.
+          Open a request to see the invoice and Alipay QR. Confirm cedis, scan the QR, check the name, send RMB, then mark sent.
         </p>
       </div>
 
@@ -226,7 +227,18 @@ export default function AdminExchangePage() {
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-col gap-2">
+                    <Link
+                      href={`/admin/exchange/${encodeURIComponent(ex.exchange_number)}`}
+                      className="w-full rounded-xl border border-brand-primary py-3 text-center text-sm font-bold text-brand-primary"
+                    >
+                      Open invoice + QR
+                    </Link>
+                    {ex.has_alipay_qr ? (
+                      <p className="text-center text-xs font-semibold text-green-700">Alipay QR on file</p>
+                    ) : (
+                      <p className="text-center text-xs font-semibold text-amber-700">No Alipay QR</p>
+                    )}
                     {canConfirm ? (
                       <button
                         type="button"
@@ -245,13 +257,12 @@ export default function AdminExchangePage() {
                         Confirm payment
                       </button>
                     ) : ex.status === 'confirmed' ? (
-                      <button
-                        type="button"
-                        onClick={() => act(ex.exchange_number, 'complete')}
-                        className="w-full rounded-xl bg-brand-accent py-3 text-sm font-bold text-white"
+                      <Link
+                        href={`/admin/exchange/${encodeURIComponent(ex.exchange_number)}`}
+                        className="w-full rounded-xl bg-brand-accent py-3 text-center text-sm font-bold text-white"
                       >
-                        Mark RMB sent
-                      </button>
+                        Scan QR & mark RMB sent
+                      </Link>
                     ) : ex.status === 'completed' ? (
                       <p className="text-center text-sm font-semibold text-green-700">Done</p>
                     ) : null}
@@ -269,6 +280,7 @@ export default function AdminExchangePage() {
                   <th className="px-4 py-3">Code</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Deal</th>
+                  <th className="px-4 py-3">QR</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
@@ -288,8 +300,21 @@ export default function AdminExchangePage() {
                       {Number(ex.amount_from).toFixed(2)} {ex.currency_from} →{' '}
                       {Number(ex.amount_to).toFixed(2)} {ex.currency_to}
                     </td>
+                    <td className="px-4 py-3">
+                      {ex.has_alipay_qr ? (
+                        <span className="text-xs font-semibold text-green-700">Ready</span>
+                      ) : (
+                        <span className="text-xs font-semibold text-amber-700">Missing</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 capitalize">{String(ex.status || '').replace(/_/g, ' ')}</td>
                     <td className="px-4 py-3 space-x-2 whitespace-nowrap">
+                      <Link
+                        href={`/admin/exchange/${encodeURIComponent(ex.exchange_number)}`}
+                        className="rounded-lg border border-brand-primary px-3 py-1.5 text-xs font-bold text-brand-primary"
+                      >
+                        Open
+                      </Link>
                       {['awaiting_payment', 'payment_sent'].includes(ex.status) ||
                       ex.payment_status === 'awaiting_confirmation' ||
                       ex.payment_status === 'pending' ? (
@@ -311,13 +336,12 @@ export default function AdminExchangePage() {
                         </button>
                       ) : null}
                       {ex.status === 'confirmed' ? (
-                        <button
-                          type="button"
-                          onClick={() => act(ex.exchange_number, 'complete')}
+                        <Link
+                          href={`/admin/exchange/${encodeURIComponent(ex.exchange_number)}`}
                           className="rounded-lg bg-brand-accent px-3 py-1.5 text-xs font-bold text-white"
                         >
-                          Mark RMB sent
-                        </button>
+                          Scan & send
+                        </Link>
                       ) : null}
                       {ex.status === 'completed' ? (
                         <span className="text-xs font-semibold text-green-700">Done</span>
