@@ -110,7 +110,8 @@ export default function AdminExchangePage() {
       <div>
         <h1 className="text-2xl font-bold text-brand-primary">Buy RMB Desk</h1>
         <p className="text-sm text-slate-500">
-          Open a request to see the invoice and Alipay QR. Confirm cedis, scan the QR, check the name, send RMB, then mark sent.
+          Open a request for the invoice and Alipay QR. Confirm cedis first. Scan the QR. Check the
+          Alipay name matches. Send the exact RMB amount. Then mark RMB sent.
         </p>
       </div>
 
