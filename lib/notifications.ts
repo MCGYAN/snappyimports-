@@ -476,6 +476,9 @@ export async function sendExchangePaymentAwaitingAdminAlert(exchange: {
     alipay_account_name?: string | null;
     has_alipay_qr?: boolean;
     alipay_qr_path?: string | null;
+    country_code?: string | null;
+    currency_from?: string | null;
+    metadata?: Record<string, any> | null;
 }) {
     const {
         id,
@@ -490,6 +493,9 @@ export async function sendExchangePaymentAwaitingAdminAlert(exchange: {
         alipay_account_name,
         has_alipay_qr,
         alipay_qr_path,
+        country_code,
+        currency_from,
+        metadata,
     } = exchange;
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
     const ref = exchange_number || id;
@@ -498,22 +504,30 @@ export async function sendExchangePaymentAwaitingAdminAlert(exchange: {
     const rmb = Number(amount_to || 0).toFixed(2);
     const customerLabel = customer_name || full_name || 'Customer';
     const qrReady = has_alipay_qr || Boolean(alipay_qr_path);
+    const countryLabel =
+      country_code === 'NG'
+        ? 'Nigeria'
+        : country_code === 'TZ'
+          ? 'Tanzania'
+          : metadata?.country_name || 'Ghana';
+    const localCurrency = currency_from || 'GHS';
 
     await sendEmail({
         to: ADMIN_EMAIL,
-        subject: `Buy RMB payment to confirm #${ref}`,
+        subject: `Buy RMB payment to confirm #${ref} (${countryLabel})`,
         html: emailLayout(`
 <h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Buy RMB. Customer says they have paid</h2>
 <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
-  Check the cedis transfer, open the invoice with Alipay QR, then confirm and send RMB.
+  Check the ${escapeHtml(countryLabel)} transfer, open the invoice with Alipay QR, then confirm and send RMB.
 </p>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:16px 0;">
   ${emailInfoRow('Exchange', `#${escapeHtml(String(ref))}`)}
+  ${emailInfoRow('Country', escapeHtml(countryLabel))}
   ${emailInfoRow('Customer', escapeHtml(String(customerLabel)))}
   ${email ? emailInfoRow('Email', escapeHtml(String(email))) : ''}
   ${phone ? emailInfoRow('Phone', escapeHtml(String(phone))) : ''}
-  ${emailInfoRow('GH¢', gh)}
+  ${emailInfoRow(localCurrency, gh)}
   ${emailInfoRow('RMB', rmb)}
   ${emailInfoRow('Alipay QR', qrReady ? 'On file' : 'Missing')}
   ${alipay_account_name ? emailInfoRow('Alipay name', escapeHtml(String(alipay_account_name))) : ''}

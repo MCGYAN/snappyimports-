@@ -7,6 +7,11 @@ import ExchangeInvoiceDocument from '@/components/ExchangeInvoiceDocument';
 import { supabase } from '@/lib/supabase';
 import { buildWhatsAppHref } from '@/lib/snappy-import';
 import { resolvePaymentReference } from '@/lib/payment-reference';
+import {
+  EXCHANGE_CORRIDORS,
+  formatLocalMoney,
+  parseExchangeCountryCode,
+} from '@/lib/exchange-corridors';
 import { ArrowLeft, MessageCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 
 export default function AdminExchangeDetailPage() {
@@ -120,6 +125,11 @@ export default function AdminExchangeDetailPage() {
   const paymentRef = exchange
     ? resolvePaymentReference(exchange.metadata?.payment_ref, exchange.exchange_number)
     : '';
+  const country = parseExchangeCountryCode(
+    exchange?.country_code || exchange?.metadata?.country_code,
+  );
+  const countryMeta = EXCHANGE_CORRIDORS[country];
+  const localPaidLabel = formatLocalMoney(Number(exchange?.amount_from || 0), country);
 
   const readyToMarkSent =
     checklist.cedisConfirmed && checklist.nameChecked && checklist.amountChecked;
@@ -153,7 +163,7 @@ export default function AdminExchangeDetailPage() {
             {exchange.exchange_number}
           </h1>
           <p className="text-sm text-slate-500">
-            Code {paymentRef}. Status:{' '}
+            Code {paymentRef}. {countryMeta.name}. Status:{' '}
             <span className="capitalize">{String(exchange.status).replace(/_/g, ' ')}</span>
           </p>
         </div>
@@ -198,12 +208,17 @@ export default function AdminExchangeDetailPage() {
               <div>
                 <h2 className="text-lg font-bold text-brand-primary">Alipay send checklist</h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  Confirm cedis first. Scan QR. Check name. Send RMB. Then mark sent.
+                  Confirm {countryMeta.name} payment first. Scan QR. Check name. Send RMB. Then mark
+                  sent.
                 </p>
               </div>
             </div>
 
             <div className="mt-4 space-y-3 rounded-xl bg-white p-4 text-sm text-slate-700 ring-1 ring-slate-100">
+              <p>
+                <span className="font-semibold text-slate-500">Pay-in country:</span>{' '}
+                <span className="font-bold text-brand-primary">{countryMeta.name}</span>
+              </p>
               <p>
                 <span className="font-semibold text-slate-500">Invoice name:</span>{' '}
                 <span className="font-bold text-brand-primary">{exchange.customer_name}</span>
@@ -221,8 +236,7 @@ export default function AdminExchangeDetailPage() {
                 </span>
               </p>
               <p>
-                <span className="font-semibold text-slate-500">Customer paid:</span> GH¢
-                {Number(exchange.amount_from).toFixed(2)}
+                <span className="font-semibold text-slate-500">Customer paid:</span> {localPaidLabel}
               </p>
             </div>
 
@@ -236,7 +250,9 @@ export default function AdminExchangeDetailPage() {
                   }
                   className="mt-1"
                 />
-                <span>Cedis payment confirmed in bank or MoMo</span>
+                <span>
+                  {countryMeta.name} payment confirmed in bank or mobile money ({localPaidLabel})
+                </span>
               </label>
               <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
                 <input
@@ -272,7 +288,7 @@ export default function AdminExchangeDetailPage() {
                   onClick={() => {
                     if (
                       !confirm(
-                        `Confirm cedis received: GH¢${Number(exchange.amount_from).toFixed(2)} for ${exchange.exchange_number}?`,
+                        `Confirm ${countryMeta.name} payment received: ${localPaidLabel} for ${exchange.exchange_number}?`,
                       )
                     ) {
                       return;
@@ -281,7 +297,7 @@ export default function AdminExchangeDetailPage() {
                   }}
                   className="rounded-xl bg-brand-primary py-3 text-sm font-bold text-white disabled:opacity-60"
                 >
-                  {acting ? 'Working…' : '1. Confirm cedis payment received'}
+                  {acting ? 'Working…' : `1. Confirm ${countryMeta.name} payment received`}
                 </button>
               ) : null}
 

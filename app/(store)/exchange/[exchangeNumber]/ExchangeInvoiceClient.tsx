@@ -262,7 +262,7 @@ export default function ExchangeInvoiceClient() {
             </section>
 
             <section className="store-card space-y-3 p-6 print:hidden">
-              <h3 className="font-semibold text-brand-primary">Ghana payment status</h3>
+              <h3 className="font-semibold text-brand-primary">Local payment status</h3>
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <Clock className="h-4 w-4" />
                 Status:{' '}

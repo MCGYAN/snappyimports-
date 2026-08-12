@@ -11,9 +11,13 @@ export function formatStoreMoney(
   const symbol =
     code === 'GHS' || code === 'GH¢' || code === 'GHC'
       ? STORE_CURRENCY_SYMBOL
-      : code === 'USD'
-        ? '$'
-        : `${code} `;
+      : code === 'NGN'
+        ? '₦'
+        : code === 'TZS'
+          ? 'TZS '
+          : code === 'USD'
+            ? '$'
+            : `${code} `;
   return `${symbol}${Number(amount || 0).toLocaleString('en-GH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

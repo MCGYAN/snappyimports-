@@ -5,10 +5,19 @@ import { verifyAuth } from '@/lib/auth';
 import {
   createExchangeNumber,
   EXCHANGE_DUE_HOURS,
-  isRateValid,
-  quoteGhsToRmb,
 } from '@/lib/rmb-exchange';
 import { createPaymentReference } from '@/lib/payment-reference';
+import {
+  corridorIsReady,
+  EXCHANGE_CORRIDORS,
+  formatLocalMoney,
+  normalizePayAccounts,
+  parseExchangeCountryCode,
+  quoteLocalToRmb,
+  resolvePayAccounts,
+  type CorridorRateBoard,
+  type ExchangeCountryCode,
+} from '@/lib/exchange-corridors';
 
 const ALIPAY_BUCKET = 'exchange-alipay';
 const ALLOWED_QR = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
@@ -22,7 +31,25 @@ function sanitizeExchange(row: any) {
   };
 }
 
+function mapBoard(row: any): CorridorRateBoard {
+  const country = parseExchangeCountryCode(row.country_code);
+  return {
+    country_code: country,
+    currency_code: row.currency_code || EXCHANGE_CORRIDORS[country].currencyCode,
+    buy_rmb_rate: Number(row.buy_rmb_rate) || 0,
+    sell_rmb_rate: Number(row.sell_rmb_rate) || 0,
+    min_amount: Number(row.min_amount) || 0,
+    max_amount: row.max_amount != null ? Number(row.max_amount) : null,
+    notes: row.notes || null,
+    valid_until: row.valid_until || null,
+    is_live: Boolean(row.is_live),
+    pay_accounts: normalizePayAccounts(row.pay_accounts),
+    updated_at: row.updated_at,
+  };
+}
+
 async function readCreatePayload(req: Request): Promise<{
+  country: ExchangeCountryCode;
   customerName: string;
   phone: string;
   email: string | null;
@@ -36,6 +63,7 @@ async function readCreatePayload(req: Request): Promise<{
     const form = await req.formData();
     const file = form.get('alipayQr');
     return {
+      country: parseExchangeCountryCode(form.get('country')),
       customerName: String(form.get('customerName') || '').trim(),
       phone: String(form.get('phone') || '').trim(),
       email: String(form.get('email') || '').trim() || null,
@@ -48,6 +76,7 @@ async function readCreatePayload(req: Request): Promise<{
 
   const body = await req.json();
   return {
+    country: parseExchangeCountryCode(body.country),
     customerName: String(body.customerName || '').trim(),
     phone: String(body.phone || '').trim(),
     email: String(body.email || '').trim() || null,
@@ -68,7 +97,7 @@ export async function POST(req: Request) {
     }
 
     const payload = await readCreatePayload(req);
-    let { customerName, phone, email, businessName, amountInput, alipayAccountName, alipayFile } =
+    let { country, customerName, phone, email, businessName, amountInput, alipayAccountName, alipayFile } =
       payload;
 
     const auth = await verifyAuth(req);
@@ -79,11 +108,16 @@ export async function POST(req: Request) {
       email = email.toLowerCase();
     }
 
+    const meta = EXCHANGE_CORRIDORS[country];
+
     if (!customerName || !phone) {
       return NextResponse.json({ error: 'Name and phone are required.' }, { status: 400 });
     }
     if (!Number.isFinite(amountInput) || amountInput <= 0) {
-      return NextResponse.json({ error: 'Enter a valid amount in cedis.' }, { status: 400 });
+      return NextResponse.json(
+        { error: `Enter a valid amount in ${meta.currencyLabel}.` },
+        { status: 400 },
+      );
     }
     if (!alipayFile) {
       return NextResponse.json(
@@ -104,35 +138,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Alipay QR image must be under 5MB.' }, { status: 400 });
     }
 
-    const { data: board } = await supabaseAdmin
-      .from('exchange_rate_board')
+    const { data: boardRow, error: boardError } = await supabaseAdmin
+      .from('exchange_corridor_rates')
       .select('*')
-      .eq('id', 1)
-      .single();
+      .eq('country_code', country)
+      .maybeSingle();
 
-    if (!board || !isRateValid(board)) {
+    if (boardError) {
+      console.error('[exchange create] board', boardError);
+      return NextResponse.json({ error: 'Could not load rate board.' }, { status: 500 });
+    }
+
+    const board = boardRow ? mapBoard(boardRow) : null;
+    const ready = corridorIsReady(board);
+    if (!ready.ok || !board) {
       return NextResponse.json(
-        { error: 'Today’s RMB buy rate is not available or has expired. Contact Snappy on WhatsApp.' },
+        { error: ready.ok === false ? ready.reason : 'Corridor not ready.' },
         { status: 400 },
       );
     }
 
-    const quote = quoteGhsToRmb(amountInput, Number(board.buy_rmb_rate));
+    const quote = quoteLocalToRmb(amountInput, Number(board.buy_rmb_rate), country);
+    const localSide = quote.amountFrom;
 
-    const ghsSide = quote.amountFrom;
-    if (ghsSide < Number(board.min_amount_ghs || 0)) {
+    if (localSide < Number(board.min_amount || 0)) {
       return NextResponse.json(
-        { error: `Minimum buy is GH¢${Number(board.min_amount_ghs).toFixed(0)}.` },
+        {
+          error: `Minimum buy for ${meta.name} is ${formatLocalMoney(Number(board.min_amount), country, 0)}.`,
+        },
         { status: 400 },
       );
     }
-    if (board.max_amount_ghs && ghsSide > Number(board.max_amount_ghs)) {
+    if (board.max_amount && localSide > Number(board.max_amount)) {
       return NextResponse.json(
-        { error: `Maximum buy is GH¢${Number(board.max_amount_ghs).toFixed(0)}.` },
+        {
+          error: `Maximum buy for ${meta.name} is ${formatLocalMoney(Number(board.max_amount), country, 0)}.`,
+        },
         { status: 400 },
       );
     }
 
+    const payAccounts = resolvePayAccounts(board);
     const exchangeNumber = createExchangeNumber();
     const paymentRef = createPaymentReference('SN');
     const dueAt = new Date(Date.now() + EXCHANGE_DUE_HOURS * 3600000).toISOString();
@@ -151,7 +197,10 @@ export async function POST(req: Request) {
 
     if (uploadError) {
       console.error('[exchange create] alipay upload', uploadError);
-      return NextResponse.json({ error: 'Could not save your Alipay QR. Try another screenshot.' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Could not save your Alipay QR. Try another screenshot.' },
+        { status: 500 },
+      );
     }
 
     const { data, error } = await supabaseAdmin
@@ -163,7 +212,8 @@ export async function POST(req: Request) {
         email,
         business_name: businessName,
         user_id: userId,
-        direction: 'ghs_to_rmb',
+        country_code: country,
+        direction: quote.direction,
         rate: quote.rate,
         amount_from: quote.amountFrom,
         amount_to: quote.amountTo,
@@ -175,10 +225,14 @@ export async function POST(req: Request) {
         alipay_qr_path: qrPath,
         alipay_account_name: alipayAccountName,
         metadata: {
+          country_code: country,
+          country_name: meta.name,
           rate_board_updated_at: board.updated_at,
           payment_ref: paymentRef,
           guest_checkout: !userId,
           alipay_qr_uploaded_at: new Date().toISOString(),
+          // Freeze pay-in accounts on the invoice so later admin edits cannot rewrite history
+          pay_accounts: payAccounts,
         },
       })
       .select()
@@ -203,17 +257,24 @@ export async function GET(req: Request) {
   const exchangeNumber = (searchParams.get('exchange') || '').trim();
   const phone = (searchParams.get('phone') || '').trim();
   const admin = searchParams.get('admin') === '1';
+  const countryFilter = searchParams.get('country');
 
   if (admin) {
     const auth = await verifyAuth(req, { requireModule: 'exchange' });
     if (!auth.authenticated) {
       return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('exchange_orders')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(100);
+
+    if (countryFilter && countryFilter !== 'ALL') {
+      query = query.eq('country_code', parseExchangeCountryCode(countryFilter));
+    }
+
+    const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({
       success: true,
@@ -242,7 +303,6 @@ export async function GET(req: Request) {
     auth.user?.id &&
     data.user_id === auth.user.id;
 
-  // Staff with exchange module can open any invoice
   const staffAuth = await verifyAuth(req, { requireModule: 'exchange' });
   if (staffAuth.authenticated) {
     return NextResponse.json({ success: true, exchange: sanitizeExchange(data), adminView: true });
