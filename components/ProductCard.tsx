@@ -107,7 +107,7 @@ export default function ProductCard({
     addToCart({ id, name, price, image, quantity: moq, slug, maxStock, moq });
   };
 
-  const cartButtonClass = `btn-interactive flex shrink-0 items-center justify-center bg-brand-accent text-white font-bold transition-all shadow-[0_4px_12px_rgba(242,107,29,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(242,107,29,0.35)] disabled:pointer-events-none disabled:opacity-50 ${
+  const cartButtonClass = `btn-interactive flex w-full shrink-0 items-center justify-center bg-brand-accent text-white font-bold transition-all shadow-[0_4px_12px_rgba(242,107,29,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(242,107,29,0.35)] disabled:pointer-events-none disabled:opacity-50 sm:w-auto ${
     compact ? 'h-8 rounded-lg px-3 text-[10px] lg:h-9 lg:rounded-xl lg:px-4 lg:text-xs' : 'h-9 rounded-xl px-3 text-[11px] sm:h-10 sm:px-5 sm:text-xs'
   }`;
   const openProductForOptions =
@@ -121,7 +121,7 @@ export default function ProductCard({
         className={`relative block w-full shrink-0 overflow-hidden liquid-glass-well ${
           compact
             ? 'aspect-square max-lg:p-2.5 lg:aspect-[4/3] lg:p-6'
-            : 'aspect-[4/3] p-5 sm:p-6'
+            : 'aspect-[4/3] p-3.5 sm:p-5 md:p-6'
         }`}
       >
         <LazyImage
@@ -165,7 +165,7 @@ export default function ProductCard({
         )}
       </Link>
 
-      <div className={`flex flex-1 flex-col ${compact ? 'p-3 max-lg:pt-2.5 lg:p-6' : 'p-5 sm:p-6'}`}>
+      <div className={`flex flex-1 flex-col ${compact ? 'p-3 max-lg:pt-2.5 lg:p-6' : 'p-3.5 sm:p-5 md:p-6'}`}>
         <div className={`mb-1.5 flex items-center justify-between gap-2 ${compact ? 'max-lg:mb-1' : ''}`}>
           {categoryName ? (
             <span className={`truncate font-bold uppercase tracking-widest text-brand-accent ${compact ? 'max-lg:hidden text-[10px] lg:text-[10px]' : 'text-[9px] sm:text-[10px]'}`}>
@@ -219,19 +219,19 @@ export default function ProductCard({
           </div>
         )}
 
-        <div className={`mt-auto flex items-end justify-between gap-2 border-t border-slate-100 ${compact ? 'max-lg:pt-2.5 lg:gap-3 lg:pt-5' : 'gap-3 pt-4 sm:pt-5'}`}>
-          <div className="min-w-0 flex-1">
+        <div className={`mt-auto flex flex-col gap-2 border-t border-slate-100 sm:flex-row sm:items-end sm:justify-between ${compact ? 'max-lg:pt-2.5 sm:gap-2 lg:gap-3 lg:pt-5' : 'pt-3 sm:gap-3 sm:pt-5'}`}>
+          <div className="min-w-0 sm:flex-1">
             {originalPrice && originalPrice > displayPrice && (
               <span className={`block font-medium text-slate-400 line-through ${compact ? 'text-[10px] lg:text-xs' : 'text-[11px] sm:text-xs'}`}>
                 {formatPrice(originalPrice)}
               </span>
             )}
-            <span className={`font-heading block font-black leading-tight text-brand-primary ${compact ? 'text-[13px] line-clamp-2 lg:text-lg' : 'text-base line-clamp-2 sm:text-lg'}`}>
+            <span className={`font-heading block break-words font-black leading-tight text-brand-primary ${compact ? 'text-[13px] lg:text-lg' : 'text-base sm:text-lg'}`}>
               {priceLabel()}
             </span>
           </div>
 
-          <div className="shrink-0 mt-0.5">
+          <div className="sm:mt-0.5 sm:shrink-0">
             {openProductForOptions ? (
               <Link
                 href={`/product/${slug}`}
