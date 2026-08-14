@@ -11,8 +11,7 @@ export default function NotificationsPage() {
     const [form, setForm] = useState({
         subject: '',
         message: '',
-        channels: { email: true, sms: false },
-        audience: 'all'
+        audience: 'all',
     });
 
     const handleSend = async (e: React.FormEvent) => {
@@ -22,70 +21,47 @@ export default function NotificationsPage() {
         setSuccess('');
 
         try {
-            // 1. Get auth token for admin verification
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.access_token) {
                 throw new Error('You must be logged in as admin to send campaigns');
             }
 
-            // 2. Fetch Recipients from the customers table (includes secondary contacts)
             const { data: customers, error: fetchError } = await supabase
                 .from('customers')
-                .select('email, phone, full_name, secondary_phone, secondary_email');
+                .select('email, full_name, secondary_email');
 
             if (fetchError) throw fetchError;
 
-            // Build recipients with deduplication
-            const seenPhones = new Set<string>();
             const seenEmails = new Set<string>();
+            const recipients: { email: string; name: string | null }[] = [];
 
-            const normalizePhone = (p: string) => p.replace(/[\s\-\(\)\.]+/g, '').replace(/^00/, '+');
+            for (const c of customers || []) {
+                const emails = [c.email, c.secondary_email]
+                    .filter(Boolean)
+                    .map((email: string) => email.toLowerCase().trim());
 
-            const recipients: any[] = [];
-            for (const c of (customers || [])) {
-                const phones = [c.phone, c.secondary_phone].filter(Boolean).map((p: string) => normalizePhone(p));
-                const emails = [c.email, c.secondary_email].filter(Boolean).map((e: string) => e.toLowerCase().trim());
+                const uniqueEmail = emails.find((email) => !seenEmails.has(email)) || null;
+                if (!uniqueEmail) continue;
 
-                // Pick first unique phone for this customer
-                const uniquePhone = phones.find(p => !seenPhones.has(p)) || null;
-                if (uniquePhone) seenPhones.add(uniquePhone);
-
-                // Pick first unique email for this customer
-                const uniqueEmail = emails.find(e => !seenEmails.has(e)) || null;
-                if (uniqueEmail) seenEmails.add(uniqueEmail);
-
-                // Also mark all their contact info as seen to avoid duplicates from other customers
-                phones.forEach(p => seenPhones.add(p));
-                emails.forEach(e => seenEmails.add(e));
-
-                const recipient = { email: uniqueEmail, phone: uniquePhone, name: c.full_name };
-
-                // Filter based on selected channels
-                if (form.channels.sms && !form.channels.email && !recipient.phone) continue;
-                if (form.channels.email && !form.channels.sms && !recipient.email) continue;
-                if (!recipient.email && !recipient.phone) continue;
-
-                recipients.push(recipient);
+                emails.forEach((email) => seenEmails.add(email));
+                recipients.push({ email: uniqueEmail, name: c.full_name });
             }
 
-            if (recipients.length === 0) throw new Error('No recipients found with valid contact info');
+            if (recipients.length === 0) {
+                throw new Error('No recipients found with a valid email address');
+            }
 
-            // Confirm before sending
-            const smsCount = recipients.filter(r => r.phone).length;
-            const emailCount = recipients.filter(r => r.email).length;
-            const summary = [];
-            if (form.channels.sms) summary.push(`${smsCount} SMS (deduplicated)`);
-            if (form.channels.email) summary.push(`${emailCount} emails`);
-
-            if (!window.confirm(`This will send ${summary.join(' and ')} to your customers. Continue?`)) {
+            if (
+                !window.confirm(
+                    `This will send ${recipients.length} emails to your customers. Continue?`,
+                )
+            ) {
                 setLoading(false);
                 return;
             }
 
-            // 3. Send in batches to avoid API timeout
             const BATCH_SIZE = 50;
             let totalEmail = 0;
-            let totalSms = 0;
             let totalErrors = 0;
 
             for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
@@ -95,7 +71,7 @@ export default function NotificationsPage() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`
+                        Authorization: `Bearer ${session.access_token}`,
                     },
                     body: JSON.stringify({
                         type: 'campaign',
@@ -103,39 +79,38 @@ export default function NotificationsPage() {
                             recipients: batch,
                             subject: form.subject,
                             message: form.message,
-                            channels: form.channels,
-                        }
-                    })
+                            channels: { email: true, sms: false },
+                        },
+                    }),
                 });
 
-                // Handle non-JSON responses (e.g. timeouts, server errors)
                 let data;
                 const contentType = res.headers.get('content-type') || '';
                 if (contentType.includes('application/json')) {
                     data = await res.json();
                 } else {
                     const text = await res.text();
-                    throw new Error(`Server error (batch ${Math.floor(i / BATCH_SIZE) + 1}): ${text.slice(0, 100)}`);
+                    throw new Error(
+                        `Server error (batch ${Math.floor(i / BATCH_SIZE) + 1}): ${text.slice(0, 100)}`,
+                    );
                 }
 
                 if (!res.ok) throw new Error(data.error || 'Failed to send');
 
-                // Parse results from response
                 const msg = data.message || '';
                 const emailMatch = msg.match(/(\d+) emails/);
-                const smsMatch = msg.match(/(\d+) SMS/);
                 const errorMatch = msg.match(/(\d+) failed/);
-                if (emailMatch) totalEmail += parseInt(emailMatch[1]);
-                if (smsMatch) totalSms += parseInt(smsMatch[1]);
-                if (errorMatch) totalErrors += parseInt(errorMatch[1]);
+                if (emailMatch) totalEmail += parseInt(emailMatch[1], 10);
+                if (errorMatch) totalErrors += parseInt(errorMatch[1], 10);
             }
 
-            const resultParts = [];
-            if (totalEmail > 0) resultParts.push(`${totalEmail} emails`);
-            if (totalSms > 0) resultParts.push(`${totalSms} SMS`);
             const errorNote = totalErrors > 0 ? ` (${totalErrors} failed)` : '';
-            setSuccess(`Campaign sent successfully! ${resultParts.join(', ')} sent.${errorNote}`);
-            setForm(prev => ({ ...prev, subject: '', message: '' }));
+            setSuccess(
+                totalEmail > 0
+                    ? `Campaign sent successfully! ${totalEmail} emails sent.${errorNote}`
+                    : `Campaign finished.${errorNote}`,
+            );
+            setForm((prev) => ({ ...prev, subject: '', message: '' }));
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -150,15 +125,23 @@ export default function NotificationsPage() {
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
                 <h2 className="text-xl font-semibold mb-6">Send New Campaign</h2>
 
-                {success && <div className="bg-brand-primary/5 text-brand-primary p-4 rounded-lg mb-4">{success}</div>}
-                {error && <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-4">{error}</div>}
+                {success && (
+                    <div className="bg-brand-primary/5 text-brand-primary p-4 rounded-lg mb-4">
+                        {success}
+                    </div>
+                )}
+                {error && (
+                    <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-4">{error}</div>
+                )}
 
                 <form onSubmit={handleSend} className="space-y-6">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Audience</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Audience
+                        </label>
                         <select
                             value={form.audience}
-                            onChange={e => setForm({ ...form, audience: e.target.value })}
+                            onChange={(e) => setForm({ ...form, audience: e.target.value })}
                             className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-accent/25"
                         >
                             <option value="all">All Customers</option>
@@ -166,63 +149,48 @@ export default function NotificationsPage() {
                         </select>
                     </div>
 
-                    <div className="flex gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={form.channels.email}
-                                onChange={e => setForm({ ...form, channels: { ...form.channels, email: e.target.checked } })}
-                                className="w-5 h-5 text-brand-primary rounded focus:ring-brand-accent/25 cursor-pointer"
-                            />
-                            <span className="font-medium text-gray-900">Send Email</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={form.channels.sms}
-                                onChange={e => setForm({ ...form, channels: { ...form.channels, sms: e.target.checked } })}
-                                className="w-5 h-5 text-brand-primary rounded focus:ring-brand-accent/25 cursor-pointer"
-                            />
-                            <span className="font-medium text-gray-900">Send SMS</span>
-                        </label>
-                    </div>
-
-                    {form.channels.email && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Email Subject</label>
-                            <input
-                                type="text"
-                                value={form.subject}
-                                onChange={e => setForm({ ...form, subject: e.target.value })}
-                                className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-accent/25"
-                                placeholder="e.g., Summer Sale Starts Now!"
-                                required={form.channels.email}
-                            />
-                        </div>
-                    )}
-
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Message Content</label>
-                        <textarea
-                            value={form.message}
-                            onChange={e => setForm({ ...form, message: e.target.value })}
-                            className="w-full p-3 border border-gray-300 rounded-lg h-40 outline-none focus:ring-2 focus:ring-brand-accent/25"
-                            placeholder="Write your message here... For emails, this supports plain text."
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Email Subject
+                        </label>
+                        <input
+                            type="text"
+                            value={form.subject}
+                            onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                            className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-accent/25"
+                            placeholder="e.g., Summer Sale Starts Now!"
                             required
                         />
-                        <p className="text-sm text-gray-500 mt-1">This message will be used for the email body (wrapped in a template) and SMS content (if selected).</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Message Content
+                        </label>
+                        <textarea
+                            value={form.message}
+                            onChange={(e) => setForm({ ...form, message: e.target.value })}
+                            className="w-full p-3 border border-gray-300 rounded-lg h-40 outline-none focus:ring-2 focus:ring-brand-accent/25"
+                            placeholder="Write your email message here..."
+                            required
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                            This becomes the email body. Plain text is fine.
+                        </p>
                     </div>
 
                     <button
                         type="submit"
-                        disabled={loading || (!form.channels.email && !form.channels.sms)}
+                        disabled={loading}
                         className="w-full bg-brand-primary text-white py-4 rounded-lg font-bold text-lg hover:bg-brand-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                         {loading ? (
                             <span className="flex items-center justify-center">
                                 <i className="ri-loader-4-line animate-spin mr-2"></i> Sending...
                             </span>
-                        ) : 'Send Campaign'}
+                        ) : (
+                            'Send Email Campaign'
+                        )}
                     </button>
                 </form>
             </div>

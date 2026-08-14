@@ -185,11 +185,6 @@ export default function AdminLayout({
       path: '/admin/notifications'
     },
     {
-      title: 'SMS Debugger',
-      icon: 'ri-message-2-line',
-      path: '/admin/test-sms'
-    },
-    {
       title: 'Team',
       icon: 'ri-user-settings-line',
       path: '/admin/team'
