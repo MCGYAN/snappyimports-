@@ -24,12 +24,66 @@ function timeAgo(value: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+/** Soft two-tone chime. No audio file required. */
+function playNotificationChime(audioCtx: AudioContext | null) {
+  if (!audioCtx) return;
+  try {
+    if (audioCtx.state === 'suspended') {
+      void audioCtx.resume();
+    }
+
+    const now = audioCtx.currentTime;
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
+    master.connect(audioCtx.destination);
+
+    const tones = [
+      { freq: 880, start: 0, duration: 0.28 },
+      { freq: 1174.7, start: 0.14, duration: 0.42 },
+    ];
+
+    for (const tone of tones) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(tone.freq, now + tone.start);
+      gain.gain.setValueAtTime(0.0001, now + tone.start);
+      gain.gain.exponentialRampToValueAtTime(0.7, now + tone.start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.start + tone.duration);
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(now + tone.start);
+      osc.stop(now + tone.start + tone.duration + 0.02);
+    }
+  } catch {
+    // Browsers may block audio until the tab has been interacted with.
+  }
+}
+
 export default function AdminNotificationBell({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [liveAlert, setLiveAlert] = useState<AdminNotification | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const ensureAudio = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new AudioCtx();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      void audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  }, []);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -60,6 +114,7 @@ export default function AdminNotificationBell({ userId }: { userId: string }) {
           const next = payload.new as AdminNotification;
           setItems((current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, 30));
           setLiveAlert(next);
+          playNotificationChime(audioCtxRef.current || ensureAudio());
         },
       )
       .subscribe();
@@ -67,13 +122,32 @@ export default function AdminNotificationBell({ userId }: { userId: string }) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [load, userId]);
+  }, [ensureAudio, load, userId]);
 
   useEffect(() => {
     if (!liveAlert) return;
     const timer = window.setTimeout(() => setLiveAlert(null), 7000);
     return () => window.clearTimeout(timer);
   }, [liveAlert]);
+
+  useEffect(() => {
+    const unlock = () => {
+      ensureAudio();
+    };
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, [ensureAudio]);
+
+  useEffect(() => {
+    return () => {
+      void audioCtxRef.current?.close();
+      audioCtxRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -131,7 +205,10 @@ export default function AdminNotificationBell({ userId }: { userId: string }) {
 
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          ensureAudio();
+          setOpen((value) => !value);
+        }}
         className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-brand-primary transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-primary/5 hover:text-brand-accent"
         aria-label={unread ? `${unread} unread notifications` : 'Notifications'}
         aria-expanded={open}
