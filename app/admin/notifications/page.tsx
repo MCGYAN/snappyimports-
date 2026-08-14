@@ -11,7 +11,6 @@ export default function NotificationsPage() {
     const [form, setForm] = useState({
         subject: '',
         message: '',
-        audience: 'all',
     });
 
     const handleSend = async (e: React.FormEvent) => {
@@ -135,19 +134,9 @@ export default function NotificationsPage() {
                 )}
 
                 <form onSubmit={handleSend} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Audience
-                        </label>
-                        <select
-                            value={form.audience}
-                            onChange={(e) => setForm({ ...form, audience: e.target.value })}
-                            className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-accent/25"
-                        >
-                            <option value="all">All Customers</option>
-                            <option value="newsletter">Newsletter Subscribers</option>
-                        </select>
-                    </div>
+                    <p className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                        Sends to all customers with an email address.
+                    </p>
 
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
