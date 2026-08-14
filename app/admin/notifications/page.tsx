@@ -1,17 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function NotificationsPage() {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
-
+    const [recipientCount, setRecipientCount] = useState<number | null>(null);
     const [form, setForm] = useState({
         subject: '',
         message: '',
     });
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const { count, error: countError } = await supabase
+                    .from('customers')
+                    .select('id', { count: 'exact', head: true })
+                    .not('email', 'is', null)
+                    .neq('email', '');
+                if (!cancelled && !countError) {
+                    setRecipientCount(count ?? 0);
+                }
+            } catch {
+                // Count is informational only
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,98 +41,58 @@ export default function NotificationsPage() {
         setSuccess('');
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
             if (!session?.access_token) {
                 throw new Error('You must be logged in as admin to send campaigns');
             }
 
-            const { data: customers, error: fetchError } = await supabase
-                .from('customers')
-                .select('email, full_name, secondary_email');
+            const confirmText =
+                recipientCount != null
+                    ? `Send this email to about ${recipientCount} customers?`
+                    : 'Send this email to all customers with an email address?';
 
-            if (fetchError) throw fetchError;
-
-            const seenEmails = new Set<string>();
-            const recipients: { email: string; name: string | null }[] = [];
-
-            for (const c of customers || []) {
-                const emails = [c.email, c.secondary_email]
-                    .filter(Boolean)
-                    .map((email: string) => email.toLowerCase().trim());
-
-                const uniqueEmail = emails.find((email) => !seenEmails.has(email)) || null;
-                if (!uniqueEmail) continue;
-
-                emails.forEach((email) => seenEmails.add(email));
-                recipients.push({ email: uniqueEmail, name: c.full_name });
-            }
-
-            if (recipients.length === 0) {
-                throw new Error('No recipients found with a valid email address');
-            }
-
-            if (
-                !window.confirm(
-                    `This will send ${recipients.length} emails to your customers. Continue?`,
-                )
-            ) {
+            if (!window.confirm(confirmText)) {
                 setLoading(false);
                 return;
             }
 
-            const BATCH_SIZE = 50;
-            let totalEmail = 0;
-            let totalErrors = 0;
-
-            for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
-                const batch = recipients.slice(i, i + BATCH_SIZE);
-
-                const res = await fetch('/api/notifications', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${session.access_token}`,
+            const res = await fetch('/api/notifications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                    type: 'campaign',
+                    payload: {
+                        subject: form.subject.trim(),
+                        message: form.message.trim(),
                     },
-                    body: JSON.stringify({
-                        type: 'campaign',
-                        payload: {
-                            recipients: batch,
-                            subject: form.subject,
-                            message: form.message,
-                            channels: { email: true, sms: false },
-                        },
-                    }),
-                });
+                }),
+            });
 
-                let data;
-                const contentType = res.headers.get('content-type') || '';
-                if (contentType.includes('application/json')) {
-                    data = await res.json();
-                } else {
-                    const text = await res.text();
-                    throw new Error(
-                        `Server error (batch ${Math.floor(i / BATCH_SIZE) + 1}): ${text.slice(0, 100)}`,
-                    );
-                }
-
-                if (!res.ok) throw new Error(data.error || 'Failed to send');
-
-                const msg = data.message || '';
-                const emailMatch = msg.match(/(\d+) emails/);
-                const errorMatch = msg.match(/(\d+) failed/);
-                if (emailMatch) totalEmail += parseInt(emailMatch[1], 10);
-                if (errorMatch) totalErrors += parseInt(errorMatch[1], 10);
+            let data: any = {};
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                data = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error(text.slice(0, 120) || 'Server error');
             }
 
-            const errorNote = totalErrors > 0 ? ` (${totalErrors} failed)` : '';
-            setSuccess(
-                totalEmail > 0
-                    ? `Campaign sent successfully! ${totalEmail} emails sent.${errorNote}`
-                    : `Campaign finished.${errorNote}`,
-            );
-            setForm((prev) => ({ ...prev, subject: '', message: '' }));
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to send campaign');
+            }
+
+            setSuccess(data.message || 'Campaign sent.');
+            setForm({ subject: '', message: '' });
+            if (typeof data.sent === 'number') {
+                setRecipientCount(data.sent + (data.failed || 0));
+            }
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'Failed to send campaign');
         } finally {
             setLoading(false);
         }
@@ -135,7 +116,9 @@ export default function NotificationsPage() {
 
                 <form onSubmit={handleSend} className="space-y-6">
                     <p className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                        Sends to all customers with an email address.
+                        {recipientCount == null
+                            ? 'Sends to all customers with an email address via Resend.'
+                            : `Sends via Resend to ${recipientCount} customer${recipientCount === 1 ? '' : 's'} with an email address.`}
                     </p>
 
                     <div>
@@ -149,6 +132,7 @@ export default function NotificationsPage() {
                             className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-accent/25"
                             placeholder="e.g., Summer Sale Starts Now!"
                             required
+                            maxLength={200}
                         />
                     </div>
 
@@ -162,6 +146,7 @@ export default function NotificationsPage() {
                             className="w-full p-3 border border-gray-300 rounded-lg h-40 outline-none focus:ring-2 focus:ring-brand-accent/25"
                             placeholder="Write your email message here..."
                             required
+                            maxLength={5000}
                         />
                         <p className="text-sm text-gray-500 mt-1">
                             This becomes the email body. Plain text is fine.

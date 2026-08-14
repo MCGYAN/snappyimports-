@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import { escapeHtml, isValidEmail } from '@/lib/sanitize';
-import { sendOrderConfirmation, sendOrderStatusUpdate, sendWelcomeMessage, sendContactMessage, sendPaymentLink, sendEmail, sendSMS, emailLayout } from '@/lib/notifications';
+import { sendOrderConfirmation, sendOrderStatusUpdate, sendWelcomeMessage, sendContactMessage, sendPaymentLink, sendEmail, emailLayout } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
@@ -169,74 +169,127 @@ export async function POST(request: Request) {
         }
 
         // ============================================================
-        // campaign — admin only, with HTML sanitization
+        // campaign — owner only. Recipients are loaded server-side.
         // ============================================================
         if (type === 'campaign') {
-            const { recipients, subject, message, channels } = payload;
+            const { subject, message } = payload;
 
-            if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-                return NextResponse.json({ error: 'Recipients required' }, { status: 400 });
+            if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'missing_api_key') {
+                return NextResponse.json(
+                    { error: 'Email is not configured. Add RESEND_API_KEY on the server.' },
+                    { status: 500 },
+                );
             }
-            if (!message) {
+            if (!subject || !String(subject).trim()) {
+                return NextResponse.json({ error: 'Email subject required' }, { status: 400 });
+            }
+            if (!message || !String(message).trim()) {
                 return NextResponse.json({ error: 'Message content required' }, { status: 400 });
             }
-            // Subject required only when sending email
-            if (channels?.email && !subject) {
-                return NextResponse.json({ error: 'Email subject required when sending email' }, { status: 400 });
+            if (String(subject).length > 200 || String(message).length > 5000) {
+                return NextResponse.json({ error: 'Subject or message too long' }, { status: 400 });
             }
 
-            // Deduplicate phone numbers and emails server-side
-            const seenPhones = new Set<string>();
+            const { data: customers, error: customersError } = await supabaseAdmin
+                .from('customers')
+                .select('email, full_name, secondary_email');
+
+            if (customersError) {
+                console.error('[Campaign] Failed to load customers:', customersError);
+                return NextResponse.json(
+                    { error: 'Could not load customer emails.' },
+                    { status: 500 },
+                );
+            }
+
             const seenEmails = new Set<string>();
-            const results = { email: 0, sms: 0, errors: 0 };
+            const recipients: { email: string; name: string }[] = [];
 
-            // SECURITY: Sanitize subject and message to prevent XSS in emails
-            const safeSubject = escapeHtml(subject);
-            const safeMessage = escapeHtml(message);
+            for (const customer of customers || []) {
+                const emails = [customer.email, customer.secondary_email]
+                    .filter(Boolean)
+                    .map((email: string) => String(email).toLowerCase().trim());
 
-            for (const recipient of recipients) {
-                try {
-                    // Send email (skip duplicates)
-                    if (channels?.email && recipient.email) {
-                        const emailKey = recipient.email.toLowerCase().trim();
-                        if (!seenEmails.has(emailKey)) {
-                            seenEmails.add(emailKey);
-                            const recipientName = escapeHtml(recipient.name || 'Valued Customer');
-                            const brandedHtml = emailLayout(`
+                for (const email of emails) {
+                    if (!isValidEmail(email) || seenEmails.has(email)) continue;
+                    seenEmails.add(email);
+                    recipients.push({
+                        email,
+                        name: customer.full_name || 'Valued Customer',
+                    });
+                    break;
+                }
+            }
+
+            if (recipients.length === 0) {
+                return NextResponse.json(
+                    { error: 'No customers with a valid email address were found.' },
+                    { status: 400 },
+                );
+            }
+
+            const safeSubject = escapeHtml(String(subject).trim());
+            const safeMessage = escapeHtml(String(message).trim());
+            const results = { email: 0, errors: 0, firstError: '' as string };
+
+            // Send in small parallel waves so Resend rate limits are respected
+            const WAVE = 5;
+            for (let i = 0; i < recipients.length; i += WAVE) {
+                const wave = recipients.slice(i, i + WAVE);
+                const settled = await Promise.allSettled(
+                    wave.map(async (recipient) => {
+                        const recipientName = escapeHtml(recipient.name || 'Valued Customer');
+                        const brandedHtml = emailLayout(
+                            `
 <h2 style="margin:0 0 16px;color:#111827;font-size:22px;text-align:center;">${safeSubject}</h2>
 <p style="color:#374151;font-size:14px;line-height:1.7;margin:16px 0;">Hi ${recipientName},</p>
 <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px;">${safeMessage.replace(/\n/g, '</p><p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px;">')}</p>
-`, safeSubject);
-                            await sendEmail({
-                                to: recipient.email,
-                                subject: subject, // Keep original for email subject header
-                                html: brandedHtml
-                            });
-                            results.email++;
-                        }
-                    }
+`,
+                            safeSubject,
+                        );
+                        await sendEmail({
+                            to: recipient.email,
+                            subject: String(subject).trim(),
+                            html: brandedHtml,
+                        });
+                    }),
+                );
 
-                    // Send SMS (skip duplicates)
-                    if (channels?.sms && recipient.phone) {
-                        const phoneKey = recipient.phone.replace(/[\s\-\(\)\.]+/g, '');
-                        if (!seenPhones.has(phoneKey)) {
-                            seenPhones.add(phoneKey);
-                            await sendSMS({
-                                to: recipient.phone,
-                                message: message // SMS is plain text, no XSS risk
-                            });
-                            results.sms++;
+                for (const result of settled) {
+                    if (result.status === 'fulfilled') {
+                        results.email++;
+                    } else {
+                        results.errors++;
+                        if (!results.firstError) {
+                            results.firstError =
+                                result.reason instanceof Error
+                                    ? result.reason.message
+                                    : 'Send failed';
                         }
+                        console.error('[Campaign] Send failed:', result.reason);
                     }
-                } catch (err: any) {
-                    console.error(`[Campaign] Failed for ${recipient.email || recipient.phone}:`, err.message);
-                    results.errors++;
                 }
+            }
+
+            if (results.email === 0) {
+                return NextResponse.json(
+                    {
+                        error:
+                            results.firstError ||
+                            'Could not send any emails. Check Resend settings and try again.',
+                    },
+                    { status: 500 },
+                );
             }
 
             return NextResponse.json({
                 success: true,
-                message: `Campaign sent: ${results.email} emails, ${results.sms} SMS.${results.errors > 0 ? ` (${results.errors} failed)` : ''}`
+                sent: results.email,
+                failed: results.errors,
+                message:
+                    results.errors > 0
+                        ? `Sent ${results.email} emails. ${results.errors} failed.`
+                        : `Sent ${results.email} emails.`,
             });
         }
 

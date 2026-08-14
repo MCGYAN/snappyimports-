@@ -110,12 +110,17 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
         console.warn('[Email] RESEND_API_KEY not configured');
         throw new Error('Email is not configured. Please set RESEND_API_KEY.');
     }
+    if (!to || !to.includes('@')) {
+        throw new Error('Invalid recipient email');
+    }
     try {
+        const replyTo = (process.env.ADMIN_EMAIL || '').trim();
         const data = await resend.emails.send({
             from: EMAIL_FROM,
-            to,
+            to: [to.trim()],
             subject,
             html,
+            ...(replyTo.includes('@') ? { replyTo } : {}),
         });
         if (data.error) {
             const errMsg = (data.error as { message?: string }).message || String(data.error);
