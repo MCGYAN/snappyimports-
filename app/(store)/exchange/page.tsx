@@ -12,11 +12,15 @@ import {
   formatCorridorBuyRate,
   formatLocalMoney,
   quoteLocalToRmb,
-  resolvePayAccounts,
   type CorridorRateBoard,
   type ExchangeCountryCode,
 } from '@/lib/exchange-corridors';
-import { ArrowRightLeft, Clock, ShieldCheck, Upload } from 'lucide-react';
+import { Check, Upload } from 'lucide-react';
+
+const inputClass =
+  'mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-primary';
+
+const labelClass = 'text-[13px] font-medium text-slate-600';
 
 export default function ExchangePage() {
   const router = useRouter();
@@ -39,7 +43,6 @@ export default function ExchangePage() {
   const board = boards[country] || null;
   const meta = EXCHANGE_CORRIDORS[country];
   const ready = corridorIsReady(board);
-  const payAccounts = resolvePayAccounts(board);
 
   useEffect(() => {
     fetch('/api/exchange/rate?all=1')
@@ -164,154 +167,111 @@ export default function ExchangePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0B1F3A] via-[#102a4a] to-[#0a1628] text-white">
-      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-accent">Buy RMB</p>
-        <h1 className="mt-3 font-heading text-3xl font-bold sm:text-5xl">
-          Pay locally. Get RMB on Alipay.
-        </h1>
-        <p className="mt-4 max-w-2xl text-white/80">
-          Choose your country first. Pay Snappy in that country’s currency. After we confirm your
-          local payment, we send RMB to your Alipay receive QR.
-        </p>
-
-        <div className="mt-8">
-          <p className="text-sm font-semibold text-white/90">1. Where are you paying from?</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {EXCHANGE_COUNTRY_CODES.map((code) => {
-              const c = EXCHANGE_CORRIDORS[code];
-              const b = boards[code];
-              const status = corridorIsReady(b);
-              const selected = country === code;
-              return (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => handleCountryChange(code)}
-                  className={`rounded-2xl border px-4 py-4 text-left transition ${
-                    selected
-                      ? 'border-brand-accent bg-brand-accent/20 ring-2 ring-brand-accent'
-                      : 'border-white/15 bg-white/5 hover:border-white/40'
-                  }`}
-                >
-                  <p className="font-bold text-white">{c.name}</p>
-                  <p className="mt-1 text-xs text-white/70">You pay in {c.currencyLabel}</p>
-                  <p className="mt-2 text-xs font-semibold">
-                    {loading ? (
-                      <span className="text-white/50">Checking…</span>
-                    ) : status.ok ? (
-                      <span className="text-emerald-300">Open now</span>
-                    ) : (
-                      <span className="text-amber-200">WhatsApp to buy</span>
-                    )}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-2 text-xs text-white/55">
-            One request = one country. Do not send {meta.name} money to another country’s accounts.
+    <main className="min-h-screen bg-[#f6f7f9]">
+      <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
+        <header>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-accent">
+            Buy RMB
           </p>
+          <h1 className="mt-2 font-heading text-[28px] font-bold leading-tight text-brand-primary sm:text-4xl">
+            Pay locally. Get RMB on Alipay.
+          </h1>
+          <p className="mt-2 text-[15px] text-slate-500">
+            Pay Snappy in your country. We send RMB after your payment is confirmed.
+          </p>
+        </header>
+
+        <div className="mt-8 grid grid-cols-3 gap-1 rounded-xl bg-white p-1 ring-1 ring-slate-200">
+          {EXCHANGE_COUNTRY_CODES.map((code) => {
+            const c = EXCHANGE_CORRIDORS[code];
+            const open = corridorIsReady(boards[code]).ok;
+            const selected = country === code;
+            return (
+              <button
+                key={code}
+                type="button"
+                onClick={() => handleCountryChange(code)}
+                className={`rounded-lg py-2.5 text-sm font-semibold transition ${
+                  selected ? 'bg-brand-primary text-white' : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {c.name}
+                {!loading && !open ? (
+                  <span className={`ml-1 text-[11px] ${selected ? 'text-white/70' : 'text-slate-400'}`}>
+                    soon
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-2">
-          <section className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur">
-            <div className="flex items-center gap-2 text-brand-accent">
-              <ArrowRightLeft className="h-5 w-5" />
-              <h2 className="text-lg font-bold">{meta.name} buy rate</h2>
-            </div>
-            {loading ? (
-              <p className="mt-6 text-white/60">Loading…</p>
-            ) : (
-              <div className="mt-6 space-y-4">
-                <div className="rounded-2xl bg-black/20 p-4">
-                  <p className="text-sm text-white/60">Official Snappy desk rate for {meta.name}</p>
-                  <p className="text-3xl font-black text-white">
-                    {board && Number(board.buy_rmb_rate) > 0
-                      ? formatCorridorBuyRate(Number(board.buy_rmb_rate), country)
-                      : 'Rate not published'}
-                  </p>
-                  <p className="mt-2 text-sm text-white/70">
-                    You pay {meta.currencyLabel}. You receive Chinese RMB on Alipay.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-white/70">
-                  <Clock className="h-4 w-4" />
-                  {board?.valid_until
-                    ? `This rate is valid until ${new Date(board.valid_until).toLocaleString('en-GB')}`
-                    : ready.ok
-                      ? 'Ask Snappy if you need a validity window'
-                      : 'Waiting for today’s published rate'}
-                </div>
-                {!ready.ok ? (
-                  <p className="text-sm text-amber-300">{ready.reason}</p>
-                ) : null}
-                {board?.notes ? <p className="text-sm text-white/60">{board.notes}</p> : null}
-
-                <div className="rounded-2xl border border-white/10 bg-black/15 p-4 text-sm text-white/75">
-                  <p className="font-semibold text-white">What happens, in order</p>
-                  <ol className="mt-2 list-decimal space-y-2 pl-4">
-                    <li>Confirm you selected {meta.name}.</li>
-                    <li>Upload your Alipay receive QR and lock today’s rate.</li>
-                    <li>Pay the invoice in {meta.payVerb} to the {meta.name} accounts shown.</li>
-                    <li>Tap I’ve paid only after the money has left your account.</li>
-                    <li>We confirm your {meta.payVerb}, then scan your QR and send RMB.</li>
-                  </ol>
-                </div>
-
-                <div className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-4 text-sm text-amber-50">
-                  <p className="font-semibold text-amber-100">Use the right Alipay QR</p>
-                  <p className="mt-1.5 leading-relaxed text-amber-50/90">
-                    Upload the QR that lets people send money to you (Receive / Collect). Do not
-                    upload a shop payment QR or someone else’s QR.
-                  </p>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-3xl bg-white p-6 text-slate-900 shadow-2xl">
-            <h2 className="text-xl font-bold text-brand-primary">
-              2. Start your {meta.name} Buy RMB request
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              This creates your invoice for {meta.name} only. It does not charge your bank or phone
-              by itself.
+        <section className="mt-4 rounded-2xl bg-white p-5 ring-1 ring-slate-200 sm:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p className="text-2xl font-bold tracking-tight text-brand-primary sm:text-[28px]">
+              {loading
+                ? 'Loading rate'
+                : board && Number(board.buy_rmb_rate) > 0
+                  ? formatCorridorBuyRate(Number(board.buy_rmb_rate), country)
+                  : 'Rate not published'}
             </p>
+            {board?.valid_until && ready.ok ? (
+              <p className="text-xs text-slate-400">
+                Valid until {new Date(board.valid_until).toLocaleString('en-GB')}
+              </p>
+            ) : null}
+          </div>
+          {board?.notes && ready.ok ? (
+            <p className="mt-1.5 text-sm text-slate-500">{board.notes}</p>
+          ) : null}
 
-            {ready.ok ? (
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-800">Full name</span>
-                  <span className="mt-0.5 block text-xs text-slate-500">
-                    Use the same name you will use when sending the {meta.name} payment.
-                  </span>
+          {ready.ok ? (
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <div>
+                <label className={labelClass} htmlFor="ex-amount">
+                  You pay ({meta.unitLabel})
+                </label>
+                <input
+                  id="ex-amount"
+                  required
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={`${inputClass} text-lg font-semibold`}
+                />
+                {quote ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    You receive{' '}
+                    <span className="font-semibold text-brand-primary">
+                      {quote.amountTo.toFixed(2)} RMB
+                    </span>{' '}
+                    for {formatLocalMoney(quote.amountFrom, country)}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass} htmlFor="ex-name">
+                    Full name
+                  </label>
                   <input
+                    id="ex-name"
                     required
                     autoComplete="name"
                     value={form.customerName}
                     onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-                    placeholder="As it will appear on your transfer"
-                    className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-3"
+                    placeholder="Name on your transfer"
+                    className={inputClass}
                   />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-800">Business name (optional)</span>
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="ex-phone">
+                    WhatsApp number
+                  </label>
                   <input
-                    value={form.businessName}
-                    onChange={(e) => setForm({ ...form, businessName: e.target.value })}
-                    placeholder="Only if paying as a business"
-                    className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-3"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-800">{meta.phoneHint}</span>
-                  <span className="mt-0.5 block text-xs text-slate-500">
-                    Needed to reopen this invoice and reach you if Alipay name looks different.
-                  </span>
-                  <input
+                    id="ex-phone"
                     required
                     type="tel"
                     inputMode="tel"
@@ -319,163 +279,137 @@ export default function ExchangePage() {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     placeholder={meta.phoneExample}
-                    className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-3"
+                    className={inputClass}
                   />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-800">Email (optional)</span>
-                  <span className="mt-0.5 block text-xs text-slate-500">
-                    We email when local payment is confirmed and when RMB is sent.
-                  </span>
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="ex-email">
+                    Email <span className="text-slate-400">(optional)</span>
+                  </label>
                   <input
+                    id="ex-email"
                     type="email"
                     inputMode="email"
                     autoComplete="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="you@email.com"
-                    className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-3"
+                    className={inputClass}
                   />
-                </label>
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="ex-business">
+                    Business <span className="text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="ex-business"
+                    value={form.businessName}
+                    onChange={(e) => setForm({ ...form, businessName: e.target.value })}
+                    placeholder="Company name"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
 
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-800">
-                    Amount you will pay ({meta.unitLabel})
-                  </span>
-                  <span className="mt-0.5 block text-xs text-slate-500">
-                    Enter {meta.payVerb}. We show the RMB you will receive before you lock.
+              <div>
+                <label className={labelClass}>Alipay receive QR</label>
+                <label
+                  className={`mt-1.5 flex cursor-pointer items-center gap-3 rounded-lg border border-dashed px-3.5 py-3 transition ${
+                    alipayFile
+                      ? 'border-emerald-300 bg-emerald-50/60'
+                      : 'border-slate-300 bg-slate-50 hover:border-brand-accent/50'
+                  }`}
+                >
+                  {alipayFile ? (
+                    <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                  ) : (
+                    <Upload className="h-4 w-4 shrink-0 text-slate-400" />
+                  )}
+                  <span className="text-sm text-slate-600">
+                    {alipayFile ? 'QR added. Tap to change' : 'Upload your receive QR screenshot'}
                   </span>
                   <input
-                    required
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder={`Example amount in ${meta.unitLabel}`}
-                    className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-lg font-semibold"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => onPickQr(e.target.files?.[0] || null)}
                   />
                 </label>
-
-                <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-brand-primary">
-                    Alipay receive QR (required)
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                    This is where your RMB will go. Same for Ghana, Nigeria, and Tanzania.
-                  </p>
-                  <label className="mt-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-5 text-center hover:border-brand-accent/40">
-                    <Upload className="h-5 w-5 text-brand-accent" />
-                    <span className="text-sm font-semibold text-brand-primary">
-                      {alipayFile ? 'Change QR screenshot' : 'Upload receive QR screenshot'}
-                    </span>
-                    <span className="text-xs text-slate-400">JPG, PNG, or WebP. Max 5MB.</span>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      className="hidden"
-                      onChange={(e) => onPickQr(e.target.files?.[0] || null)}
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Use the Receive or Collect QR from Alipay, not a shop payment code.
+                </p>
+                {alipayPreview ? (
+                  <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={alipayPreview}
+                      alt="Preview of the Alipay receive QR you uploaded"
+                      className="mx-auto max-h-40 w-auto object-contain"
                     />
-                  </label>
-                  {alipayPreview ? (
-                    <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={alipayPreview}
-                        alt="Preview of the Alipay receive QR you uploaded"
-                        className="mx-auto max-h-48 w-auto object-contain"
-                      />
-                    </div>
-                  ) : null}
-                  <label className="mt-3 block">
-                    <span className="text-sm font-semibold text-slate-800">
-                      Name shown on Alipay (optional)
-                    </span>
-                    <input
-                      value={form.alipayAccountName}
-                      onChange={(e) => setForm({ ...form, alipayAccountName: e.target.value })}
-                      placeholder="As it appears in Alipay"
-                      className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm"
-                    />
-                  </label>
-                </div>
-
-                {quote ? (
-                  <div className="rounded-xl bg-brand-light px-4 py-3 text-sm text-brand-primary">
-                    <p className="font-semibold">If you lock now ({meta.name})</p>
-                    <p className="mt-1">
-                      You will pay:{' '}
-                      <strong>{formatLocalMoney(quote.amountFrom, country)}</strong>
-                    </p>
-                    <p>
-                      You will receive: <strong>{quote.amountTo.toFixed(2)} RMB</strong> on Alipay
-                    </p>
-                    <p className="mt-1 text-xs opacity-80">
-                      Locked rate: {formatCorridorBuyRate(quote.rate, country, 4)}. RMB is sent only
-                      after we confirm your {meta.payVerb}.
-                    </p>
                   </div>
                 ) : null}
-
-                {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full rounded-xl bg-brand-accent py-4 text-lg font-bold text-white disabled:opacity-50"
-                >
-                  {submitting
-                    ? 'Creating your invoice…'
-                    : quote
-                      ? `Lock ${meta.name} rate and open invoice for ${formatLocalMoney(quote.amountFrom, country)}`
-                      : `Lock ${meta.name} rate and open invoice`}
-                </button>
-                <p className="text-center text-xs leading-relaxed text-slate-500">
-                  Next page is your {meta.name} invoice. Pay only those accounts. Uploading your QR
-                  or locking the rate is not a payment.
-                </p>
-              </form>
-            ) : (
-              <div className="mt-6 space-y-4">
-                <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  {ready.ok === false ? ready.reason : 'This country is not open yet.'}
-                </p>
-                <a
-                  href={buildWhatsAppHref(DEFAULT_CONTACT_WHATSAPP)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full rounded-xl bg-[#25D366] py-4 text-center text-lg font-bold text-white hover:brightness-105"
-                >
-                  WhatsApp Snappy for {meta.name} Buy RMB
-                </a>
+                <input
+                  value={form.alipayAccountName}
+                  onChange={(e) => setForm({ ...form, alipayAccountName: e.target.value })}
+                  placeholder="Name shown on Alipay (optional)"
+                  className={inputClass}
+                />
               </div>
-            )}
 
-            <div className="mt-6 flex items-start gap-2 text-xs text-slate-600">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-primary" />
-              <p>
-                Pay only the {meta.name} accounts printed on your invoice under Snappy Sampson
-                Enterprise. Do not send to another country’s accounts for this request.
+              {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-lg bg-brand-accent py-3.5 text-base font-bold text-white transition hover:brightness-105 disabled:opacity-50"
+              >
+                {submitting
+                  ? 'Creating invoice…'
+                  : quote
+                    ? `Lock rate. Get invoice for ${formatLocalMoney(quote.amountFrom, country)}`
+                    : 'Lock rate and get invoice'}
+              </button>
+              <p className="text-center text-xs text-slate-400">
+                This creates an invoice only. Nothing is charged yet.
               </p>
+            </form>
+          ) : (
+            <div className="mt-5 space-y-3">
+              <p className="text-sm text-slate-500">{ready.reason}</p>
+              <a
+                href={buildWhatsAppHref(DEFAULT_CONTACT_WHATSAPP)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full rounded-lg bg-[#25D366] py-3.5 text-center text-base font-bold text-white hover:brightness-105"
+              >
+                WhatsApp us for {meta.name}
+              </a>
             </div>
-            {payAccounts.length ? (
-              <div className="mt-3 space-y-1 text-xs text-slate-400">
-                <p className="font-medium text-slate-500">
-                  Usual {meta.name} accounts (confirm on invoice):
-                </p>
-                {payAccounts.map((a) => (
-                  <p key={`${a.bank}-${a.accountNumber}`}>
-                    {a.bank}: {a.accountNumber}
-                  </p>
-                ))}
-              </div>
-            ) : null}
-            <p className="mt-4 text-sm">
-              <Link href="/exchange/lookup" className="font-semibold text-brand-primary hover:underline">
-                Already have a buy number? Open your invoice
-              </Link>
-            </p>
-          </section>
-        </div>
+          )}
+        </section>
+
+        <details className="group mt-4 rounded-2xl bg-white px-5 py-4 ring-1 ring-slate-200">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-brand-primary">
+            How it works
+            <span className="ml-1 font-normal text-slate-400 group-open:hidden">(5 steps)</span>
+          </summary>
+          <ol className="mt-3 list-decimal space-y-1.5 pl-4 text-sm text-slate-600">
+            <li>Pick your country and enter the amount.</li>
+            <li>Upload your Alipay receive QR and lock the rate.</li>
+            <li>Pay the invoice to the {meta.name} accounts shown on it.</li>
+            <li>Tap I’ve paid once the money has left your account.</li>
+            <li>We confirm, scan your QR, and send the RMB.</li>
+          </ol>
+          <p className="mt-3 text-xs text-slate-400">
+            Pay only the accounts printed on your invoice. One request covers one country.
+          </p>
+        </details>
+
+        <p className="mt-6 text-center text-sm text-slate-500">
+          <Link href="/exchange/lookup" className="font-medium text-brand-primary hover:underline">
+            Already have a buy number? Open your invoice
+          </Link>
+        </p>
       </div>
     </main>
   );
