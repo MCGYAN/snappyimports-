@@ -189,7 +189,7 @@ export default function Home() {
         </div>
 
         <div className="relative aspect-[4/5] w-full max-h-[90svh] sm:aspect-[5/4] lg:aspect-auto lg:h-[56.25vw] lg:max-h-[100svh]">
-          <div className="absolute inset-0 z-10 mx-auto flex w-full max-w-[1440px] flex-col justify-end px-4 pb-20 pt-8 sm:px-6 sm:pb-28 sm:pt-10 md:px-8 lg:justify-center lg:px-10 lg:py-0 lg:pb-28 xl:px-14">
+          <div className="absolute inset-0 z-10 mx-auto flex w-full max-w-[1440px] flex-col justify-end px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-10 md:px-8 lg:justify-center lg:px-10 lg:py-0 xl:px-14">
             <div className="max-w-xl text-white max-md:text-left lg:max-w-2xl">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/80 sm:mb-4 sm:text-sm sm:font-medium sm:normal-case sm:tracking-normal">
               China to Ghana
@@ -235,19 +235,6 @@ export default function Home() {
               Suppliers you can trust. China to Tema port. Updates you can count on.
             </p>
           </div>
-          </div>
-
-          {/* Category strip */}
-          <div
-            className="absolute inset-x-0 bottom-0 z-10 glass-panel-dark border-b-0 border-x-0 rounded-none lg:rounded-t-3xl mx-auto lg:max-w-[1440px] lg:bottom-4 lg:inset-x-10 xl:inset-x-14 lg:border lg:border-white/15"
-          >
-            <div className="flex items-center gap-6 overflow-x-auto px-6 py-4 scrollbar-hide sm:gap-10 sm:px-8 sm:py-5 md:px-10 lg:justify-center">
-              {['Vehicles', 'Electronics', 'Appliances', 'Equipment', 'Spare parts'].map((label) => (
-                <span key={label} className="shrink-0 whitespace-nowrap text-sm font-semibold tracking-wide text-white/90 sm:text-[15px]">
-                  {label}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
       </section>
