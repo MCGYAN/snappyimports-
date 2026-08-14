@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import { sendOrderStatusUpdate } from '@/lib/notifications';
+import { createAdminNotification } from '@/lib/admin-notifications';
 
 /** POST — admin confirms bank/MoMo payment received */
 export async function POST(req: Request) {
@@ -73,6 +74,18 @@ export async function POST(req: Request) {
         console.error('[confirm-payment] buyer notify failed', notifyErr);
       }
 
+      await createAdminNotification({
+        type: 'order_paid',
+        title: 'Shop payment confirmed',
+        message: `${updated.order_number} is paid. GH¢${Number(updated.total).toLocaleString(
+          'en-GH',
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+        )} is now included in shop revenue.`,
+        href: `/admin/orders/${encodeURIComponent(updated.id)}`,
+        entityId: updated.id,
+        entityNumber: updated.order_number,
+      });
+
       return NextResponse.json({ success: true, order: updated });
     }
 
@@ -93,6 +106,18 @@ export async function POST(req: Request) {
       } catch (notifyErr) {
         console.error('[confirm-payment] buyer notify failed', notifyErr);
       }
+
+      await createAdminNotification({
+        type: 'order_paid',
+        title: 'Shop payment confirmed',
+        message: `${updated.order_number} is paid. GH¢${Number(updated.total).toLocaleString(
+          'en-GH',
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+        )} is now included in shop revenue.`,
+        href: `/admin/orders/${encodeURIComponent(updated.id)}`,
+        entityId: updated.id,
+        entityNumber: updated.order_number,
+      });
     }
 
     return NextResponse.json({ success: true, order: updated });

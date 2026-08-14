@@ -7,6 +7,7 @@ import {
   EXCHANGE_DUE_HOURS,
 } from '@/lib/rmb-exchange';
 import { createPaymentReference } from '@/lib/payment-reference';
+import { createAdminNotification } from '@/lib/admin-notifications';
 import {
   corridorIsReady,
   EXCHANGE_CORRIDORS,
@@ -243,6 +244,18 @@ export async function POST(req: Request) {
       await supabaseAdmin.storage.from(ALIPAY_BUCKET).remove([qrPath]);
       return NextResponse.json({ error: 'Could not create exchange order.' }, { status: 500 });
     }
+
+    await createAdminNotification({
+      type: 'exchange_created',
+      title: 'New Buy RMB request',
+      message: `${customerName} locked ${formatLocalMoney(
+        quote.amountFrom,
+        country,
+      )} for ${quote.amountTo.toFixed(2)} RMB.`,
+      href: `/admin/exchange/${encodeURIComponent(exchangeNumber)}`,
+      entityId: data.id,
+      entityNumber: exchangeNumber,
+    });
 
     return NextResponse.json({ success: true, exchange: sanitizeExchange(data) });
   } catch (e) {

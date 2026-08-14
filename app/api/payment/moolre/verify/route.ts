@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendOrderConfirmation } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
+import { createAdminNotification } from '@/lib/admin-notifications';
 
 /**
  * Payment verification endpoint.
@@ -181,6 +182,18 @@ export async function POST(req: Request) {
             } catch (notifyError: any) {
                 console.error('[Verify] Notification failed:', notifyError.message);
             }
+
+            await createAdminNotification({
+                type: 'order_paid',
+                title: 'Online payment received',
+                message: `${orderJson.order_number} was paid online. GH¢${Number(orderJson.total).toLocaleString('en-GH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })} is now included in shop revenue.`,
+                href: `/admin/orders/${encodeURIComponent(orderJson.id)}`,
+                entityId: orderJson.id,
+                entityNumber: orderJson.order_number,
+            });
         }
 
         return NextResponse.json({

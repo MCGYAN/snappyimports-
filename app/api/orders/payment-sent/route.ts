@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { isInvoiceExpired } from '@/lib/payment-routing';
 import { sendPaymentAwaitingAdminAlert } from '@/lib/notifications';
+import { createAdminNotification } from '@/lib/admin-notifications';
 
 /** POST — customer marks bank/MoMo payment as sent */
 export async function POST(req: Request) {
@@ -77,6 +78,20 @@ export async function POST(req: Request) {
     } catch (notifyErr) {
       console.error('[payment-sent] admin alert failed', notifyErr);
     }
+
+    await createAdminNotification({
+      type: 'order_payment_sent',
+      title: 'Customer says payment was sent',
+      message: `${updated.shipping_address?.firstName || updated.email} says they paid GH¢${Number(
+        updated.total,
+      ).toLocaleString('en-GH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} for ${updated.order_number}. Confirm it in your bank before marking paid.`,
+      href: `/admin/orders/${encodeURIComponent(updated.id)}`,
+      entityId: updated.id,
+      entityNumber: updated.order_number,
+    });
 
     return NextResponse.json({
       success: true,

@@ -7,6 +7,7 @@ import {
   resolveCheckoutPaymentChannel,
 } from '@/lib/payment-routing';
 import { createPaymentReference } from '@/lib/payment-reference';
+import { createAdminNotification } from '@/lib/admin-notifications';
 import {
   cleanVariantDisplayLabel,
   formatVariantLabel,
@@ -301,6 +302,18 @@ export async function POST(req: Request) {
       p_last_name: lastName.trim(),
       p_user_id: userId && typeof userId === 'string' ? userId : null,
       p_address: { firstName, lastName, email, phone, address, city, region }
+    });
+
+    await createAdminNotification({
+      type: 'order_created',
+      title: 'New shop order',
+      message: `${fullName} placed ${orderNumber} for GH¢${total.toLocaleString('en-GH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}.`,
+      href: `/admin/orders/${encodeURIComponent(order.id)}`,
+      entityId: order.id,
+      entityNumber: orderNumber,
     });
 
     return NextResponse.json({

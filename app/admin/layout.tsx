@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
+import AdminNotificationBell from '@/components/admin/AdminNotificationBell';
 import {
   canAccessAdminDashboard,
   canAccessAdminPath,
@@ -180,8 +181,8 @@ export default function AdminLayout({
       path: '/admin/customer-insights'
     },
     {
-      title: 'Notifications',
-      icon: 'ri-notification-3-line',
+      title: 'Email Campaigns',
+      icon: 'ri-mail-send-line',
       path: '/admin/notifications'
     },
     {
@@ -299,10 +300,7 @@ export default function AdminLayout({
             </div>
 
             <div className="flex shrink-0 items-center space-x-1 md:space-x-2 lg:space-x-4">
-              <button className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-brand-primary transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-primary/5 hover:text-brand-accent">
-                <i className="ri-notification-3-line text-xl"></i>
-                <span className="absolute top-2 right-2 w-2 h-2 bg-brand-accent rounded-full border-2 border-white"></span>
-              </button>
+              {user?.id ? <AdminNotificationBell userId={user.id} /> : null}
 
               <div className="relative user-menu-container">
                 <button

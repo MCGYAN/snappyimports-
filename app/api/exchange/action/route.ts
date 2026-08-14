@@ -6,6 +6,11 @@ import {
   sendExchangePaymentAwaitingAdminAlert,
   sendExchangeBuyerStatusEmail,
 } from '@/lib/notifications';
+import { createAdminNotification } from '@/lib/admin-notifications';
+import {
+  formatLocalMoney,
+  parseExchangeCountryCode,
+} from '@/lib/exchange-corridors';
 
 function sanitizeExchange(row: any) {
   if (!row) return row;
@@ -79,6 +84,21 @@ export async function POST(req: Request) {
         console.error('[exchange action] admin alert failed', notifyErr);
       }
 
+      const country = parseExchangeCountryCode(
+        updated.country_code || updated.metadata?.country_code,
+      );
+      await createAdminNotification({
+        type: 'exchange_payment_sent',
+        title: 'Buy RMB customer says payment was sent',
+        message: `${updated.customer_name} says they paid ${formatLocalMoney(
+          Number(updated.amount_from),
+          country,
+        )} for ${updated.exchange_number}. Confirm it before sending RMB.`,
+        href: `/admin/exchange/${encodeURIComponent(updated.exchange_number)}`,
+        entityId: updated.id,
+        entityNumber: updated.exchange_number,
+      });
+
       return NextResponse.json({ success: true, exchange: sanitizeExchange(updated) });
     }
 
@@ -106,6 +126,22 @@ export async function POST(req: Request) {
       } catch (notifyErr) {
         console.error('[exchange action] buyer confirm email failed', notifyErr);
       }
+      const country = parseExchangeCountryCode(
+        updated.country_code || updated.metadata?.country_code,
+      );
+      await createAdminNotification({
+        type: 'exchange_paid',
+        title: 'Buy RMB payment confirmed',
+        message: `${formatLocalMoney(
+          Number(updated.amount_from),
+          country,
+        )} was confirmed for ${updated.exchange_number}. Send ${Number(
+          updated.amount_to,
+        ).toFixed(2)} RMB to the saved Alipay QR.`,
+        href: `/admin/exchange/${encodeURIComponent(updated.exchange_number)}`,
+        entityId: updated.id,
+        entityNumber: updated.exchange_number,
+      });
       return NextResponse.json({ success: true, exchange: sanitizeExchange(updated) });
     }
 
