@@ -39,18 +39,57 @@ export default function AdminCustomersPage() {
       }
 
       if (customerData) {
-        const processed = customerData.map((customer: any) => {
-          // Determine status dynamically
-          let status = 'New';
-          const totalSpent = Number(customer.total_spent) || 0;
-          const totalOrders = customer.total_orders || 0;
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('id, user_id, email, total, created_at, status');
 
+        const countableOrders = (orders || []).filter(
+          (order) => String(order.status || '').toLowerCase() !== 'cancelled',
+        );
+
+        const processed = customerData.map((customer: any) => {
+          const primaryEmail = String(customer.email || '').toLowerCase().trim();
+          const secondaryEmail = String(customer.secondary_email || '').toLowerCase().trim();
+          const userOrders = countableOrders.filter((order) => {
+            if (customer.user_id && order.user_id === customer.user_id) return true;
+            const orderEmail = String(order.email || '').toLowerCase().trim();
+            if (!orderEmail) return false;
+            return (
+              orderEmail === primaryEmail ||
+              (!!secondaryEmail && orderEmail === secondaryEmail)
+            );
+          });
+
+          const totalSpent =
+            userOrders.length > 0
+              ? userOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+              : Number(customer.total_spent) || 0;
+          const totalOrders =
+            userOrders.length > 0 ? userOrders.length : customer.total_orders || 0;
+          const lastOrderDate =
+            userOrders.length > 0
+              ? new Date(
+                  Math.max(...userOrders.map((order) => new Date(order.created_at).getTime())),
+                )
+              : customer.last_order_at
+                ? new Date(customer.last_order_at)
+                : null;
+
+          let status = 'New';
           if (totalSpent > 1000) status = 'VIP';
           else if (totalOrders > 0) status = 'Active';
-          else if (new Date(customer.created_at).getTime() < Date.now() - 30 * 24 * 60 * 60 * 1000) status = 'Inactive';
+          else if (
+            new Date(customer.created_at).getTime() <
+            Date.now() - 30 * 24 * 60 * 60 * 1000
+          ) {
+            status = 'Inactive';
+          }
 
-          const displayName = customer.full_name ||
-            (customer.first_name && customer.last_name ? `${customer.first_name} ${customer.last_name}` : null) ||
+          const displayName =
+            customer.full_name ||
+            (customer.first_name && customer.last_name
+              ? `${customer.first_name} ${customer.last_name}`
+              : null) ||
             customer.first_name ||
             'No Name';
 
@@ -61,13 +100,13 @@ export default function AdminCustomersPage() {
             phone: customer.phone || 'N/A',
             avatar: getInitials(displayName !== 'No Name' ? displayName : customer.email),
             orders: totalOrders,
-            totalSpent: totalSpent,
+            totalSpent,
             joined: new Date(customer.created_at).toLocaleDateString(),
-            lastOrder: customer.last_order_at ? timeAgo(new Date(customer.last_order_at)) : 'Never',
-            status: status,
+            lastOrder: lastOrderDate ? timeAgo(lastOrderDate) : 'Never',
+            status,
             rawJoined: new Date(customer.created_at),
-            rawLastOrder: customer.last_order_at ? new Date(customer.last_order_at) : null,
-            isGuest: !customer.user_id
+            rawLastOrder: lastOrderDate,
+            isGuest: !customer.user_id,
           };
         });
         setCustomers(processed);
