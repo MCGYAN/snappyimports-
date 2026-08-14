@@ -44,8 +44,8 @@ INSERT INTO public.exchange_corridor_rates (
   country_code, currency_code, buy_rmb_rate, sell_rmb_rate,
   min_amount, max_amount, notes, valid_until, is_live, pay_accounts, updated_at
 ) VALUES
-  ('NG', 'NGN', 0, 0, 10000, NULL, 'Add Nigeria receiving accounts and publish today''s rate before going live.', NULL, false, '[]'::jsonb, now()),
-  ('TZ', 'TZS', 0, 0, 50000, NULL, 'Add Tanzania receiving accounts and publish today''s rate before going live.', NULL, false, '[]'::jsonb, now())
+  ('NG', 'NGN', 0, 0, 10000, NULL, NULL, NULL, false, '[]'::jsonb, now()),
+  ('TZ', 'TZS', 0, 0, 50000, NULL, NULL, NULL, false, '[]'::jsonb, now())
 ON CONFLICT (country_code) DO NOTHING;
 
 ALTER TABLE public.exchange_orders

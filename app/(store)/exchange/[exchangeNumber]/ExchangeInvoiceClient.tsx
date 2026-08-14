@@ -5,7 +5,16 @@ import { useParams, useSearchParams } from 'next/navigation';
 import ExchangeInvoiceDocument from '@/components/ExchangeInvoiceDocument';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle2, Clock, Download, Printer, Upload } from 'lucide-react';
+import { EXCHANGE_CORRIDORS, parseExchangeCountryCode } from '@/lib/exchange-corridors';
+import { CheckCircle2, Download, Printer, Upload } from 'lucide-react';
+
+const STATUS_LABEL: Record<string, string> = {
+  awaiting_payment: 'Awaiting your payment',
+  payment_sent: 'Checking your transfer',
+  confirmed: 'Sending your RMB',
+  completed: 'RMB sent',
+  expired: 'Expired',
+};
 
 export default function ExchangeInvoiceClient() {
   const params = useParams();
@@ -27,7 +36,9 @@ export default function ExchangeInvoiceClient() {
     setLoading(true);
     setError('');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const headers: Record<string, string> = {};
       if (session?.access_token) {
         headers.Authorization = `Bearer ${session.access_token}`;
@@ -44,12 +55,8 @@ export default function ExchangeInvoiceClient() {
         return;
       }
       setExchange(data.exchange);
-      if (!ph && data.exchange?.phone) {
-        setPhone(data.exchange.phone);
-      }
-      if (data.exchange?.alipay_account_name) {
-        setAlipayName(data.exchange.alipay_account_name);
-      }
+      if (!ph && data.exchange?.phone) setPhone(data.exchange.phone);
+      if (data.exchange?.alipay_account_name) setAlipayName(data.exchange.alipay_account_name);
     } finally {
       setLoading(false);
     }
@@ -65,12 +72,7 @@ export default function ExchangeInvoiceClient() {
       const res = await fetch('/api/exchange/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'payment_sent',
-          exchangeNumber,
-          phone,
-          note,
-        }),
+        body: JSON.stringify({ action: 'payment_sent', exchangeNumber, phone, note }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -120,11 +122,7 @@ export default function ExchangeInvoiceClient() {
       const headers: Record<string, string> = {};
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
-      const res = await fetch('/api/exchange/alipay-qr', {
-        method: 'POST',
-        headers,
-        body,
-      });
+      const res = await fetch('/api/exchange/alipay-qr', { method: 'POST', headers, body });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || 'Could not upload Alipay QR');
@@ -136,23 +134,46 @@ export default function ExchangeInvoiceClient() {
     }
   };
 
+  const status = String(exchange?.status || '');
+  const isPaidSide =
+    exchange?.payment_status === 'paid' || status === 'confirmed' || status === 'completed';
+  const country = parseExchangeCountryCode(
+    exchange?.country_code || exchange?.metadata?.country_code,
+  );
+  const countryName = EXCHANGE_CORRIDORS[country].name;
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#f8fafc] via-white to-[#eef2f7]">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 print:max-w-none print:px-0 print:py-0">
-        <div className="mb-6 print:hidden">
-          <p className="text-xs font-bold uppercase tracking-widest text-brand-accent">Buy RMB</p>
-          <h1 className="font-heading text-2xl font-bold text-brand-primary sm:text-3xl">
-            {exchangeNumber}
-          </h1>
+    <main className="min-h-screen bg-[#f8fafc]">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 print:max-w-none print:px-0 print:py-0">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:hidden">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-accent">Buy RMB</p>
+            <h1 className="font-heading text-2xl font-bold text-brand-primary">{exchangeNumber}</h1>
+          </div>
+          {exchange ? (
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                status === 'completed'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : isPaidSide
+                    ? 'bg-blue-100 text-blue-800'
+                    : status === 'payment_sent'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-slate-200 text-slate-700'
+              }`}
+            >
+              {STATUS_LABEL[status] || status.replace(/_/g, ' ')}
+            </span>
+          ) : null}
         </div>
 
         {loading && !exchange ? (
-          <p className="mt-6 text-sm text-slate-500 print:hidden">Opening invoice…</p>
+          <p className="text-sm text-slate-500 print:hidden">Opening invoice…</p>
         ) : null}
 
         {!loading && !exchange && (
           <form
-            className="store-card mx-auto mt-6 max-w-md space-y-3 p-6 print:hidden"
+            className="store-card mx-auto max-w-md space-y-3 p-6 print:hidden"
             onSubmit={(e) => {
               e.preventDefault();
               void load(exchangeNumber, phone);
@@ -162,164 +183,133 @@ export default function ExchangeInvoiceClient() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Phone used on the request"
-              className="w-full rounded-xl border-2 border-slate-200 px-4 py-3"
+              className="w-full rounded-xl border border-slate-200 px-4 py-3"
               required
             />
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <button type="submit" className="w-full rounded-xl bg-brand-primary px-6 py-3 font-bold text-white">
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-brand-primary px-6 py-3 font-bold text-white"
+            >
               Open invoice
             </button>
           </form>
         )}
 
         {exchange ? (
-          <div className="space-y-6">
-            <section className="store-card p-5 sm:p-8">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
-                <div>
-                  <h2 className="text-xl font-bold text-brand-primary">Your invoice</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Pay the total due on this invoice to Snappy. Then come back here and tap I’ve paid.
-                    RMB is not sent until we confirm your cedis.
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-brand-primary"
-                  >
-                    <Printer className="h-4 w-4" /> Print
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleDownloadPdf();
-                    }}
-                    disabled={downloading}
-                    className="inline-flex items-center gap-2 rounded-full bg-brand-accent px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-                  >
-                    <Download className="h-4 w-4" />
-                    {downloading ? 'Preparing PDF…' : 'Download PDF'}
-                  </button>
-                </div>
+          <div className="space-y-4">
+            <section className="store-card p-5 sm:p-7">
+              <div className="mb-5 flex justify-end gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
+                >
+                  <Printer className="h-3.5 w-3.5" /> Print
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadPdf()}
+                  disabled={downloading}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 disabled:opacity-60"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {downloading ? 'Preparing…' : 'PDF'}
+                </button>
               </div>
 
               <ExchangeInvoiceDocument exchange={exchange} />
             </section>
 
-            <section className="store-card space-y-3 p-6 print:hidden">
-              <h3 className="font-semibold text-brand-primary">Where your RMB will go</h3>
-              {exchange.has_alipay_qr ? (
-                <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">
-                  Your Alipay receive QR is saved
-                  {exchange.alipay_account_name ? (
-                    <>
-                      {' '}
-                      for <strong>{exchange.alipay_account_name}</strong>
-                    </>
-                  ) : null}
-                  . After we confirm your Ghana payment, we will scan this QR and send{' '}
-                  <strong>{Number(exchange.amount_to).toFixed(2)} RMB</strong>. Uploading the QR is
-                  not a payment.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-amber-700">
-                    We still need your Alipay receive QR before we can send RMB. Upload the Receive /
-                    Collect QR only, not a shop payment code.
+            {!exchange.has_alipay_qr ? (
+              <section className="store-card space-y-3 p-6 print:hidden">
+                <div>
+                  <h2 className="font-semibold text-brand-primary">Add your Alipay receive QR</h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    We cannot send RMB without it. Upload your receive money code, not a shop
+                    payment code.
                   </p>
-                  <label className="block">
-                    <span className="text-xs font-semibold text-slate-600">
-                      Name shown on Alipay (optional)
-                    </span>
-                    <input
-                      value={alipayName}
-                      onChange={(e) => setAlipayName(e.target.value)}
-                      placeholder="As it appears in Alipay"
-                      className="mt-1 w-full rounded-xl border-2 border-slate-200 px-4 py-3"
-                    />
-                  </label>
-                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                    <Upload className="mb-2 h-6 w-6 text-brand-primary" />
-                    <span className="text-sm font-semibold text-brand-primary">
-                      {uploadingQr ? 'Uploading…' : 'Upload Alipay receive QR screenshot'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/jpg"
-                      className="hidden"
-                      disabled={uploadingQr}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        e.target.value = '';
-                        if (file) void uploadQr(file);
-                      }}
-                    />
-                  </label>
                 </div>
-              )}
-            </section>
+                <input
+                  value={alipayName}
+                  onChange={(e) => setAlipayName(e.target.value)}
+                  placeholder="Name shown on Alipay (optional)"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
+                />
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3">
+                  <Upload className="h-5 w-5 shrink-0 text-brand-primary" />
+                  <span className="text-sm font-medium text-brand-primary">
+                    {uploadingQr ? 'Uploading…' : 'Upload QR screenshot'}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/jpg"
+                    className="hidden"
+                    disabled={uploadingQr}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      e.target.value = '';
+                      if (file) void uploadQr(file);
+                    }}
+                  />
+                </label>
+              </section>
+            ) : null}
 
-            <section className="store-card space-y-3 p-6 print:hidden">
-              <h3 className="font-semibold text-brand-primary">Local payment status</h3>
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Clock className="h-4 w-4" />
-                Status:{' '}
-                <strong className="capitalize">{String(exchange.status).replace(/_/g, ' ')}</strong>
-              </div>
-              {exchange.payment_status === 'paid' ||
-              exchange.status === 'confirmed' ||
-              exchange.status === 'completed' ? (
-                <div className="flex items-start gap-2 rounded-xl bg-green-50 px-4 py-3 text-green-800">
+            <section className="store-card p-6 print:hidden">
+              {status === 'completed' ? (
+                <div className="flex items-start gap-2 text-emerald-800">
                   <CheckCircle2 className="h-5 w-5 shrink-0" />
                   <p className="text-sm font-medium">
-                    {exchange.status === 'completed'
-                      ? 'RMB has been sent to your Alipay. Check Alipay for the credit.'
-                      : 'We confirmed your cedis. We are sending your RMB to the Alipay QR on this request.'}
+                    We sent {Number(exchange.amount_to).toFixed(2)} RMB to your Alipay. Check Alipay
+                    for the credit.
                   </p>
                 </div>
-              ) : exchange.status === 'payment_sent' ? (
-                <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  You told us you paid. We are checking your bank or MoMo transfer. Do not send the
-                  money again unless we ask you to.
+              ) : isPaidSide ? (
+                <div className="flex items-start gap-2 text-brand-primary">
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                  <p className="text-sm font-medium">
+                    Your {countryName} payment is confirmed. We are sending{' '}
+                    {Number(exchange.amount_to).toFixed(2)} RMB to your Alipay.
+                  </p>
                 </div>
+              ) : status === 'payment_sent' ? (
+                <p className="text-sm text-amber-800">
+                  We are checking your transfer. Please do not send the money again unless we ask.
+                </p>
               ) : (
-                <>
-                  <p className="text-sm text-slate-600">
-                    Only tap I’ve paid after you have already sent the invoice total to Snappy. This
-                    button tells us to check your transfer. It does not move money by itself.
-                  </p>
-                  <label className="block">
-                    <span className="text-xs font-semibold text-slate-600">
-                      Transfer note or reference (optional)
-                    </span>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="Example: MoMo name, or bank reference"
-                      className="mt-1 w-full rounded-xl border-2 border-slate-200 px-4 py-3"
-                      rows={2}
-                    />
-                  </label>
+                <div className="space-y-3">
+                  <div>
+                    <h2 className="font-semibold text-brand-primary">Already paid?</h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Tap below only after the money has left your account.
+                    </p>
+                  </div>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Transfer reference (optional)"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
+                    rows={2}
+                  />
                   <button
                     type="button"
                     disabled={submitting}
                     onClick={() => {
                       if (
                         !confirm(
-                          'Have you already sent the invoice amount to Snappy? Tap OK only if the money has left your account.',
+                          'Tap OK only if you have already sent the invoice amount to Snappy.',
                         )
                       ) {
                         return;
                       }
                       void handlePaid();
                     }}
-                    className="rounded-xl bg-brand-primary px-6 py-3 font-bold text-white disabled:opacity-60"
+                    className="w-full rounded-xl bg-brand-primary py-3.5 font-bold text-white disabled:opacity-60"
                   >
-                    {submitting ? 'Notifying Snappy…' : 'I’ve paid. Please confirm my transfer'}
+                    {submitting ? 'Notifying Snappy…' : 'I’ve paid'}
                   </button>
-                </>
+                </div>
               )}
             </section>
           </div>
