@@ -181,9 +181,24 @@ export async function issueShippingInvoice({
   createdBy?: string | null;
 }) {
   const now = new Date();
-  const amount = pkg.freight_included
-    ? 0
-    : Number((Number(pkg.estimated_shipping_usd) * finalUsdToGhs).toFixed(2));
+
+  // Freight already paid inside the product price (CIF Tema, DDP). Record the
+  // arrival rate for the timeline but never raise a zero cedi bill.
+  if (pkg.freight_included) {
+    await supabaseAdmin
+      .from('shipping_packages')
+      .update({
+        final_usd_to_ghs: finalUsdToGhs,
+        final_shipping_ghs: 0,
+        shipping_payment_status: 'paid',
+        shipping_paid_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .eq('id', pkg.id);
+    return null;
+  }
+
+  const amount = Number((Number(pkg.estimated_shipping_usd) * finalUsdToGhs).toFixed(2));
 
   const { data: prior } = await supabaseAdmin
     .from('financial_documents')
@@ -231,6 +246,10 @@ export async function issueShippingInvoice({
       due_at: dueAt,
       data: {
         reference: order.order_number,
+        customer_name:
+          [order.shipping_address?.firstName, order.shipping_address?.lastName]
+            .filter(Boolean)
+            .join(' ') || order.email,
         tracking_id: pkg.tracking_id,
         package_name: pkg.package_name,
         cbm: Number(pkg.cbm),
@@ -250,8 +269,8 @@ export async function issueShippingInvoice({
     .update({
       final_usd_to_ghs: finalUsdToGhs,
       final_shipping_ghs: amount,
-      shipping_payment_status: pkg.freight_included ? 'paid' : 'unpaid',
-      shipping_paid_at: pkg.freight_included ? now.toISOString() : null,
+      shipping_payment_status: 'unpaid',
+      shipping_paid_at: null,
       updated_at: now.toISOString(),
     })
     .eq('id', pkg.id);
@@ -299,6 +318,12 @@ export async function createShippingReceipt(
       data: {
         ...(invoice?.data || {}),
         reference: order.order_number,
+        customer_name:
+          invoice?.data?.customer_name ||
+          [order.shipping_address?.firstName, order.shipping_address?.lastName]
+            .filter(Boolean)
+            .join(' ') ||
+          order.email,
         invoice_number: invoice?.document_number || null,
       },
       created_by: createdBy || null,

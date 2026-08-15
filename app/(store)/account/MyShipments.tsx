@@ -68,11 +68,12 @@ export default function MyShipments() {
           <div className="grid sm:grid-cols-[10rem_1fr]">
             <div className="bg-orange-50 p-4">
               <p className="text-[11px] font-bold uppercase tracking-wide text-orange-700">
-                USD to GHS estimate
+                Today&apos;s guide rate
               </p>
               <p className="mt-1 text-2xl font-black text-brand-primary">
                 GH¢{Number(board.usd_to_ghs).toFixed(2)}
               </p>
+              <p className="mt-1 text-[11px] text-slate-500">per $1</p>
             </div>
             <div className="grid grid-cols-2 gap-px bg-slate-100 sm:grid-cols-4">
               {[
@@ -150,6 +151,13 @@ export default function MyShipments() {
                           ? formatGhs(pkg.final_shipping_ghs)
                           : formatUsd(pkg.estimated_shipping_usd)}
                     </strong>
+                    <span className="block text-xs text-slate-400">
+                      {pkg.freight_included
+                        ? 'Nothing to pay'
+                        : pkg.final_usd_to_ghs
+                          ? `Locked at GH¢${Number(pkg.final_usd_to_ghs).toFixed(2)} per $1`
+                          : 'Estimate'}
+                    </span>
                   </div>
                   <div>
                     <span className="mr-2 text-xs text-slate-400 md:hidden">Arrival</span>

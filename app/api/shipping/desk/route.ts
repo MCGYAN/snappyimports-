@@ -203,22 +203,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Enter the arrival-day USD to GHS rate.' }, { status: 400 });
     }
     let issued = 0;
+    let included = 0;
     for (const pkg of packages || []) {
       await supabaseAdmin
         .from('shipping_packages')
         .update({ status: 'arrived', arrived_at: new Date().toISOString() })
         .eq('id', pkg.id);
-      await issueShippingInvoice({
+      const invoice = await issueShippingInvoice({
         pkg,
         order: pkg.orders,
         finalUsdToGhs: finalRate,
         validDays,
         createdBy: auth.user?.id,
       });
-      issued++;
+      if (invoice) issued++;
+      else included++;
     }
     await advanceOrders(packages || [], 'in_ghana', 'shipped', auth.user?.id);
-    return NextResponse.json({ success: true, issued });
+    return NextResponse.json({ success: true, issued, included });
   }
 
   if (action === 'confirm_shipping_payment') {

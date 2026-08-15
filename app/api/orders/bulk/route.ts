@@ -8,6 +8,7 @@ import {
 } from '@/lib/order-journey';
 import { createShopReceipt } from '@/lib/financial-documents';
 import { createAdminNotification } from '@/lib/admin-notifications';
+import { syncPackagesToStage } from '@/lib/shipping-sync';
 
 export async function POST(req: Request) {
   const auth = await verifyAuth(req, { requireModule: 'orders' });
@@ -121,8 +122,12 @@ export async function POST(req: Request) {
           updated_at: now,
         })
         .eq('id', order.id);
-      if (updateError) skipped.push({ id: order.id, reason: 'Update failed' });
-      else completed.push(order.id);
+      if (updateError) {
+        skipped.push({ id: order.id, reason: 'Update failed' });
+      } else {
+        await syncPackagesToStage(order.id, stage);
+        completed.push(order.id);
+      }
     }
     return NextResponse.json({ success: true, completed, skipped });
   }

@@ -43,6 +43,23 @@ export type ShippingRateBoard = {
   updated_at?: string;
 };
 
+export function shippingStatusIndex(status: string) {
+  const index = SHIPPING_STATUS.indexOf(status as ShippingPackageStatus);
+  return index < 0 ? 0 : index;
+}
+
+/**
+ * The import journey is the single place staff move an order forward.
+ * Packages follow it so nobody has to set the same milestone twice.
+ */
+export function packageStatusForStage(stage: string): ShippingPackageStatus | null {
+  if (stage === 'en_route_ghana') return 'in_transit';
+  if (stage === 'in_ghana') return 'arrived';
+  if (stage === 'ready') return 'ready';
+  if (stage === 'delivered') return 'delivered';
+  return null;
+}
+
 export function rateForClass(board: ShippingRateBoard, goodsClass: ShippingGoodsClass) {
   if (goodsClass === 'sensitive') return Number(board.sensitive_usd_per_cbm) || 0;
   if (goodsClass === 'heavy') return Number(board.heavy_usd_per_cbm) || 0;

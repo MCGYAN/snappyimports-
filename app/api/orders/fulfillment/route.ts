@@ -6,6 +6,7 @@ import {
   orderStatusForStage,
   type FulfillmentStage,
 } from '@/lib/order-journey';
+import { syncPackagesToStage } from '@/lib/shipping-sync';
 
 /** POST — admin updates China→Ghana fulfillment stage */
 export async function POST(req: Request) {
@@ -65,6 +66,8 @@ export async function POST(req: Request) {
     if (updateError) {
       return NextResponse.json({ error: 'Failed to update journey.' }, { status: 500 });
     }
+
+    await syncPackagesToStage(orderId, stage);
 
     return NextResponse.json({ success: true, order: updated });
   } catch (e) {

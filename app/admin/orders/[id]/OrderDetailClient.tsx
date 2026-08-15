@@ -736,51 +736,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             </div>
 
             <OrderShippingDesk order={order} />
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Import journey</h2>
-              <p className="mb-6 text-sm text-gray-500">
-                China to Ghana milestones. Same path the customer sees.
-              </p>
-              <div className="space-y-4">
-                {FULFILLMENT_STAGES.map((event, index) => {
-                  const done = journeyIndex >= 0 && index < journeyIndex;
-                  const active = event.key === currentJourney;
-                  return (
-                    <div key={event.key} className="flex items-start space-x-4">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${
-                          active || done
-                            ? 'border-brand-primary bg-brand-primary'
-                            : 'border-gray-300 bg-white'
-                        }`}
-                      >
-                        {done || active ? (
-                          <i className="ri-check-line text-xl text-white"></i>
-                        ) : (
-                          <span className="h-3 w-3 rounded-full bg-gray-300"></span>
-                        )}
-                      </div>
-                      <div className="flex-1 border-b border-gray-200 pb-6 last:border-0">
-                        <p
-                          className={`font-semibold ${
-                            active ? 'text-brand-accent' : done ? 'text-gray-900' : 'text-gray-500'
-                          }`}
-                        >
-                          {event.title}
-                          {active ? (
-                            <span className="ml-2 text-xs font-bold uppercase tracking-wide text-brand-accent">
-                              Current
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="mt-1 text-sm text-gray-600">{event.description}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           <div className="space-y-6">
@@ -788,7 +743,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               <div className="border-b border-brand-primary/10 px-5 py-4">
                 <h2 className="text-lg font-bold text-gray-900">Update import journey</h2>
                 <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                  Tap a milestone, then confirm. Payment stages update on their own.
+                  Tap a milestone, then confirm. Payment stages and the shipping packages below
+                  follow this on their own.
                 </p>
                 <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/80 px-3 py-2.5 ring-1 ring-brand-primary/10">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-white">

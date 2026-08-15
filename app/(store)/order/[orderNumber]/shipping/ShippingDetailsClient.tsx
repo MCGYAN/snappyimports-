@@ -165,7 +165,10 @@ export default function ShippingDetailsClient() {
                     <p className="mt-2 text-3xl font-black text-brand-primary">
                       GH¢{Number(board.usd_to_ghs).toFixed(2)}
                     </p>
-                    <p className="mt-2 text-xs text-slate-500">Current estimate only</p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Today&apos;s guide rate. Each package shows its own locked rate once it lands
+                      in Ghana.
+                    </p>
                   </div>
                   <div className="p-5">
                     <p className="font-bold text-brand-primary">Shipping rates per CBM</p>
@@ -282,22 +285,30 @@ export default function ShippingDetailsClient() {
                           </div>
                           <div>
                             <p className="text-xs text-slate-500">
-                              {pkg.final_shipping_ghs != null ? 'Final cedis' : 'Cedi estimate'}
+                              {pkg.final_usd_to_ghs ? 'Final cedis, rate locked' : 'Cedi estimate'}
                             </p>
                             <p className="mt-1 text-xl font-black text-brand-primary">
                               {pkg.freight_included
-                                ? 'Included'
+                                ? 'Nothing to pay'
                                 : pkg.final_shipping_ghs != null
                                   ? formatGhs(pkg.final_shipping_ghs)
                                   : pkg.estimated_shipping_ghs != null
                                     ? formatGhs(pkg.estimated_shipping_ghs)
                                     : 'Pending rate'}
                             </p>
-                            {!pkg.freight_included && pkg.final_shipping_ghs == null ? (
+                            {pkg.final_usd_to_ghs ? (
+                              <p className="mt-1 text-xs font-semibold text-emerald-700">
+                                Locked at GH¢{Number(pkg.final_usd_to_ghs).toFixed(2)} per $1
+                              </p>
+                            ) : !pkg.freight_included ? (
                               <p className="mt-1 text-xs text-slate-400">
                                 Final amount uses the arrival-day dollar rate.
                               </p>
-                            ) : null}
+                            ) : (
+                              <p className="mt-1 text-xs text-emerald-700">
+                                Freight is inside your product price.
+                              </p>
+                            )}
                           </div>
                           <div>
                             <p className="text-xs text-slate-500">Estimated arrival</p>
@@ -340,7 +351,15 @@ export default function ShippingDetailsClient() {
                             {pkg.vessel || 'Not provided'}
                           </div>
                         </div>
-                        {receipt ? (
+                        {pkg.freight_included ? (
+                          <div className="border-t border-emerald-100 bg-emerald-50 px-5 py-4">
+                            <p className="font-bold text-emerald-900">No shipping bill for this package</p>
+                            <p className="text-xs text-emerald-700">
+                              Freight was already paid inside the product price. You only wait for
+                              arrival.
+                            </p>
+                          </div>
+                        ) : receipt ? (
                           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-emerald-100 bg-emerald-50 px-5 py-4">
                             <div>
                               <p className="font-bold text-emerald-900">Shipping payment confirmed</p>

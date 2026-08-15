@@ -5,7 +5,9 @@ import {
   calculateCbm,
   calculateShipping,
   createShippingTrackingId,
+  packageStatusForStage,
   rateForClass,
+  shippingStatusIndex,
   SHIPPING_GOODS_CLASSES,
   SHIPPING_STATUS,
   type ShippingGoodsClass,
@@ -154,6 +156,37 @@ export async function POST(req: Request) {
     if (orderError || !order) {
       return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
     }
+
+    if (String(body.action || '') === 'lock_rate') {
+      const finalRate = Number(body.finalUsdToGhs);
+      if (!packageId || !(finalRate > 0)) {
+        return NextResponse.json(
+          { error: 'Package and arrival day rate are required.' },
+          { status: 400 },
+        );
+      }
+      const { data: pkg } = await supabaseAdmin
+        .from('shipping_packages')
+        .select('*')
+        .eq('id', packageId)
+        .eq('order_id', order.id)
+        .single();
+      if (!pkg) return NextResponse.json({ error: 'Package not found.' }, { status: 404 });
+
+      const { data: rateRow } = await supabaseAdmin
+        .from('shipping_rate_board')
+        .select('*')
+        .eq('id', 1)
+        .single();
+      const invoice = await issueShippingInvoice({
+        pkg,
+        order,
+        finalUsdToGhs: finalRate,
+        validDays: mapRateBoard(rateRow).invoice_valid_days,
+        createdBy: auth.user?.id,
+      });
+      return NextResponse.json({ success: true, invoice });
+    }
     if (order.payment_status !== 'paid') {
       return NextResponse.json(
         { error: 'Confirm the product payment before creating a shipment.' },
@@ -174,9 +207,30 @@ export async function POST(req: Request) {
     const goodsClass = SHIPPING_GOODS_CLASSES.includes(body.goodsClass)
       ? (body.goodsClass as ShippingGoodsClass)
       : 'normal';
+
+    const { data: existingPackage } = packageId
+      ? await supabaseAdmin
+          .from('shipping_packages')
+          .select('status')
+          .eq('id', packageId)
+          .eq('order_id', order.id)
+          .maybeSingle()
+      : { data: null };
+
+    // Staff move milestones on the import journey only. Package status follows
+    // that journey, or the loaded date, so the same step is never set twice.
+    const journeyStatus = packageStatusForStage(deriveFulfillmentStage(order));
+    const candidates = [
+      journeyStatus,
+      existingPackage?.status as ShippingPackageStatus | undefined,
+      body.loadedAt ? ('in_transit' as ShippingPackageStatus) : undefined,
+      'received' as ShippingPackageStatus,
+    ].filter(Boolean) as ShippingPackageStatus[];
     const status = SHIPPING_STATUS.includes(body.status)
       ? (body.status as ShippingPackageStatus)
-      : 'received';
+      : candidates.reduce((furthest, option) =>
+          shippingStatusIndex(option) > shippingStatusIndex(furthest) ? option : furthest,
+        );
     const orderItemId = String(body.orderItemId || '').trim() || null;
     const orderItem = orderItemId
       ? order.order_items?.find((item: any) => item.id === orderItemId)
