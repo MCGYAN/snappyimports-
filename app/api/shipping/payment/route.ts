@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const packageId = String(body.packageId || '').trim();
   const { data: order } = await supabaseAdmin
     .from('orders')
-    .select('id, order_number, email')
+    .select('id, order_number, email, order_items(id)')
     .eq('order_number', orderNumber)
     .single();
   if (!order || String(order.email || '').toLowerCase() !== email) {
@@ -26,9 +26,19 @@ export async function POST(req: Request) {
     .from('shipping_packages')
     .select('*')
     .eq('id', packageId)
-    .eq('order_id', order.id)
     .single();
   if (!pkg) return NextResponse.json({ error: 'Package not found.' }, { status: 404 });
+  const orderItemIds = (order.order_items || []).map((item: any) => item.id);
+  const { count: membershipCount } = orderItemIds.length
+    ? await supabaseAdmin
+        .from('shipping_package_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('package_id', packageId)
+        .in('order_item_id', orderItemIds)
+    : { count: 0 };
+  if (!membershipCount) {
+    return NextResponse.json({ error: 'Package not found.' }, { status: 404 });
+  }
 
   const { data: invoice } = await supabaseAdmin
     .from('financial_documents')

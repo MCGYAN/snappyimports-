@@ -35,6 +35,7 @@ export default function OrderHubPage() {
 
   const [email, setEmail] = useState(emailFromUrl);
   const [order, setOrder] = useState<any>(null);
+  const [packageCount, setPackageCount] = useState(0);
   const [loading, setLoading] = useState(Boolean(emailFromUrl));
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
@@ -54,16 +55,25 @@ export default function OrderHubPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(
-        `/api/orders/lookup?order=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(mail.trim())}`,
-      );
+      const [res, shippingRes] = await Promise.all([
+        fetch(
+          `/api/orders/lookup?order=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(mail.trim())}`,
+        ),
+        fetch(
+          `/api/shipping/packages?order=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(
+            mail.trim(),
+          )}`,
+        ),
+      ]);
       const data = await res.json();
+      const shippingData = await shippingRes.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || 'Could not load order');
         setOrder(null);
         return;
       }
       setOrder(data.order);
+      setPackageCount(shippingRes.ok ? (shippingData.packages || []).length : 0);
       const addr = data.order?.shipping_address || {};
       setDeliveryForm((prev) => ({
         ...prev,
@@ -469,7 +479,8 @@ export default function OrderHubPage() {
                 <h2 className="text-xl font-bold text-brand-primary">Import journey</h2>
               </div>
               <p className="mb-6 text-sm text-slate-500">
-                China to Ghana in clear steps. We update this when your goods actually move.
+                Payment and sourcing stay on this page. After packing, follow each physical package
+                for CBM, freight and days left to Ghana.
               </p>
               <ol className="space-y-4">
                 {FULFILLMENT_STAGES.filter((s) => s.key !== 'cancelled').map((s) => {
@@ -514,9 +525,15 @@ export default function OrderHubPage() {
                   <span className="flex items-center gap-3">
                     <Package className="h-5 w-5 text-brand-accent" />
                     <span>
-                      <span className="block text-sm font-bold">View shipping details</span>
+                      <span className="block text-sm font-bold">
+                        {packageCount > 0
+                          ? `View ${packageCount} shipping package${packageCount === 1 ? '' : 's'}`
+                          : 'View shipping packages'}
+                      </span>
                       <span className="block text-xs text-slate-500">
-                        Package CBM, freight estimate and days left to Ghana
+                        {packageCount > 0
+                          ? 'See what is inside each box, CBM, freight and arrival'
+                          : 'Package details appear after the warehouse packs your goods'}
                       </span>
                     </span>
                   </span>

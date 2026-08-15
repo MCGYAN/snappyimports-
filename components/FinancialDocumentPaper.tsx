@@ -100,10 +100,21 @@ function buildLines(document: FinancialDocumentRecord): Line[] {
     const usdPerCbm = Number(data.usd_per_cbm) || 0;
     const shippingUsd = Number(data.shipping_usd) || 0;
     const usdToGhs = Number(data.usd_to_ghs) || 0;
+    const contents = Array.isArray(data.contents)
+      ? data.contents
+          .map(
+            (entry: any) =>
+              `${entry.product_name || 'Item'} × ${entry.quantity || 1}${
+                entry.order_number ? ` (${entry.order_number})` : ''
+              }`,
+          )
+          .join(', ')
+      : '';
     const detail = data.freight_included
       ? 'Freight is already included in the product price.'
       : [
           data.package_name ? `Package: ${data.package_name}` : '',
+          contents ? `Inside: ${contents}` : '',
           `${cbm.toFixed(3)} CBM x $${formatAmount(usdPerCbm)} per CBM = $${formatAmount(shippingUsd)}`,
           usdToGhs ? `Arrival day rate GH¢${formatAmount(usdToGhs)} per $1` : '',
         ]

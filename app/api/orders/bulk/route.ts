@@ -8,7 +8,6 @@ import {
 } from '@/lib/order-journey';
 import { createShopReceipt } from '@/lib/financial-documents';
 import { createAdminNotification } from '@/lib/admin-notifications';
-import { syncPackagesToStage } from '@/lib/shipping-sync';
 
 export async function POST(req: Request) {
   const auth = await verifyAuth(req, { requireModule: 'orders' });
@@ -94,8 +93,11 @@ export async function POST(req: Request) {
 
   if (action === 'move_stage') {
     const stage = String(body.stage || '') as FulfillmentStage;
-    if (!ADMIN_FULFILLMENT_STAGES.includes(stage)) {
-      return NextResponse.json({ error: 'Invalid journey stage.' }, { status: 400 });
+    if (!ADMIN_FULFILLMENT_STAGES.includes(stage) || stage !== 'sourcing') {
+      return NextResponse.json(
+        { error: 'Orders can be marked as sourcing here. Travel updates happen in Shipping.' },
+        { status: 400 },
+      );
     }
     const now = new Date().toISOString();
     for (const order of orders || []) {
@@ -125,7 +127,6 @@ export async function POST(req: Request) {
       if (updateError) {
         skipped.push({ id: order.id, reason: 'Update failed' });
       } else {
-        await syncPackagesToStage(order.id, stage);
         completed.push(order.id);
       }
     }

@@ -136,6 +136,11 @@ export default function AdminLayout({
       badge: ''
     },
     {
+      title: 'Packages',
+      icon: 'ri-archive-drawer-line',
+      path: '/admin/packages'
+    },
+    {
       title: 'Shipping',
       icon: 'ri-ship-2-line',
       path: '/admin/shipping'

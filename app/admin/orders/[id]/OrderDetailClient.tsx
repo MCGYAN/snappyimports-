@@ -6,11 +6,8 @@ import { supabase } from '@/lib/supabase';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
 import OrderShippingDesk from '@/components/admin/OrderShippingDesk';
 import {
-  ADMIN_FULFILLMENT_STAGES,
   deriveFulfillmentStage,
   FULFILLMENT_STAGES,
-  fulfillmentIndex,
-  normalizeFulfillmentStage,
 } from '@/lib/order-journey';
 import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 
@@ -178,7 +175,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [paymentUndoUntil, setPaymentUndoUntil] = useState<string | null>(null);
   const [updatingJourney, setUpdatingJourney] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
-  const [journeyStage, setJourneyStage] = useState('');
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -363,8 +359,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     await fetchOrderDetails();
   };
 
-  const handleUpdateJourney = async () => {
-    if (!order?.id || !journeyStage) return;
+  const handleStartSourcing = async () => {
+    if (!order?.id) return;
     try {
       setUpdatingJourney(true);
       const { data: { session } } = await supabase.auth.getSession();
@@ -374,13 +370,12 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ orderId: order.id, stage: journeyStage, note: adminNotes || undefined }),
+        body: JSON.stringify({ orderId: order.id, stage: 'sourcing', note: adminNotes || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Update failed');
       await fetchOrderDetails();
-      setJourneyStage('');
-      alert('Import journey updated');
+      alert('Order marked as sourcing in China.');
     } catch (err: any) {
       alert(err?.message || 'Failed to update journey');
     } finally {
@@ -463,7 +458,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     : shippingAddress.full_name || shippingAddress.firstName || order.email?.split('@')[0] || 'Customer';
 
   const currentJourney = deriveFulfillmentStage(order);
-  const journeyIndex = fulfillmentIndex(currentJourney);
 
   // Mock fraud analysis for now (or implement real logic later)
   const fraudAnalysis: FraudAnalysis = {
@@ -740,11 +734,11 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
           <div className="space-y-6">
             <div className="overflow-hidden rounded-2xl border border-brand-primary/15 bg-gradient-to-b from-brand-light/80 to-white shadow-sm">
-              <div className="border-b border-brand-primary/10 px-5 py-4">
-                <h2 className="text-lg font-bold text-gray-900">Update import journey</h2>
+              <div className="px-5 py-4">
+                <h2 className="text-lg font-bold text-gray-900">Order progress</h2>
                 <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                  Tap a milestone, then confirm. Payment stages and the shipping packages below
-                  follow this on their own.
+                  Orders stop here after sourcing. Build boxes in Packages, then manage travel in
+                  Shipping.
                 </p>
                 <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/80 px-3 py-2.5 ring-1 ring-brand-primary/10">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-white">
@@ -760,149 +754,23 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     </p>
                   </div>
                 </div>
-              </div>
+                {order.payment_status === 'paid' && currentJourney === 'paid' ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleStartSourcing()}
+                    disabled={updatingJourney || order.status === 'cancelled'}
+                    className="mt-3 w-full rounded-xl bg-brand-primary py-3 text-sm font-bold text-white disabled:opacity-40"
+                  >
+                    {updatingJourney ? 'Updating…' : 'Start sourcing in China'}
+                  </button>
+                ) : null}
 
-              <div className="space-y-2 px-4 py-4" role="radiogroup" aria-label="Import journey milestone">
-                {ADMIN_FULFILLMENT_STAGES.map((key) => {
-                  const stage = FULFILLMENT_STAGES.find((x) => x.key === key);
-                  if (!stage) return null;
-                  const stageIdx = fulfillmentIndex(key);
-                  const isCurrent = currentJourney === key;
-                  const isPast = journeyIndex > stageIdx && journeyIndex >= 0;
-                  const isSelected = journeyStage === key;
-                  const nextKey = ADMIN_FULFILLMENT_STAGES.find(
-                    (k) => fulfillmentIndex(k) > journeyIndex,
-                  );
-                  const isNext = !journeyStage && key === nextKey;
-                  const icons: Record<string, string> = {
-                    sourcing: 'ri-shopping-bag-3-line',
-                    en_route_ghana: 'ri-ship-2-line',
-                    in_ghana: 'ri-flag-2-line',
-                    ready: 'ri-store-2-line',
-                    delivered: 'ri-checkbox-circle-line',
-                  };
-
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected || (!journeyStage && isCurrent)}
-                      disabled={order.status === 'cancelled' || updatingJourney}
-                      onClick={() => setJourneyStage(key)}
-                      className={`group w-full rounded-xl border px-3.5 py-3 text-left transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
-                        isSelected
-                          ? 'border-brand-accent bg-brand-accent/10 shadow-sm ring-2 ring-brand-accent/25'
-                          : isCurrent
-                            ? 'border-brand-primary/30 bg-brand-primary/5'
-                            : 'border-gray-200/80 bg-white hover:border-brand-primary/35 hover:bg-brand-light/40'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span
-                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base transition-colors ${
-                            isSelected
-                              ? 'bg-brand-accent text-white'
-                              : isPast || isCurrent
-                                ? 'bg-brand-primary text-white'
-                                : 'bg-gray-100 text-gray-500 group-hover:bg-brand-primary/10 group-hover:text-brand-primary'
-                          }`}
-                        >
-                          <i
-                            className={
-                              isPast && !isSelected
-                                ? 'ri-check-line'
-                                : icons[key] || 'ri-circle-line'
-                            }
-                            aria-hidden
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`text-sm font-semibold ${
-                                isSelected || isCurrent ? 'text-gray-900' : 'text-gray-700'
-                              }`}
-                            >
-                              {stage.title}
-                            </span>
-                            {isCurrent ? (
-                              <span className="rounded-md bg-brand-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-primary">
-                                Current
-                              </span>
-                            ) : null}
-                            {isNext && !isSelected ? (
-                              <span className="rounded-md bg-brand-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-accent">
-                                Suggested next
-                              </span>
-                            ) : null}
-                            {isSelected && !isCurrent ? (
-                              <span className="rounded-md bg-brand-accent px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                                Selected
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="mt-0.5 block text-xs leading-snug text-gray-500">
-                            {stage.description}
-                          </span>
-                        </span>
-                        <span
-                          className={`mt-2 h-4 w-4 shrink-0 rounded-full border-2 ${
-                            isSelected
-                              ? 'border-brand-accent bg-brand-accent shadow-[inset_0_0_0_2px_white]'
-                              : 'border-gray-300 bg-white'
-                          }`}
-                          aria-hidden
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="border-t border-brand-primary/10 px-4 pb-5 pt-3">
-                <button
-                  type="button"
-                  onClick={handleUpdateJourney}
-                  disabled={
-                    updatingJourney ||
-                    !journeyStage ||
-                    journeyStage === currentJourney ||
-                    order.status === 'cancelled'
-                  }
-                  className="w-full rounded-xl bg-brand-primary py-3.5 text-sm font-bold text-white transition-colors hover:bg-brand-accent disabled:cursor-not-allowed disabled:opacity-40"
+                <Link
+                  href="/admin/packages"
+                  className="mt-3 flex w-full items-center justify-center rounded-xl border border-brand-primary/20 bg-white py-3 text-sm font-bold text-brand-primary"
                 >
-                  {updatingJourney
-                    ? 'Updating…'
-                    : journeyStage && journeyStage !== currentJourney
-                      ? `Move to ${
-                          FULFILLMENT_STAGES.find((s) => s.key === journeyStage)?.title ||
-                          'milestone'
-                        }`
-                      : 'Select a milestone to continue'}
-                </button>
-
-                <div className="mt-4">
-                  <label className="mb-2 block text-sm font-semibold text-gray-900">
-                    Tracking number
-                  </label>
-                  <input
-                    type="text"
-                    value={trackingNumber}
-                    onChange={(e) => setTrackingNumber(e.target.value)}
-                    placeholder="Optional carrier / warehouse ref"
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleUpdateStatus(undefined)}
-                  disabled={statusUpdating}
-                  className="mt-3 w-full rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-800 transition-colors hover:border-brand-primary/30 hover:bg-brand-light/30 disabled:opacity-50"
-                >
-                  {statusUpdating ? 'Saving...' : 'Save tracking number'}
-                </button>
+                  Open Packages workspace
+                </Link>
 
                 {order.status !== 'cancelled' &&
                   currentJourney !== 'delivered' &&

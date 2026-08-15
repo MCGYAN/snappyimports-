@@ -6,7 +6,6 @@ import {
   orderStatusForStage,
   type FulfillmentStage,
 } from '@/lib/order-journey';
-import { syncPackagesToStage } from '@/lib/shipping-sync';
 
 /** POST — admin updates China→Ghana fulfillment stage */
 export async function POST(req: Request) {
@@ -23,6 +22,12 @@ export async function POST(req: Request) {
 
     if (!orderId || !FULFILLMENT_STAGES.some((s) => s.key === stage)) {
       return NextResponse.json({ error: 'Valid orderId and stage required.' }, { status: 400 });
+    }
+    if (stage !== 'sourcing') {
+      return NextResponse.json(
+        { error: 'Travel stages are updated from the Shipping workspace.' },
+        { status: 400 },
+      );
     }
 
     const { data: order, error } = await supabaseAdmin
@@ -66,8 +71,6 @@ export async function POST(req: Request) {
     if (updateError) {
       return NextResponse.json({ error: 'Failed to update journey.' }, { status: 500 });
     }
-
-    await syncPackagesToStage(orderId, stage);
 
     return NextResponse.json({ success: true, order: updated });
   } catch (e) {

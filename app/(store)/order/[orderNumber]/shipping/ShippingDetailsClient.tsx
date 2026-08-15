@@ -206,7 +206,8 @@ export default function ShippingDetailsClient() {
                   <div>
                     <h2 className="text-xl font-bold text-brand-primary">Your packages</h2>
                     <p className="text-sm text-slate-500">
-                      {packages.length} package{packages.length === 1 ? '' : 's'} linked to this order
+                      {packages.length} package{packages.length === 1 ? '' : 's'} containing items
+                      from this order
                     </p>
                   </div>
                 </div>
@@ -245,6 +246,11 @@ export default function ShippingDetailsClient() {
                               <p className="mt-0.5 font-mono text-xs text-slate-400">
                                 {pkg.tracking_id}
                               </p>
+                              {pkg.carrier_reference ? (
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  Shipping company reference: {pkg.carrier_reference}
+                                </p>
+                              ) : null}
                             </div>
                           </div>
                           <span
@@ -256,6 +262,31 @@ export default function ShippingDetailsClient() {
                           >
                             {SHIPPING_STATUS_LABELS[status]}
                           </span>
+                        </div>
+
+                        <div className="border-b border-slate-100 px-5 py-4">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Inside this package
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {(pkg.shipping_package_items || []).length > 0 ? (
+                              pkg.shipping_package_items.map((entry: any) => (
+                                <span
+                                  key={entry.order_item_id}
+                                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700"
+                                >
+                                  {entry.order_items?.product_name || 'Order item'} × {entry.quantity}
+                                  {entry.order_items?.orders?.order_number
+                                    ? ` (${entry.order_items.orders.order_number})`
+                                    : ''}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-slate-500">
+                                Package contents are being recorded.
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">

@@ -671,9 +671,7 @@ export default function AdminOrdersPage() {
                     onChange={(event) => setBulkStage(event.target.value as FulfillmentStage)}
                     className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
                   >
-                    {FULFILLMENT_STAGES.filter((stage) =>
-                      ['sourcing', 'en_route_ghana', 'in_ghana', 'ready', 'delivered'].includes(stage.key),
-                    ).map((stage) => (
+                    {FULFILLMENT_STAGES.filter((stage) => stage.key === 'sourcing').map((stage) => (
                       <option key={stage.key} value={stage.key}>{stage.title}</option>
                     ))}
                   </select>
@@ -682,7 +680,7 @@ export default function AdminOrdersPage() {
                     disabled={bulkBusy}
                     className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
                   >
-                    Move selected
+                    Start sourcing
                   </button>
                 </>
               )}

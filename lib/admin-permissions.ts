@@ -6,7 +6,7 @@
 export const ADMIN_MODULES = {
   orders: {
     label: 'Orders',
-    description: 'Orders, payments, and POS',
+    description: 'Orders, packages, shipping, payments, and POS',
   },
   exchange: {
     label: 'Buy RMB',
@@ -39,6 +39,7 @@ const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null 
   { prefix: '/admin/team', module: 'owner' },
   { prefix: '/admin/notifications', module: 'owner' },
   { prefix: '/admin/analytics', module: 'owner' },
+  { prefix: '/admin/packages', module: 'orders' },
   { prefix: '/admin/shipping', module: 'orders' },
   { prefix: '/admin/orders', module: 'orders' },
   { prefix: '/admin/pos', module: 'orders' },

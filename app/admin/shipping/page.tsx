@@ -87,14 +87,22 @@ export default function AdminShippingPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-brand-primary">Shipping</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Publish China to Ghana CBM rates. Package details are added inside each paid order.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-primary">Shipping</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Track completed packages, manage freight rates, and lock the final Ghana shipping bill.
+          </p>
+        </div>
+        <Link
+          href="/admin/packages"
+          className="rounded-xl border border-brand-primary/20 bg-white px-4 py-2.5 text-sm font-bold text-brand-primary"
+        >
+          Open Packages
+        </Link>
       </div>
 
-      <ShippingOperationsDesk />
+      <ShippingOperationsDesk mode="shipping" />
 
       <details className="rounded-2xl border border-slate-200 bg-white">
         <summary className="cursor-pointer px-5 py-4 font-bold text-brand-primary">
@@ -244,14 +252,11 @@ export default function AdminShippingPage() {
           </div>
 
           <div className="rounded-2xl bg-brand-light/60 p-4 text-sm text-brand-primary">
-            <p className="font-bold">Next step</p>
+            <p className="font-bold">Clear handoff</p>
             <p className="mt-1 text-xs leading-relaxed">
-              Open a paid order and add its measured package. CIF freight can still be tracked but
-              will show freight included.
+              Create and measure boxes in Packages. Completed packages appear here for travel,
+              billing, payment, and release.
             </p>
-            <Link href="/admin/orders" className="mt-3 inline-block font-semibold underline">
-              Open orders
-            </Link>
           </div>
         </aside>
       </div>

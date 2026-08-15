@@ -126,8 +126,11 @@ export default function MyShipments() {
           <div className="divide-y divide-slate-100">
             {packages.map((pkg: any) => {
               const days = daysUntil(pkg.estimated_arrival_at, now);
-              const email = pkg.orders?.email || '';
-              const orderNumber = pkg.orders?.order_number || '';
+              const firstOrder = (pkg.shipping_package_items || []).find(
+                (entry: any) => entry.order_items?.orders,
+              )?.order_items?.orders;
+              const email = pkg.customer_email || firstOrder?.email || '';
+              const orderNumber = firstOrder?.order_number || '';
               return (
                 <Link
                   key={pkg.id}
@@ -137,6 +140,19 @@ export default function MyShipments() {
                   <div>
                     <p className="font-semibold text-slate-900">{pkg.package_name}</p>
                     <p className="font-mono text-[11px] text-slate-400">{pkg.tracking_id}</p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Inside:{' '}
+                      {(pkg.shipping_package_items || [])
+                        .map(
+                          (entry: any) =>
+                            `${entry.order_items?.product_name || 'Item'} × ${entry.quantity}${
+                              entry.order_items?.orders?.order_number
+                                ? ` (${entry.order_items.orders.order_number})`
+                                : ''
+                            }`,
+                        )
+                        .join(', ') || 'Contents being recorded'}
+                    </p>
                   </div>
                   <div>
                     <span className="mr-2 text-xs text-slate-400 md:hidden">Size</span>

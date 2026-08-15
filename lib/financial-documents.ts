@@ -169,18 +169,41 @@ export async function createRmbReceipt(exchange: any, createdBy?: string | null,
 
 export async function issueShippingInvoice({
   pkg,
-  order,
   finalUsdToGhs,
   validDays,
   createdBy,
 }: {
   pkg: any;
-  order: any;
   finalUsdToGhs: number;
   validDays: number;
   createdBy?: string | null;
 }) {
   const now = new Date();
+  const { data: packageItems } = await supabaseAdmin
+    .from('shipping_package_items')
+    .select(
+      'quantity, order_items(order_id, product_name, variant_name, orders(id, order_number, email, user_id, shipping_address))',
+    )
+    .eq('package_id', pkg.id);
+  const orders = Array.from(
+    new Map(
+      (packageItems || [])
+        .map((entry: any) => entry.order_items?.orders)
+        .filter(Boolean)
+        .map((order: any) => [order.id, order]),
+    ).values(),
+  ) as any[];
+  const primaryOrder = orders[0];
+  if (!primaryOrder) throw new Error('A shipping package must contain at least one order item.');
+  const orderNumbers = orders.map((order) => order.order_number).filter(Boolean);
+  const customerEmail = pkg.customer_email || primaryOrder.email || null;
+  const customerUserId = pkg.customer_user_id || primaryOrder.user_id || null;
+  const contents = (packageItems || []).map((entry: any) => ({
+    product_name: entry.order_items?.product_name || 'Order item',
+    variant_name: entry.order_items?.variant_name || null,
+    quantity: Number(entry.quantity) || 1,
+    order_number: entry.order_items?.orders?.order_number || null,
+  }));
 
   // Freight already paid inside the product price (CIF Tema, DDP). Record the
   // arrival rate for the timeline but never raise a zero cedi bill.
@@ -235,21 +258,22 @@ export async function issueShippingInvoice({
       document_type: 'invoice',
       flow: 'shipping',
       entity_id: pkg.id,
-      order_id: order.id,
+      order_id: primaryOrder.id,
       shipping_package_id: pkg.id,
-      customer_user_id: order.user_id || null,
-      customer_email: order.email || null,
+      customer_user_id: customerUserId,
+      customer_email: customerEmail,
       currency: 'GHS',
       amount,
       status: 'active',
       version,
       due_at: dueAt,
       data: {
-        reference: order.order_number,
+        reference: orderNumbers.join(', '),
+        order_numbers: orderNumbers,
         customer_name:
-          [order.shipping_address?.firstName, order.shipping_address?.lastName]
+          [primaryOrder.shipping_address?.firstName, primaryOrder.shipping_address?.lastName]
             .filter(Boolean)
-            .join(' ') || order.email,
+            .join(' ') || customerEmail,
         tracking_id: pkg.tracking_id,
         package_name: pkg.package_name,
         cbm: Number(pkg.cbm),
@@ -257,6 +281,7 @@ export async function issueShippingInvoice({
         shipping_usd: Number(pkg.estimated_shipping_usd),
         usd_to_ghs: finalUsdToGhs,
         freight_included: Boolean(pkg.freight_included),
+        contents,
       },
       created_by: createdBy || null,
     })
@@ -279,7 +304,6 @@ export async function issueShippingInvoice({
 
 export async function createShippingReceipt(
   pkg: any,
-  order: any,
   createdBy?: string | null,
   delayMinutes = 2,
 ) {
@@ -297,6 +321,22 @@ export async function createShippingReceipt(
     .order('version', { ascending: false })
     .limit(1)
     .maybeSingle();
+  const { data: packageItems } = await supabaseAdmin
+    .from('shipping_package_items')
+    .select('order_items(order_id, orders(id, order_number, email, user_id, shipping_address))')
+    .eq('package_id', pkg.id);
+  const orders = Array.from(
+    new Map(
+      (packageItems || [])
+        .map((entry: any) => entry.order_items?.orders)
+        .filter(Boolean)
+        .map((order: any) => [order.id, order]),
+    ).values(),
+  ) as any[];
+  const primaryOrder = orders[0];
+  if (!primaryOrder) throw new Error('A shipping package must contain at least one order item.');
+  const orderNumbers = orders.map((order) => order.order_number).filter(Boolean);
+  const customerEmail = pkg.customer_email || primaryOrder.email || null;
 
   const { data: receipt, error } = await supabaseAdmin
     .from('financial_documents')
@@ -305,10 +345,10 @@ export async function createShippingReceipt(
       document_type: 'receipt',
       flow: 'shipping',
       entity_id: pkg.id,
-      order_id: order.id,
+      order_id: primaryOrder.id,
       shipping_package_id: pkg.id,
-      customer_user_id: order.user_id || null,
-      customer_email: order.email || null,
+      customer_user_id: pkg.customer_user_id || primaryOrder.user_id || null,
+      customer_email: customerEmail,
       currency: 'GHS',
       amount: Number(pkg.final_shipping_ghs) || 0,
       status: 'paid',
@@ -317,13 +357,14 @@ export async function createShippingReceipt(
       paid_at: issuedAt,
       data: {
         ...(invoice?.data || {}),
-        reference: order.order_number,
+        reference: invoice?.data?.reference || orderNumbers.join(', '),
+        order_numbers: invoice?.data?.order_numbers || orderNumbers,
         customer_name:
           invoice?.data?.customer_name ||
-          [order.shipping_address?.firstName, order.shipping_address?.lastName]
+          [primaryOrder.shipping_address?.firstName, primaryOrder.shipping_address?.lastName]
             .filter(Boolean)
             .join(' ') ||
-          order.email,
+          customerEmail,
         invoice_number: invoice?.document_number || null,
       },
       created_by: createdBy || null,
