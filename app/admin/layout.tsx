@@ -136,6 +136,11 @@ export default function AdminLayout({
       badge: ''
     },
     {
+      title: 'Shipping',
+      icon: 'ri-ship-2-line',
+      path: '/admin/shipping'
+    },
+    {
       title: 'Buy RMB',
       icon: 'ri-exchange-dollar-line',
       path: '/admin/exchange'

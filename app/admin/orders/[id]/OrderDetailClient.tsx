@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
+import OrderShippingDesk from '@/components/admin/OrderShippingDesk';
 import {
   ADMIN_FULFILLMENT_STAGES,
   deriveFulfillmentStage,
@@ -73,6 +74,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             total_price,
             metadata,
             products (
+              metadata,
               product_images (url)
             )
           )
@@ -99,6 +101,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               total_price,
               metadata,
               products (
+              metadata,
                 product_images (url)
               )
             )
@@ -718,6 +721,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </div>
               )}
             </div>
+
+            <OrderShippingDesk order={order} />
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Import journey</h2>

@@ -219,10 +219,14 @@ export async function POST(req: Request) {
       resolvedProductIds.push(productId);
     }
 
-    const { data: productVariants } = await supabaseAdmin
-      .from('product_variants')
-      .select('id, product_id, name, option1, option2, option3, price, quantity')
-      .in('product_id', [...new Set(resolvedProductIds)]);
+    const uniqueProductIds = [...new Set(resolvedProductIds)];
+    const [{ data: productVariants }, { data: productSettings }] = await Promise.all([
+      supabaseAdmin
+        .from('product_variants')
+        .select('id, product_id, name, option1, option2, option3, price, quantity')
+        .in('product_id', uniqueProductIds),
+      supabaseAdmin.from('products').select('id, metadata').in('id', uniqueProductIds),
+    ]);
 
     const variantsByProduct = new Map<string, any[]>();
     for (const v of productVariants || []) {
@@ -230,6 +234,9 @@ export async function POST(req: Request) {
       list.push(v);
       variantsByProduct.set(v.product_id, list);
     }
+    const metadataByProduct = new Map(
+      (productSettings || []).map((product) => [product.id, product.metadata || {}]),
+    );
 
     for (let i = 0; i < validatedCart.length; i++) {
       const item = validatedCart[i];
@@ -281,6 +288,8 @@ export async function POST(req: Request) {
           color: color || null,
           size: size || null,
           variant_id: variantRow?.id || null,
+          import_type: metadataByProduct.get(productId)?.import_type || null,
+          import_notes: metadataByProduct.get(productId)?.import_notes || null,
         },
       });
     }

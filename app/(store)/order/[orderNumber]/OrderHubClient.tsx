@@ -504,6 +504,25 @@ export default function OrderHubPage() {
                   <span className="font-mono font-bold">{order.metadata.tracking_number}</span>
                 </p>
               ) : null}
+              {order.payment_status === 'paid' ? (
+                <Link
+                  href={`/order/${encodeURIComponent(order.order_number)}/shipping?email=${encodeURIComponent(
+                    order.email,
+                  )}`}
+                  className="mt-5 flex items-center justify-between rounded-xl border border-brand-primary/15 bg-brand-light/50 px-4 py-3 text-brand-primary transition hover:border-brand-accent/40"
+                >
+                  <span className="flex items-center gap-3">
+                    <Package className="h-5 w-5 text-brand-accent" />
+                    <span>
+                      <span className="block text-sm font-bold">View shipping details</span>
+                      <span className="block text-xs text-slate-500">
+                        Package CBM, freight estimate and days left to Ghana
+                      </span>
+                    </span>
+                  </span>
+                  <span aria-hidden>›</span>
+                </Link>
+              ) : null}
             </section>
 
             {order.payment_status === 'paid' &&
