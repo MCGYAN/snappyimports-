@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { formatStoreMoney } from '@/lib/currency';
@@ -9,19 +9,91 @@ import FinancialDocumentPaper, {
   type FinancialDocumentRecord,
 } from '@/components/FinancialDocumentPaper';
 
+const FLOW_LABELS: Record<string, string> = {
+  shop: 'Product order',
+  rmb: 'Buy RMB',
+  shipping: 'Shipping to Ghana',
+};
+
 function money(amount: number, currency: string) {
   return currency === 'GHS'
     ? formatStoreMoney(amount)
     : `${currency} ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 }
 
+function longDate(value?: string | null) {
+  if (!value) return '';
+  return new Date(value).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function isExpired(row: FinancialDocumentRecord) {
+  if (row.document_type !== 'invoice') return false;
+  if (row.status === 'expired' || row.status === 'void') return true;
+  return row.due_at ? new Date(row.due_at).getTime() < Date.now() : false;
+}
+
+function DocumentRow({
+  row,
+  highlight,
+  busy,
+  onDownload,
+}: {
+  row: FinancialDocumentRecord;
+  highlight: boolean;
+  busy: boolean;
+  onDownload: () => void;
+}) {
+  const receipt = row.document_type === 'receipt';
+  const expired = isExpired(row);
+  const line = receipt
+    ? `Paid ${longDate(row.paid_at || row.issued_at)}`
+    : expired
+      ? 'This price expired. Ask Snappy for a fresh one.'
+      : row.due_at
+        ? `Pay by ${longDate(row.due_at)}`
+        : `Sent ${longDate(row.issued_at)}`;
+
+  return (
+    <div
+      className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${
+        highlight ? 'bg-brand-light/40' : 'bg-white'
+      }`}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-semibold text-slate-900">
+          {FLOW_LABELS[row.flow] || 'Payment'}
+          {row.data?.reference ? ` ${row.data.reference}` : ''}
+        </p>
+        <p className={`mt-0.5 text-xs ${expired ? 'text-red-600' : 'text-slate-500'}`}>
+          {line}. Document {row.document_number}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="font-bold text-brand-primary">{money(row.amount, row.currency)}</span>
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={busy}
+          className="rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
+        >
+          {busy ? 'Saving…' : 'Download'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function FinancialDocuments() {
   const searchParams = useSearchParams();
   const requestedId = searchParams.get('document');
   const [documents, setDocuments] = useState<FinancialDocumentRecord[]>([]);
-  const [selected, setSelected] = useState<FinancialDocumentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
+  const [pending, setPending] = useState<FinancialDocumentRecord | null>(null);
+  const paperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -37,122 +109,106 @@ export default function FinancialDocuments() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
-      const rows: FinancialDocumentRecord[] = response.ok ? result.documents || [] : [];
-      setDocuments(rows);
-      setSelected(rows.find((row) => row.id === requestedId) || rows[0] || null);
+      setDocuments(response.ok ? result.documents || [] : []);
       setLoading(false);
     };
     void load();
-  }, [requestedId]);
+  }, []);
 
-  const download = async () => {
-    if (!selected) return;
-    const paper = document
-      .getElementById('financial-document-print')
-      ?.querySelector<HTMLElement>('.document-official');
-    if (!paper) return;
-    setDownloading(true);
-    try {
-      await downloadElementAsPdf(paper, `${selected.document_number}.pdf`);
-    } catch (error) {
-      console.error('[document pdf]', error);
-      alert('Could not download the document. Please try again.');
-    } finally {
-      setDownloading(false);
-    }
-  };
+  // The paper only exists while a download is running, so the page stays a
+  // simple list instead of a wall of invoice sheets.
+  useEffect(() => {
+    if (!pending) return;
+    let cancelled = false;
+    const run = async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      if (cancelled) return;
+      const paper = paperRef.current?.querySelector<HTMLElement>('.document-official');
+      try {
+        if (paper) await downloadElementAsPdf(paper, `${pending.document_number}.pdf`);
+      } catch (error) {
+        console.error('[document pdf]', error);
+        alert('Could not download the document. Please try again.');
+      } finally {
+        if (!cancelled) setPending(null);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [pending]);
+
+  const { invoices, receipts } = useMemo(
+    () => ({
+      invoices: documents.filter((row) => row.document_type === 'invoice'),
+      receipts: documents.filter((row) => row.document_type === 'receipt'),
+    }),
+    [documents],
+  );
 
   if (loading) return <p className="py-10 text-center text-sm text-slate-500">Loading records…</p>;
+
+  const sections = [
+    {
+      key: 'invoices',
+      title: 'Bills to pay',
+      hint: 'These ask you for money. Pay before the date shown.',
+      empty: 'Nothing to pay right now.',
+      rows: invoices,
+    },
+    {
+      key: 'receipts',
+      title: 'Payment receipts',
+      hint: 'Proof that Snappy received your money. Keep them safe.',
+      empty: 'No payments confirmed yet.',
+      rows: receipts,
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-brand-primary">Invoices and receipts</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Invoices request payment. Receipts prove that Snappy received payment.
+          Every paper for your product orders, Buy RMB and shipping. Tap Download to save a copy.
         </p>
       </div>
 
-      {documents.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center">
-          <i className="ri-file-list-3-line text-3xl text-slate-300" />
-          <p className="mt-2 font-semibold text-slate-700">No financial records yet</p>
-        </div>
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-[16rem_1fr]">
-          <div className="space-y-2">
-            {documents.map((row) => (
-              <button
-                key={row.id}
-                type="button"
-                onClick={() => setSelected(row)}
-                className={`w-full rounded-xl border p-3 text-left ${
-                  selected?.id === row.id
-                    ? 'border-brand-primary bg-brand-light/50'
-                    : 'border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wide text-brand-accent">
-                    {row.document_type}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {new Date(row.issued_at).toLocaleDateString('en-GB')}
-                  </span>
-                </div>
-                <p className="mt-1 truncate text-sm font-semibold text-slate-900">
-                  {row.document_number}
-                </p>
-                <p className="mt-1 font-bold text-brand-primary">
-                  {money(row.amount, row.currency)}
-                </p>
-              </button>
-            ))}
+      {sections.map((section) => (
+        <section key={section.key} className="overflow-hidden rounded-2xl border border-slate-200">
+          <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+            <p className="font-bold text-slate-900">
+              {section.title}
+              <span className="ml-2 text-xs font-semibold text-slate-500">
+                {section.rows.length}
+              </span>
+            </p>
+            <p className="text-xs text-slate-500">{section.hint}</p>
           </div>
-
-          {selected ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-slate-500">
-                  {selected.document_type === 'receipt'
-                    ? 'Proof of payment received by Snappy Imports Global.'
-                    : 'Amount requested by Snappy Imports Global.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void download()}
-                  disabled={downloading}
-                  className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-                >
-                  {downloading ? 'Preparing…' : 'Download'}
-                </button>
-              </div>
-
-              {selected.document_type === 'invoice' && selected.due_at ? (
-                <div
-                  className={`rounded-xl px-4 py-3 text-sm ${
-                    selected.status === 'expired' || selected.status === 'void'
-                      ? 'bg-red-50 text-red-700'
-                      : 'bg-amber-50 text-amber-800'
-                  }`}
-                >
-                  {selected.status === 'expired' || selected.status === 'void'
-                    ? 'This invoice expired. Ask Snappy to issue a fresh rate.'
-                    : `Please pay by ${new Date(selected.due_at).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}.`}
-                </div>
-              ) : null}
-
-              <article className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
-                <FinancialDocumentPaper document={selected} />
-              </article>
+          {section.rows.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-slate-400">{section.empty}</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {section.rows.map((row) => (
+                <DocumentRow
+                  key={row.id}
+                  row={row}
+                  highlight={row.id === requestedId}
+                  busy={pending?.id === row.id}
+                  onDownload={() => setPending(row)}
+                />
+              ))}
             </div>
-          ) : null}
+          )}
+        </section>
+      ))}
+
+      {pending ? (
+        <div ref={paperRef} className="pointer-events-none fixed -left-[10000px] top-0 w-[794px]">
+          <FinancialDocumentPaper document={pending} />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -167,12 +167,6 @@ export default function OrderHistory() {
     alert('Reorder feature coming soon!');
   };
 
-  const handleDownloadInvoice = (order: ShopOrder) => {
-    const email = encodeURIComponent(order.email || '');
-    const num = encodeURIComponent(order.orderNumber || order.id);
-    window.open(`/order/${num}?email=${email}`, '_blank');
-  };
-
   if (loading) {
     return (
       <div className="py-8 text-center">
@@ -212,12 +206,19 @@ export default function OrderHistory() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
         <div className="text-sm text-gray-600">
           Total: <span className="font-bold text-gray-900">{items.length}</span>
         </div>
       </div>
+      <p className="mb-6 text-sm text-gray-500">
+        What you ordered and how far it has come. Bills and receipts live in{' '}
+        <Link href="/account?tab=documents" className="font-semibold text-brand-primary underline">
+          Invoices and receipts
+        </Link>
+        .
+      </p>
 
       <div className="space-y-6">
         {items.map((item) =>
@@ -283,33 +284,33 @@ export default function OrderHistory() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-gray-200">
-                  <Link
-                    href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
-                    className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
-                  >
-                    <i className="ri-map-pin-line mr-2"></i>
-                    Track Order
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => handleReorder(item)}
-                    className="flex-1 sm:flex-none px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
-                  >
-                    <i className="ri-refresh-line mr-2"></i>
-                    Reorder
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      item.paymentStatus === 'paid'
-                        ? window.location.assign('/account?tab=documents')
-                        : handleDownloadInvoice(item)
-                    }
-                    className="flex-1 sm:flex-none px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
-                  >
-                    <i className="ri-file-list-3-line mr-2"></i>
-                    {item.paymentStatus === 'paid' ? 'View receipt' : 'Invoice & pay'}
-                  </button>
+                  {item.paymentStatus === 'paid' ? (
+                    <>
+                      <Link
+                        href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
+                        className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
+                      >
+                        <i className="ri-map-pin-line mr-2"></i>
+                        Track Order
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleReorder(item)}
+                        className="flex-1 sm:flex-none px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
+                      >
+                        <i className="ri-refresh-line mr-2"></i>
+                        Reorder
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
+                      className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
+                    >
+                      <i className="ri-bank-card-line mr-2"></i>
+                      Pay now
+                    </Link>
+                  )}
                   <Link
                     href="/contact"
                     className="flex-1 sm:flex-none text-center px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
@@ -373,8 +374,14 @@ export default function OrderHistory() {
                     }
                     className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
                   >
-                    <i className="ri-file-list-3-line mr-2"></i>
-                    Open invoice
+                    <i
+                      className={`mr-2 ${
+                        ['completed', 'confirmed'].includes(item.status)
+                          ? 'ri-eye-line'
+                          : 'ri-bank-card-line'
+                      }`}
+                    ></i>
+                    {['completed', 'confirmed'].includes(item.status) ? 'View details' : 'Pay now'}
                   </Link>
                   <Link
                     href="/contact"
