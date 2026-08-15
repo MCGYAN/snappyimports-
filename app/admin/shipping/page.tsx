@@ -9,6 +9,7 @@ import {
   formatUsd,
   type ShippingRateBoard,
 } from '@/lib/shipping';
+import ShippingOperationsDesk from '@/components/admin/ShippingOperationsDesk';
 
 const EMPTY: ShippingRateBoard = {
   id: 1,
@@ -18,6 +19,7 @@ const EMPTY: ShippingRateBoard = {
   heavy_usd_per_cbm: 300,
   bulk_usd_per_cbm: 240,
   default_transit_days: 45,
+  invoice_valid_days: 5,
   notes: null,
 };
 
@@ -92,7 +94,16 @@ export default function AdminShippingPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
+      <ShippingOperationsDesk />
+
+      <details className="rounded-2xl border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-5 py-4 font-bold text-brand-primary">
+          Rates and defaults
+          <span className="ml-2 text-xs font-normal text-slate-500">
+            Change only when your freight terms change
+          </span>
+        </summary>
+      <div className="grid gap-6 border-t border-slate-100 p-5 lg:grid-cols-[1fr_18rem]">
         <form onSubmit={save} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-semibold text-slate-700">
@@ -118,6 +129,18 @@ export default function AdminShippingPage() {
                 max="180"
                 value={form.default_transit_days}
                 onChange={(event) => setNumber('default_transit_days', event.target.value)}
+                className={inputClass}
+                required
+              />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Shipping invoice days
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={form.invoice_valid_days}
+                onChange={(event) => setNumber('invoice_valid_days', event.target.value)}
                 className={inputClass}
                 required
               />
@@ -232,6 +255,7 @@ export default function AdminShippingPage() {
           </div>
         </aside>
       </div>
+      </details>
     </div>
   );
 }

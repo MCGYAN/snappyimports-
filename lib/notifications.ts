@@ -136,6 +136,43 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
     }
 }
 
+export async function sendReceiptReadyEmail({
+  to,
+  documentNumber,
+  amount,
+  currency,
+  label,
+  documentId,
+}: {
+  to: string;
+  documentNumber: string;
+  amount: number;
+  currency: string;
+  label: string;
+  documentId: string;
+}) {
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  const amountLabel =
+    currency === 'GHS'
+      ? `GH¢${Number(amount).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`
+      : `${currency} ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  await sendEmail({
+    to,
+    subject: `Payment confirmed. Receipt ${documentNumber}`,
+    html: emailLayout(`
+<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Payment confirmed</h2>
+<p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+  We received <strong>${escapeHtml(amountLabel)}</strong> for your ${escapeHtml(label)}.
+  Your official receipt is ready in your Snappy account.
+</p>
+${emailButton('View receipt', `${baseUrl}/account?tab=documents&document=${encodeURIComponent(documentId)}`)}
+<p style="color:#6b7280;font-size:12px;line-height:1.5;margin:18px 0 0;">
+  Receipt ${escapeHtml(documentNumber)}. Keep it as proof of payment.
+</p>
+`, `Receipt ready. ${documentNumber}`),
+  });
+}
+
 // Helper to format phone numbers for SMS (adjust country code / rules for your provider)
 function formatPhoneNumber(phone: string): string {
     const cc = (process.env.MOOLRE_SMS_COUNTRY_CODE || process.env.NEXT_PUBLIC_DEFAULT_PHONE_COUNTRY_CODE || '1').replace(/\D/g, '') || '1';

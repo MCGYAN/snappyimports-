@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
+import { createShopReceipt } from '@/lib/financial-documents';
 
 /** POST /api/admin/pos — create POS order (service role bypasses RLS) */
 export async function POST(req: Request) {
@@ -118,6 +119,14 @@ export async function POST(req: Request) {
           order_ref: orderNumber,
           moolre_ref: `POS-${(paymentMethod || 'cash').toUpperCase()}-${Date.now()}`
         });
+        const { data: paidOrder } = await supabaseAdmin
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', order.id)
+          .single();
+        if (paidOrder && hasRealEmail) {
+          await createShopReceipt(paidOrder, authResult.user?.id, 2);
+        }
       } catch (stockErr) {
         console.error('[POS API] Stock reduction error (non-fatal):', stockErr);
       }

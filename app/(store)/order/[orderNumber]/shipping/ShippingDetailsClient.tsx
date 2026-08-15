@@ -32,6 +32,7 @@ export default function ShippingDetailsClient() {
   const [email, setEmail] = useState(emailFromUrl);
   const [packages, setPackages] = useState<any[]>([]);
   const [board, setBoard] = useState<ShippingRateBoard | null>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(Boolean(emailFromUrl));
   const [error, setError] = useState('');
   const [unlocked, setUnlocked] = useState(false);
@@ -50,6 +51,7 @@ export default function ShippingDetailsClient() {
       if (!response.ok) throw new Error(data.error || 'Could not load shipping details.');
       setPackages(data.packages || []);
       setBoard(data.board || null);
+      setDocuments(data.documents || []);
       setUnlocked(true);
     } catch (err) {
       if (!quiet) {
@@ -86,6 +88,22 @@ export default function ShippingDetailsClient() {
         : [],
     [board],
   );
+
+  const shippingAction = async (packageId: string, action: 'payment_sent' | 'request_invoice') => {
+    const response = await fetch('/api/shipping/payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packageId, action, orderNumber, email }),
+    });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Could not submit request.');
+    alert(
+      action === 'payment_sent'
+        ? 'Thank you. Snappy will confirm after checking the account.'
+        : 'Snappy has been notified to prepare a fresh shipping invoice.',
+    );
+    await load(email, true);
+  };
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -195,6 +213,20 @@ export default function ShippingDetailsClient() {
                     const status = pkg.status as ShippingPackageStatus;
                     const arrived = ['arrived', 'clearing', 'ready', 'delivered'].includes(status);
                     const days = daysUntil(pkg.estimated_arrival_at, now);
+                    const invoice = documents.find(
+                      (document) =>
+                        document.shipping_package_id === pkg.id &&
+                        document.document_type === 'invoice',
+                    );
+                    const receipt = documents.find(
+                      (document) =>
+                        document.shipping_package_id === pkg.id &&
+                        document.document_type === 'receipt',
+                    );
+                    const invoiceExpired =
+                      invoice &&
+                      (invoice.status === 'expired' ||
+                        (invoice.due_at && new Date(invoice.due_at).getTime() < now));
                     return (
                       <article
                         key={pkg.id}
@@ -308,6 +340,63 @@ export default function ShippingDetailsClient() {
                             {pkg.vessel || 'Not provided'}
                           </div>
                         </div>
+                        {receipt ? (
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-emerald-100 bg-emerald-50 px-5 py-4">
+                            <div>
+                              <p className="font-bold text-emerald-900">Shipping payment confirmed</p>
+                              <p className="text-xs text-emerald-700">
+                                Receipt {receipt.document_number} is saved in your account.
+                              </p>
+                            </div>
+                            <Link
+                              href={`/account?tab=documents&document=${encodeURIComponent(receipt.id)}`}
+                              className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white"
+                            >
+                              View receipt
+                            </Link>
+                          </div>
+                        ) : invoice ? (
+                          <div
+                            className={`flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 ${
+                              invoiceExpired
+                                ? 'border-red-100 bg-red-50'
+                                : 'border-orange-100 bg-orange-50'
+                            }`}
+                          >
+                            <div>
+                              <p className={`font-bold ${invoiceExpired ? 'text-red-900' : 'text-orange-900'}`}>
+                                {invoiceExpired ? 'Shipping invoice expired' : 'Final shipping bill'}
+                              </p>
+                              <p className={`text-sm ${invoiceExpired ? 'text-red-700' : 'text-orange-800'}`}>
+                                {formatGhs(invoice.amount)}
+                                {!invoiceExpired && invoice.due_at
+                                  ? ` due ${new Date(invoice.due_at).toLocaleDateString('en-GB')}`
+                                  : ''}
+                              </p>
+                            </div>
+                            {invoiceExpired ? (
+                              <button
+                                type="button"
+                                onClick={() => void shippingAction(pkg.id, 'request_invoice')}
+                                className="rounded-xl bg-red-800 px-4 py-2 text-sm font-bold text-white"
+                              >
+                                Request fresh invoice
+                              </button>
+                            ) : pkg.shipping_payment_status === 'awaiting_confirmation' ? (
+                              <span className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-orange-800">
+                                Waiting for Snappy to confirm
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => void shippingAction(pkg.id, 'payment_sent')}
+                                className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white"
+                              >
+                                I have paid
+                              </button>
+                            )}
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })}

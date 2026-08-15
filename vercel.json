@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "crons": [{"path": "/api/cron/payment-reminders", "schedule": "0 9 * * *"}]
+  "crons": [{"path": "/api/cron/receipt-outbox", "schedule": "0 8 * * *"}]
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendOrderConfirmation } from '@/lib/notifications';
+import { createShopReceipt } from '@/lib/financial-documents';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { createAdminNotification } from '@/lib/admin-notifications';
 
@@ -253,7 +253,7 @@ export async function POST(req: Request) {
             // Send SMS + Email notifications
             try {
                 console.log('[Callback] Sending notifications for:', orderJson.order_number);
-                await sendOrderConfirmation(orderJson);
+                await createShopReceipt(orderJson, null, 0);
                 console.log('[Callback] Notifications sent!');
             } catch (notifyError: any) {
                 console.error('[Callback] Notification failed:', notifyError.message);
@@ -346,7 +346,7 @@ export async function GET(req: Request) {
                                     p_order_total: orderJson.total
                                 });
                             }
-                            await sendOrderConfirmation(orderJson);
+                            await createShopReceipt(orderJson, null, 0);
                         } catch (e: any) {
                             console.error('[Callback GET] Post-payment tasks failed:', e.message);
                         }

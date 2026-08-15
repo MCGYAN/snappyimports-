@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendOrderConfirmation } from '@/lib/notifications';
+import { createShopReceipt } from '@/lib/financial-documents';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { createAdminNotification } from '@/lib/admin-notifications';
 
@@ -177,7 +177,7 @@ export async function POST(req: Request) {
         // 7. Send notifications (SMS + Email)
         if (orderJson) {
             try {
-                await sendOrderConfirmation(orderJson);
+                await createShopReceipt(orderJson, null, 0);
                 console.log('[Verify] Notifications sent for:', orderNumber);
             } catch (notifyError: any) {
                 console.error('[Verify] Notification failed:', notifyError.message);

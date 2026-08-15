@@ -296,26 +296,6 @@ export default function POSPage() {
                 setCompletedOrder({ id: order.id, orderNumber, total: grandTotal, items: cart });
                 setCart([]);
 
-                // Send notification
-                if (customerEmail && customerEmail !== 'pos-walkin@store.local') {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    fetch('/api/notifications', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
-                        },
-                        body: JSON.stringify({
-                            type: 'order_created',
-                            payload: {
-                                ...order,
-                                order_number: orderNumber,
-                                email: customerEmail,
-                                shipping_address: addressData
-                            }
-                        })
-                    }).catch(err => console.error('POS Notification error:', err));
-                }
             }
 
             // 5. If Momo — initiate Moolre payment

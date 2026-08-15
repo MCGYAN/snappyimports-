@@ -162,37 +162,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
       });
       setPendingStatus('');
 
-      // Send Notification (Email + SMS)
-      // Only send if status changed OR tracking number was added/changed
-      const statusChanged = statusToUpdate !== order.status;
-      const trackingChanged = trackingNumber !== order.metadata?.tracking_number;
-
-      if (statusChanged || (trackingChanged && trackingNumber)) {
-        // Get auth token for notification API
-        const { data: { session } } = await supabase.auth.getSession();
-        const authToken = session?.access_token;
-
-        fetch('/api/notifications', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(authToken && { 'Authorization': `Bearer ${authToken}` })
-          },
-          body: JSON.stringify({
-            type: 'order_status',
-            payload: {
-              email: order.email,
-              name: customerName,
-              orderId: orderId,
-              orderNumber: order.order_number || orderId,
-              status: statusToUpdate,
-              trackingNumber: trackingNumber,
-              phone: shippingAddress.phone || order.phone // Ensure phone is passed for SMS
-            }
-          })
-        }).catch(err => console.error('Notification error:', err));
-      }
-
       alert('Order updated successfully');
       setShowStatusMenu(false);
     } catch (err) {
@@ -206,6 +175,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [resendingNotification, setResendingNotification] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [paymentUndoUntil, setPaymentUndoUntil] = useState<string | null>(null);
   const [updatingJourney, setUpdatingJourney] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [journeyStage, setJourneyStage] = useState('');
@@ -342,7 +312,9 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
   const handleConfirmManualPayment = async () => {
     if (!order?.id) return;
-    if (!confirm('Confirm that bank/MoMo payment was received for this order?')) return;
+    if (!confirm(
+      `Confirm GH¢${Number(order.total || 0).toLocaleString('en-GH', { minimumFractionDigits: 2 })} received for ${order.order_number}? Check your bank or MoMo first.`,
+    )) return;
     try {
       setConfirmingPayment(true);
       setVerifyMessage(null);
@@ -357,13 +329,38 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Confirm failed');
-      setVerifyMessage('Manual payment confirmed.');
+      setVerifyMessage('Payment confirmed. The receipt email waits 2 minutes.');
+      setPaymentUndoUntil(data.undoUntil || null);
+      window.setTimeout(async () => {
+        const headers = await authHeaders();
+        void fetch('/api/cron/receipt-outbox', { method: 'POST', headers });
+        setPaymentUndoUntil(null);
+      }, 125_000);
       await fetchOrderDetails();
     } catch (err: any) {
       setVerifyMessage(err?.message || 'Could not confirm payment.');
     } finally {
       setConfirmingPayment(false);
     }
+  };
+
+  const handleUndoPayment = async () => {
+    if (!paymentUndoUntil || new Date(paymentUndoUntil).getTime() <= Date.now()) return;
+    setConfirmingPayment(true);
+    const response = await fetch('/api/orders/undo-payment', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ orderNumber: order.order_number }),
+    });
+    const result = await response.json();
+    setConfirmingPayment(false);
+    if (!response.ok) {
+      setVerifyMessage(result.error || 'Could not undo payment.');
+      return;
+    }
+    setPaymentUndoUntil(null);
+    setVerifyMessage('Payment confirmation undone. No receipt email was sent.');
+    await fetchOrderDetails();
   };
 
   const handleUpdateJourney = async () => {
@@ -605,6 +602,22 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             </button>
           </div>
         )}
+
+        {paymentUndoUntil ? (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm font-semibold text-emerald-900">
+              Payment confirmed. The receipt email waits 2 minutes.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleUndoPayment()}
+              disabled={confirmingPayment}
+              className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800"
+            >
+              Undo confirmation
+            </button>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

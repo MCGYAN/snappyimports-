@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
-import { sendOrderStatusUpdate } from '@/lib/notifications';
 import { createAdminNotification } from '@/lib/admin-notifications';
+import { createShopReceipt } from '@/lib/financial-documents';
 
 /** POST — admin confirms bank/MoMo payment received */
 export async function POST(req: Request) {
@@ -69,9 +69,9 @@ export async function POST(req: Request) {
       }
 
       try {
-        await sendOrderStatusUpdate(updated, 'processing');
-      } catch (notifyErr) {
-        console.error('[confirm-payment] buyer notify failed', notifyErr);
+        await createShopReceipt(updated, auth.user?.id, 2);
+      } catch (receiptError) {
+        console.error('[confirm-payment] receipt queue failed', receiptError);
       }
 
       await createAdminNotification({
@@ -86,14 +86,18 @@ export async function POST(req: Request) {
         entityNumber: updated.order_number,
       });
 
-      return NextResponse.json({ success: true, order: updated });
+      return NextResponse.json({
+        success: true,
+        order: updated,
+        undoUntil: new Date(Date.now() + 2 * 60_000).toISOString(),
+      });
     }
 
     const { data: updated } = await supabaseAdmin
       .from('orders')
       .update({
         payment_provider: 'manual',
-        metadata,
+        metadata: { ...metadata, stock_reduced: true },
         updated_at: new Date().toISOString(),
       })
       .eq('id', order.id)
@@ -102,9 +106,9 @@ export async function POST(req: Request) {
 
     if (updated) {
       try {
-        await sendOrderStatusUpdate(updated, updated.status || 'processing');
-      } catch (notifyErr) {
-        console.error('[confirm-payment] buyer notify failed', notifyErr);
+        await createShopReceipt(updated, auth.user?.id, 2);
+      } catch (receiptError) {
+        console.error('[confirm-payment] receipt queue failed', receiptError);
       }
 
       await createAdminNotification({
@@ -120,7 +124,11 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true, order: updated });
+    return NextResponse.json({
+      success: true,
+      order: updated,
+      undoUntil: new Date(Date.now() + 2 * 60_000).toISOString(),
+    });
   } catch (e) {
     console.error('[confirm-payment]', e);
     return NextResponse.json({ error: 'Failed to confirm payment.' }, { status: 500 });

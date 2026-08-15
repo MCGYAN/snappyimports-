@@ -18,6 +18,7 @@ import {
   orderStatusForStage,
   type FulfillmentStage,
 } from '@/lib/order-journey';
+import { issueShippingInvoice } from '@/lib/financial-documents';
 
 function mapRateBoard(row: any): ShippingRateBoard {
   return {
@@ -28,6 +29,7 @@ function mapRateBoard(row: any): ShippingRateBoard {
     heavy_usd_per_cbm: Number(row?.heavy_usd_per_cbm) || 0,
     bulk_usd_per_cbm: Number(row?.bulk_usd_per_cbm) || 0,
     default_transit_days: Number(row?.default_transit_days) || 45,
+    invoice_valid_days: Number(row?.invoice_valid_days) || 5,
     notes: row?.notes || null,
     updated_at: row?.updated_at,
   };
@@ -106,6 +108,15 @@ export async function GET(req: Request) {
   if (error) {
     return NextResponse.json({ error: 'Could not load shipping details.' }, { status: 500 });
   }
+  const packageIds = (packages || []).map((pkg) => pkg.id);
+  const { data: documents } = packageIds.length
+    ? await supabaseAdmin
+        .from('financial_documents')
+        .select('*')
+        .in('shipping_package_id', packageIds)
+        .neq('status', 'void')
+        .order('issued_at', { ascending: false })
+    : { data: [] };
 
   return NextResponse.json({
     success: true,
@@ -119,6 +130,7 @@ export async function GET(req: Request) {
       order_items: order.order_items,
     },
     packages: packages || [],
+    documents: documents || [],
     board: rateRow ? mapRateBoard(rateRow) : null,
     adminView: auth.authenticated,
   });
@@ -279,6 +291,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Could not save shipment.' }, { status: 500 });
     }
 
+    if (finalUsdToGhs && ['arrived', 'clearing', 'ready', 'delivered'].includes(status)) {
+      await issueShippingInvoice({
+        pkg: result.data,
+        order,
+        finalUsdToGhs,
+        validDays: board.invoice_valid_days,
+        createdBy: auth.user?.id,
+      });
+    }
     await syncOrderJourney(order, status);
     return NextResponse.json({ success: true, package: result.data });
   } catch (error) {

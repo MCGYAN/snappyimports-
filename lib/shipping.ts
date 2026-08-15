@@ -38,6 +38,7 @@ export type ShippingRateBoard = {
   heavy_usd_per_cbm: number;
   bulk_usd_per_cbm: number;
   default_transit_days: number;
+  invoice_valid_days: number;
   notes: string | null;
   updated_at?: string;
 };

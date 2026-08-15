@@ -6,7 +6,6 @@ import {
   orderStatusForStage,
   type FulfillmentStage,
 } from '@/lib/order-journey';
-import { sendOrderStatusUpdate } from '@/lib/notifications';
 
 /** POST — admin updates China→Ghana fulfillment stage */
 export async function POST(req: Request) {
@@ -65,16 +64,6 @@ export async function POST(req: Request) {
 
     if (updateError) {
       return NextResponse.json({ error: 'Failed to update journey.' }, { status: 500 });
-    }
-
-    const stageMeta = FULFILLMENT_STAGES.find((s) => s.key === stage);
-    // Buyer alerts on real progress. Skip early payment auto-stages.
-    if (updated && stageMeta && !stageMeta.auto && stage !== 'cancelled') {
-      try {
-        await sendOrderStatusUpdate(updated, stageMeta.title);
-      } catch (notifyErr) {
-        console.error('[fulfillment] buyer notify failed', notifyErr);
-      }
     }
 
     return NextResponse.json({ success: true, order: updated });

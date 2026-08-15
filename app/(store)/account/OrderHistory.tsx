@@ -15,6 +15,7 @@ interface ShopOrder {
   email: string;
   date: string;
   status: string;
+  paymentStatus: string;
   total: number;
   items: {
     id: string;
@@ -93,6 +94,7 @@ export default function OrderHistory() {
           email: order.email || session.user.email || '',
           date: order.created_at,
           status: order.status,
+          paymentStatus: order.payment_status,
           total: order.total,
           items: (order.order_items || []).map((item: any) => ({
             id: item.id,
@@ -282,7 +284,7 @@ export default function OrderHistory() {
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-gray-200">
                   <Link
-                    href={`/order/${encodeURIComponent(item.orderNumber)}`}
+                    href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
                     className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
                   >
                     <i className="ri-map-pin-line mr-2"></i>
@@ -298,11 +300,15 @@ export default function OrderHistory() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDownloadInvoice(item)}
+                    onClick={() =>
+                      item.paymentStatus === 'paid'
+                        ? window.location.assign('/account?tab=documents')
+                        : handleDownloadInvoice(item)
+                    }
                     className="flex-1 sm:flex-none px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
                   >
                     <i className="ri-file-list-3-line mr-2"></i>
-                    Invoice & pay
+                    {item.paymentStatus === 'paid' ? 'View receipt' : 'Invoice & pay'}
                   </button>
                   <Link
                     href="/contact"

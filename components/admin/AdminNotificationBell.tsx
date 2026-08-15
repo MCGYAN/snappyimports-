@@ -125,6 +125,21 @@ export default function AdminNotificationBell({ userId }: { userId: string }) {
   }, [ensureAudio, load, userId]);
 
   useEffect(() => {
+    const flushReceipts = async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      await fetch('/api/cron/receipt-outbox', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => null);
+    };
+    void flushReceipts();
+    const timer = window.setInterval(flushReceipts, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!liveAlert) return;
     const timer = window.setTimeout(() => setLiveAlert(null), 7000);
     return () => window.clearTimeout(timer);

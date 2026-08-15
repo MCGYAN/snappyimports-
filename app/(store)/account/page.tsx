@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import OrderHistory from './OrderHistory';
 import AddressBook from './AddressBook';
+import MyShipments from './MyShipments';
+import FinancialDocuments from './FinancialDocuments';
 import { supabase } from '@/lib/supabase';
 
 function AccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'profile';
+  const initialTab = searchParams.get('tab') || 'orders';
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [user, setUser] = useState<any>(null);
@@ -19,7 +21,7 @@ function AccountContent() {
   // Update active tab when URL param changes
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['profile', 'orders', 'addresses', 'security'].includes(tab)) {
+    if (tab && ['profile', 'orders', 'shipments', 'documents', 'addresses', 'security'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -191,6 +193,8 @@ function AccountContent() {
                   {[
                     { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile Settings' },
                     { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Order History' },
+                    { id: 'shipments', icon: 'ri-ship-2-line', label: 'My Shipments' },
+                    { id: 'documents', icon: 'ri-file-list-3-line', label: 'Invoices & Receipts' },
                     { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Addresses' },
                     { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
                   ].map(tab => (
@@ -215,6 +219,8 @@ function AccountContent() {
                 {[
                   { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile' },
                   { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Orders' },
+                  { id: 'shipments', icon: 'ri-ship-2-line', label: 'Shipments' },
+                  { id: 'documents', icon: 'ri-file-list-3-line', label: 'Receipts' },
                   { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Address' },
                   { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
                 ].map(tab => (
@@ -359,6 +365,10 @@ function AccountContent() {
                 )}
 
                 {activeTab === 'orders' && <OrderHistory />}
+
+                {activeTab === 'shipments' && <MyShipments />}
+
+                {activeTab === 'documents' && <FinancialDocuments />}
 
                 {activeTab === 'addresses' && <AddressBook />}
 

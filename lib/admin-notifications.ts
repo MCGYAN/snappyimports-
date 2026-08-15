@@ -7,7 +7,9 @@ export type AdminNotificationInput = {
     | 'order_paid'
     | 'exchange_created'
     | 'exchange_payment_sent'
-    | 'exchange_paid';
+    | 'exchange_paid'
+    | 'shipping_payment_sent'
+    | 'shipping_invoice_requested';
   title: string;
   message: string;
   href: string;

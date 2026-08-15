@@ -65,14 +65,26 @@ CREATE POLICY "Staff manage shipping rate board"
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-        AND profiles.role::text IN ('admin', 'staff')
+        AND (
+          profiles.role::text = 'admin'
+          OR (
+            profiles.role::text = 'staff'
+            AND COALESCE((profiles.admin_permissions ->> 'orders')::boolean, false)
+          )
+        )
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-        AND profiles.role::text IN ('admin', 'staff')
+        AND (
+          profiles.role::text = 'admin'
+          OR (
+            profiles.role::text = 'staff'
+            AND COALESCE((profiles.admin_permissions ->> 'orders')::boolean, false)
+          )
+        )
     )
   );
 
@@ -85,14 +97,26 @@ CREATE POLICY "Staff manage shipping packages"
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-        AND profiles.role::text IN ('admin', 'staff')
+        AND (
+          profiles.role::text = 'admin'
+          OR (
+            profiles.role::text = 'staff'
+            AND COALESCE((profiles.admin_permissions ->> 'orders')::boolean, false)
+          )
+        )
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-        AND profiles.role::text IN ('admin', 'staff')
+        AND (
+          profiles.role::text = 'admin'
+          OR (
+            profiles.role::text = 'staff'
+            AND COALESCE((profiles.admin_permissions ->> 'orders')::boolean, false)
+          )
+        )
     )
   );
 

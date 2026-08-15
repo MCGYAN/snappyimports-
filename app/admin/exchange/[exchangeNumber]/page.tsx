@@ -24,6 +24,7 @@ export default function AdminExchangeDetailPage() {
   const [acting, setActing] = useState(false);
   const [error, setError] = useState('');
   const [checks, setChecks] = useState({ name: false, amount: false });
+  const [undoUntil, setUndoUntil] = useState<string | null>(null);
 
   const authHeaders = useCallback(async () => {
     const {
@@ -77,7 +78,7 @@ export default function AdminExchangeDetailPage() {
     void load();
   }, [load]);
 
-  const act = async (action: 'confirm' | 'complete') => {
+  const act = async (action: 'confirm' | 'complete' | 'undo_confirm') => {
     if (!exchangeNumber) return;
     setActing(true);
     try {
@@ -92,6 +93,15 @@ export default function AdminExchangeDetailPage() {
         alert(data.error || 'Failed');
         return;
       }
+      if (action === 'confirm' && data.undoUntil) {
+        setUndoUntil(data.undoUntil);
+        window.setTimeout(async () => {
+          const freshHeaders = await authHeaders();
+          void fetch('/api/cron/receipt-outbox', { method: 'POST', headers: freshHeaders });
+          setUndoUntil(null);
+        }, 125_000);
+      }
+      if (action === 'undo_confirm') setUndoUntil(null);
       await load();
     } finally {
       setActing(false);
@@ -174,6 +184,22 @@ export default function AdminExchangeDetailPage() {
           ) : null}
         </div>
       </div>
+
+      {undoUntil ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-sm font-semibold text-emerald-900">
+            Payment confirmed. The receipt email waits 2 minutes.
+          </p>
+          <button
+            type="button"
+            onClick={() => void act('undo_confirm')}
+            disabled={acting}
+            className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800"
+          >
+            Undo confirmation
+          </button>
+        </div>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
         <section className="rounded-2xl border border-slate-200 bg-white p-5">

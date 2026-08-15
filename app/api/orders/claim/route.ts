@@ -120,6 +120,12 @@ export async function POST(req: Request) {
       }
     }
 
+    await supabaseAdmin
+      .from('financial_documents')
+      .update({ customer_user_id: user.id, updated_at: claimedAt })
+      .is('customer_user_id', null)
+      .ilike('customer_email', email);
+
     return NextResponse.json({
       success: true,
       claimed: toClaim.length + exchangesToClaim.length,

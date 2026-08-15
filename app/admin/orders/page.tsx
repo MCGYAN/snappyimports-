@@ -64,6 +64,9 @@ export default function AdminOrdersPage() {
   const [showProductStats, setShowProductStats] = useState(false);
   const [productFilter, setProductFilter] = useState('all');
   const [availableProducts, setAvailableProducts] = useState<string[]>([]);
+  const [bulkStage, setBulkStage] = useState<FulfillmentStage>('sourcing');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [undoOrders, setUndoOrders] = useState<{ number: string; until: number }[]>([]);
 
   useEffect(() => {
     fetchOrders();
@@ -248,6 +251,93 @@ export default function AdminOrdersPage() {
       setSelectedOrders(selectedOrders.filter(id => id !== orderId));
     } else {
       setSelectedOrders([...selectedOrders, orderId]);
+    }
+  };
+
+  const authHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return {
+      'Content-Type': 'application/json',
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    };
+  };
+
+  const runBulk = async (
+    action: 'confirm_payment' | 'move_stage',
+    ids: string[] = selectedOrders,
+  ) => {
+    const selected = orders.filter((order) => ids.includes(order.id));
+    if (!selected.length) return;
+    if (action === 'confirm_payment') {
+      const confirmable = selected.filter((order) => order.payment_status === 'awaiting_confirmation');
+      const total = confirmable.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      if (!confirmable.length) return alert('Select orders where the customer said they paid.');
+      if (!confirm(
+        `Confirm ${confirmable.length} payment${confirmable.length === 1 ? '' : 's'} totalling GH¢${total.toLocaleString('en-GH', { minimumFractionDigits: 2 })}? Check your bank or MoMo first.`,
+      )) return;
+    } else {
+      const label = FULFILLMENT_STAGES.find((stage) => stage.key === bulkStage)?.title || bulkStage;
+      if (!confirm(`Move ${selected.length} selected order${selected.length === 1 ? '' : 's'} to ${label}?`)) return;
+    }
+
+    setBulkBusy(true);
+    try {
+      const headers = await authHeaders();
+      const response = await fetch('/api/orders/bulk', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action,
+          orderIds: ids,
+          ...(action === 'move_stage' ? { stage: bulkStage } : {}),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Bulk action failed.');
+      if (action === 'confirm_payment' && result.completed?.length) {
+        const until = new Date(result.undoUntil).getTime();
+        setUndoOrders(
+          selected
+            .filter((order) => result.completed.includes(order.id))
+            .map((order) => ({ number: order.order_number, until })),
+        );
+        window.setTimeout(async () => {
+          const freshHeaders = await authHeaders();
+          void fetch('/api/cron/receipt-outbox', { method: 'POST', headers: freshHeaders });
+          setUndoOrders([]);
+        }, 125_000);
+      }
+      await fetchOrders();
+      setSelectedOrders([]);
+      if (result.skipped?.length) {
+        alert(`${result.completed.length} updated. ${result.skipped.length} skipped because they were not eligible.`);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Bulk action failed.');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const undoConfirmedPayments = async () => {
+    const active = undoOrders.filter((entry) => entry.until > Date.now());
+    if (!active.length) return setUndoOrders([]);
+    setBulkBusy(true);
+    const headers = await authHeaders();
+    const results = await Promise.all(
+      active.map((entry) =>
+        fetch('/api/orders/undo-payment', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ orderNumber: entry.number }),
+        }),
+      ),
+    );
+    setUndoOrders([]);
+    setBulkBusy(false);
+    await fetchOrders();
+    if (results.some((response) => !response.ok)) {
+      alert('Some payments could not be undone because their safety window closed.');
     }
   };
 
@@ -461,6 +551,21 @@ export default function AdminOrdersPage() {
           </div>
         </div>
       )}
+      {undoOrders.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-sm font-semibold text-emerald-900">
+            {undoOrders.length} payment{undoOrders.length === 1 ? '' : 's'} confirmed. Receipt email waits 2 minutes.
+          </p>
+          <button
+            type="button"
+            onClick={() => void undoConfirmedPayments()}
+            disabled={bulkBusy}
+            className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800"
+          >
+            Undo confirmation
+          </button>
+        </div>
+      )}
       {orderViewTab === 'open' && needsConfirmCount === 0 && abandonedCount > 0 && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-sm text-slate-600">
@@ -546,23 +651,41 @@ export default function AdminOrdersPage() {
         </div>
 
         {selectedOrders.length > 0 && (
-          <div className="p-4 bg-brand-primary/5 border-b border-brand-primary/20 flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-primary/20 bg-brand-primary/5 p-4">
             <p className="text-brand-primary font-semibold">
               {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''} selected
             </p>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handleBulkAction('Mark as Processing', 'processing')}
-                className="px-4 py-2 bg-brand-primary hover:bg-brand-accent text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
-              >
-                Mark Processing
-              </button>
-              <button
-                onClick={() => handleBulkAction('Mark as Packaged', 'shipped')}
-                className="px-4 py-2 bg-brand-primary hover:bg-brand-accent text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
-              >
-                Mark Packaged
-              </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {orderViewTab === 'open' ? (
+                <button
+                  onClick={() => void runBulk('confirm_payment')}
+                  disabled={bulkBusy}
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                >
+                  Confirm selected payments
+                </button>
+              ) : (
+                <>
+                  <select
+                    value={bulkStage}
+                    onChange={(event) => setBulkStage(event.target.value as FulfillmentStage)}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
+                  >
+                    {FULFILLMENT_STAGES.filter((stage) =>
+                      ['sourcing', 'en_route_ghana', 'in_ghana', 'ready', 'delivered'].includes(stage.key),
+                    ).map((stage) => (
+                      <option key={stage.key} value={stage.key}>{stage.title}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => void runBulk('move_stage')}
+                    disabled={bulkBusy}
+                    className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    Move selected
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => handleBulkAction('Export')}
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
@@ -621,7 +744,7 @@ export default function AdminOrdersPage() {
                         needsConfirm ? (
                           <span className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-sm font-bold text-white">
                             <i className="ri-hand-coin-line"></i>
-                            Customer paid. Tap to confirm
+                            Customer says payment was sent
                           </span>
                         ) : (
                           <p className={`mt-2 text-xs ${order.payment_status === 'failed' ? 'text-red-600' : 'text-slate-500'}`}>
@@ -630,6 +753,16 @@ export default function AdminOrdersPage() {
                         )
                       )}
                     </Link>
+                    {needsConfirm ? (
+                      <button
+                        type="button"
+                        onClick={() => void runBulk('confirm_payment', [order.id])}
+                        disabled={bulkBusy}
+                        className="mx-4 mb-4 w-[calc(100%-2rem)] rounded-xl bg-brand-primary py-3 text-sm font-bold text-white disabled:opacity-50"
+                      >
+                        Confirm payment from this list
+                      </button>
+                    ) : null}
                   </li>
                 );
               })}
@@ -717,13 +850,15 @@ export default function AdminOrdersPage() {
                         <span className="text-gray-700">{order.payment_method || 'N/A'}</span>
                         {orderViewTab === 'open' && (
                           order.payment_status === 'awaiting_confirmation' ? (
-                            <Link
-                              href={`/admin/orders/${order.id}`}
+                            <button
+                              type="button"
+                              onClick={() => void runBulk('confirm_payment', [order.id])}
+                              disabled={bulkBusy}
                               className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-bold text-white hover:bg-amber-600"
                             >
                               <i className="ri-hand-coin-line"></i>
                               Confirm payment
-                            </Link>
+                            </button>
                           ) : (
                             <span className={`text-xs mt-1 ${order.payment_status === 'failed' ? 'text-red-600' : 'text-slate-500'}`}>
                               {order.payment_status === 'failed' ? 'Payment failed' : 'Waiting on customer'}

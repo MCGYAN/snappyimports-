@@ -11,6 +11,7 @@ import {
   formatLocalMoney,
   parseExchangeCountryCode,
 } from '@/lib/exchange-corridors';
+import { createRmbReceipt } from '@/lib/financial-documents';
 
 function sanitizeExchange(row: any) {
   if (!row) return row;
@@ -122,9 +123,9 @@ export async function POST(req: Request) {
         .single();
       if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
       try {
-        await sendExchangeBuyerStatusEmail(updated, 'confirmed');
-      } catch (notifyErr) {
-        console.error('[exchange action] buyer confirm email failed', notifyErr);
+        await createRmbReceipt(updated, auth.user?.id, 2);
+      } catch (receiptError) {
+        console.error('[exchange action] receipt queue failed', receiptError);
       }
       const country = parseExchangeCountryCode(
         updated.country_code || updated.metadata?.country_code,
@@ -142,6 +143,49 @@ export async function POST(req: Request) {
         entityId: updated.id,
         entityNumber: updated.exchange_number,
       });
+      return NextResponse.json({
+        success: true,
+        exchange: sanitizeExchange(updated),
+        undoUntil: new Date(Date.now() + 2 * 60_000).toISOString(),
+      });
+    }
+
+    if (action === 'undo_confirm') {
+      const confirmedAt = exchange.confirmed_at ? new Date(exchange.confirmed_at).getTime() : 0;
+      if (
+        exchange.payment_status !== 'paid' ||
+        exchange.status !== 'confirmed' ||
+        !confirmedAt ||
+        Date.now() - confirmedAt > 2 * 60_000
+      ) {
+        return NextResponse.json({ error: 'The 2-minute undo window has closed.' }, { status: 400 });
+      }
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('exchange_orders')
+        .update({
+          status: 'payment_sent',
+          payment_status: 'awaiting_confirmation',
+          confirmed_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', exchange.id)
+        .select()
+        .single();
+      if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+      await Promise.all([
+        supabaseAdmin
+          .from('financial_documents')
+          .update({ status: 'void', updated_at: new Date().toISOString() })
+          .eq('flow', 'rmb')
+          .eq('entity_id', exchange.id)
+          .eq('document_type', 'receipt')
+          .neq('status', 'void'),
+        supabaseAdmin
+          .from('notification_outbox')
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+          .eq('event_key', `rmb-receipt:${exchange.id}`)
+          .eq('status', 'pending'),
+      ]);
       return NextResponse.json({ success: true, exchange: sanitizeExchange(updated) });
     }
 

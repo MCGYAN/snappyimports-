@@ -12,6 +12,7 @@ function mapBoard(row: any): ShippingRateBoard {
     heavy_usd_per_cbm: Number(row?.heavy_usd_per_cbm) || 0,
     bulk_usd_per_cbm: Number(row?.bulk_usd_per_cbm) || 0,
     default_transit_days: Number(row?.default_transit_days) || 45,
+    invoice_valid_days: Number(row?.invoice_valid_days) || 5,
     notes: row?.notes || null,
     updated_at: row?.updated_at,
   };
@@ -48,6 +49,10 @@ export async function PUT(req: Request) {
     if (transitDays > 180) {
       return NextResponse.json({ error: 'Transit days must be between 1 and 180.' }, { status: 400 });
     }
+    const invoiceValidDays = Math.round(numeric('invoice_valid_days', 1));
+    if (invoiceValidDays > 30) {
+      return NextResponse.json({ error: 'Invoice validity must be between 1 and 30 days.' }, { status: 400 });
+    }
 
     const payload = {
       id: 1,
@@ -57,6 +62,7 @@ export async function PUT(req: Request) {
       heavy_usd_per_cbm: numeric('heavy_usd_per_cbm'),
       bulk_usd_per_cbm: numeric('bulk_usd_per_cbm'),
       default_transit_days: transitDays,
+      invoice_valid_days: invoiceValidDays,
       notes: String(body.notes || '').trim().slice(0, 500) || null,
       updated_by: auth.user?.id || null,
       updated_at: new Date().toISOString(),
