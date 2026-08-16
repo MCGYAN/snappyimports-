@@ -14,6 +14,54 @@ const FLOW_LABELS: Record<string, string> = {
   shipping: 'Shipping to Ghana',
 };
 
+function isMobilePdfDevice() {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+  return (
+    /iPhone|iPad|iPod|Android/i.test(ua) ||
+    (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 && /Mac/i.test(ua))
+  );
+}
+
+async function downloadMobileServerPdf(
+  row: FinancialDocumentRecord,
+  accessToken: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/account/document-pdf?id=${encodeURIComponent(row.id)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!response.ok) {
+    const result = await response.json().catch(() => null);
+    throw new Error(result?.error || 'Could not create the PDF.');
+  }
+
+  const blob = await response.blob();
+  const filename = `${row.document_number}.pdf`;
+  const file = new File([blob], filename, { type: 'application/pdf' });
+  const sharePayload = {
+    files: [file],
+    title: row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice',
+  };
+
+  if (
+    typeof navigator.share === 'function' &&
+    (typeof navigator.canShare !== 'function' || navigator.canShare(sharePayload))
+  ) {
+    await navigator.share(sharePayload);
+    return;
+  }
+
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+}
+
 function money(amount: number, currency: string) {
   return currency === 'GHS'
     ? formatStoreMoney(amount)
@@ -104,7 +152,7 @@ export default function FinancialDocuments({
   const paperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (loading || documents.length === 0) return;
+    if (loading || documents.length === 0 || isMobilePdfDevice()) return;
     const timer = window.setTimeout(preloadPdfLibraries, 400);
     return () => window.clearTimeout(timer);
   }, [documents.length, loading]);
@@ -112,6 +160,11 @@ export default function FinancialDocuments({
   const prepareDownload = async (row: FinancialDocumentRecord) => {
     setFetchingId(row.id);
     try {
+      if (isMobilePdfDevice()) {
+        await downloadMobileServerPdf(row, accessToken);
+        return;
+      }
+
       const response = await fetch(
         `/api/account/portal?document=${encodeURIComponent(row.id)}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
@@ -122,6 +175,7 @@ export default function FinancialDocuments({
       }
       setPending(result.document);
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       console.error('[document detail]', error);
       alert('Could not load the document. Please try again.');
     } finally {
