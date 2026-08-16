@@ -12,7 +12,7 @@ import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 const STEPS = [
   {
     title: 'We source it',
-    text: 'Cars, trucks, machines, phones, appliances. We find the right option in China for what you actually need.',
+    text: 'Automotive parts, accessories, electronics, machinery, appliances, and more. We find the right supplier for what you actually need.',
   },
   {
     title: 'We confirm quality',
@@ -34,7 +34,6 @@ export default function AboutPage() {
   usePageTitle('About Us');
   const { getSetting } = useCMS();
   const whatsApp = buildWhatsAppHref(getSetting('contact_whatsapp'));
-  const founderFirst = SNAPPY_INVOICE_ISSUER.contactName.split(' ')[0] || 'Sampson';
   const founderFull = SNAPPY_INVOICE_ISSUER.contactName;
   const street = SNAPPY_INVOICE_ISSUER.addressLines[0];
   const area = SNAPPY_INVOICE_ISSUER.addressLines[1];
@@ -43,8 +42,8 @@ export default function AboutPage() {
     <div className="min-h-screen bg-[#f7f8fa]">
       <PageHero
         size="large"
-        title="China to Ghana, without the panic"
-        subtitle="Clear prices. Real updates. People you can call."
+        title="Engineering expertise. Trusted sourcing."
+        subtitle="Quality products from China and beyond, sourced with practical industry experience."
       />
 
       {/* Story */}
@@ -52,27 +51,26 @@ export default function AboutPage() {
         <div className="store-container py-10 sm:py-14 md:py-20">
           <div className="mx-auto max-w-2xl">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-accent sm:text-xs">
-              Why Snappy exists
+              About Snappy Imports Global
             </p>
             <h2 className="mt-2 font-heading text-[1.625rem] font-bold leading-tight tracking-tight text-brand-primary sm:text-3xl md:text-4xl">
-              Too many people lose sleep over China imports
+              The right product, from the right source
             </h2>
             <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-slate-600 sm:text-base md:text-lg">
               <p>
-                You find a car, a phone, or a machine online. The price looks right. Then the worry
-                starts. Will the seller vanish after payment? Will the cost jump later? Will the
-                goods get stuck with nobody answering?
+                <span className="font-semibold text-brand-primary">Snappy Imports Global</span> is a
+                trusted sourcing and import company connecting customers with quality products from
+                China and beyond.
               </p>
               <p>
-                <span className="font-semibold text-brand-primary">Snappy Imports Global</span> is
-                here for that exact problem. We are a Ghana import company ({SNAPPY_INVOICE_ISSUER.legalName})
-                that sits between you and China. You get a named team, clear payment, and follow-up
-                you can rely on.
+                Our core strength is automotive sourcing, including spare parts, accessories, and
+                automotive electronics. We also source consumer electronics, home appliances,
+                machinery, and other products based on what each customer needs.
               </p>
               <p>
-                We are especially known for vehicles from China. We also handle gadgets, appliances,
-                equipment, and spare parts. Shop on the site or message us for a quote. Either way,
-                you should know what happens next.
+                We work for the right balance of quality, reliability, competitive pricing, and
+                efficient sourcing and shipping. You get clear payment, practical guidance, and a
+                team you can reach throughout the process.
               </p>
             </div>
           </div>
@@ -178,30 +176,66 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Founder + place */}
+      {/* Founder */}
       <section className="border-b border-slate-200/80 bg-white">
         <div className="store-container py-10 sm:py-14 md:py-20">
-          <div className="mx-auto max-w-2xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-accent sm:text-xs">
-              People and place
-            </p>
-            <h2 className="mt-2 font-heading text-[1.625rem] font-bold leading-tight tracking-tight text-brand-primary sm:text-3xl md:text-4xl">
-              Led by {founderFirst}. Based in Accra.
-            </h2>
-            <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-slate-600 sm:text-base md:text-lg">
-              <p>
-                Snappy Imports Global was started by{' '}
-                <span className="font-semibold text-brand-primary">{founderFull}</span>. When you
-                message the business, you reach a team he leads. Not a faceless inbox.
+          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:gap-14">
+            <div className="mx-auto w-full max-w-md">
+              <div className="overflow-hidden rounded-3xl bg-slate-100 shadow-xl shadow-brand-primary/10">
+                <Image
+                  src="/images/sampson-dziwornu-amadah-founder.png"
+                  alt={`${founderFull}, founder of Snappy Imports Global`}
+                  width={684}
+                  height={1024}
+                  className="aspect-[4/5] h-auto w-full object-cover object-top"
+                  sizes="(max-width: 1024px) 90vw, 420px"
+                />
+              </div>
+              <div className="mx-4 -mt-6 relative rounded-2xl bg-brand-primary px-5 py-4 text-white shadow-lg">
+                <p className="font-heading text-lg font-bold">{founderFull}</p>
+                <p className="mt-1 text-xs font-semibold text-white/70">
+                  Founder. Automotive Engineer.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-accent sm:text-xs">
+                Meet the founder
               </p>
-              <p>
-                Our Accra base is on {street}, {area}. We serve customers across Ghana. Goods move
-                from China into Ghana for clearing, then pickup or delivery.
-              </p>
-              <p>
-                You can also use our Buy RMB desk when you need to pay a China supplier in RMB while
-                settling in cedis.
-              </p>
+              <h2 className="mt-2 font-heading text-[1.625rem] font-bold leading-tight tracking-tight text-brand-primary sm:text-3xl md:text-4xl">
+                Technical knowledge behind every source
+              </h2>
+              <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-slate-600 sm:text-base md:text-lg">
+                <p>
+                  Snappy Imports Global was founded by{' '}
+                  <span className="font-semibold text-brand-primary">{founderFull}</span>, an
+                  Automotive Engineer with BSc and MSc education from KNUST and HUAT.
+                </p>
+                <p>
+                  His experience includes fleet management in Ghana and advanced Automotive
+                  Engineering training in China. That combination brings technical judgment,
+                  practical industry experience, and direct access to suppliers and manufacturers
+                  into the company&apos;s sourcing work.
+                </p>
+                <p>
+                  Our Accra base is on {street}, {area}. We serve customers across Ghana and help
+                  them source with more confidence from China and beyond.
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {[
+                  ['Automotive Engineer', 'Technical product understanding'],
+                  ['Ghana experience', 'Professional fleet management'],
+                  ['China access', 'Supplier and manufacturer connections'],
+                ].map(([title, text]) => (
+                  <div key={title} className="rounded-2xl border border-slate-200 bg-[#f7f8fa] p-4">
+                    <p className="text-sm font-bold text-brand-primary">{title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -212,10 +246,11 @@ export default function AboutPage() {
         <div className="store-container py-10 sm:py-14 md:py-16">
           <div className="mx-auto max-w-xl text-center">
             <h2 className="font-heading text-xl font-bold text-brand-primary sm:text-2xl">
-              Ready when you are
+              Direct from China and beyond
             </h2>
             <p className="mt-3 text-[15px] leading-relaxed text-slate-600 sm:text-base">
-              Browse the shop, or send a WhatsApp. We will tell you the next step in plain language.
+              Tell us what you need. We will help you source it with technical care, clear
+              communication, and practical support.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
