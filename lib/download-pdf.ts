@@ -5,6 +5,25 @@
 const RENDER_WIDTH_PX = 794;
 const RENDER_PADDING_PX = 40;
 
+let pdfLibrariesPromise:
+  | Promise<
+      [
+        typeof import('html2canvas'),
+        typeof import('jspdf'),
+      ]
+    >
+  | undefined;
+
+function loadPdfLibraries() {
+  pdfLibrariesPromise ??= Promise.all([import('html2canvas'), import('jspdf')]);
+  return pdfLibrariesPromise;
+}
+
+/** Warm the PDF code after a document list settles, before the customer taps Download. */
+export function preloadPdfLibraries(): void {
+  void loadPdfLibraries();
+}
+
 async function waitForImages(root: HTMLElement): Promise<void> {
   const images = Array.from(root.querySelectorAll('img'));
   await Promise.all(
@@ -57,10 +76,7 @@ export async function downloadElementAsPdf(
   element: HTMLElement,
   filename: string,
 ): Promise<void> {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf'),
-  ]);
+  const [{ default: html2canvas }, { jsPDF }] = await loadPdfLibraries();
 
   // Clone into a fixed-width off-screen stage so the capture is independent
   // of the visitor's screen size (prevents wrapped/cut text on mobile).

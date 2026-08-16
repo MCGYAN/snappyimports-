@@ -18,6 +18,14 @@ function AccountContent() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState('');
+  const [portalData, setPortalData] = useState<{
+    packages: any[];
+    board: any | null;
+    documents: any[];
+  }>({ packages: [], board: null, documents: [] });
+  const [portalLoading, setPortalLoading] = useState({ shipments: false, documents: false });
+  const [portalLoaded, setPortalLoaded] = useState({ shipments: false, documents: false });
 
   // Update active tab when URL param changes
   useEffect(() => {
@@ -59,6 +67,7 @@ function AccountContent() {
       }
 
       setUser(session.user);
+      setAccessToken(session.access_token);
       setProfileData({
         firstName: session.user.user_metadata?.first_name || '',
         lastName: session.user.user_metadata?.last_name || '',
@@ -66,9 +75,46 @@ function AccountContent() {
         phone: session.user.phone || ''
       });
       setLoading(false);
+
+      // Guest records are normally claimed during sign-in. Recheck quietly here
+      // without making the account screen wait for database updates.
+      void fetch('/api/orders/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: '{}',
+      }).catch(() => null);
     }
     checkUser();
   }, [router]);
+
+  useEffect(() => {
+    const section =
+      activeTab === 'shipments' ? 'shipments' : activeTab === 'documents' ? 'documents' : null;
+    if (!section || !accessToken || portalLoaded[section] || portalLoading[section]) return;
+
+    const loadPortalSection = async () => {
+      setPortalLoading((current) => ({ ...current, [section]: true }));
+      try {
+        const include = section === 'shipments' ? 'packages,board' : 'documents';
+        const response = await fetch(`/api/account/portal?include=${include}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not load account records.');
+        setPortalData((current) => ({ ...current, ...result }));
+      } catch (error) {
+        console.error(`[account ${section}]`, error);
+      } finally {
+        setPortalLoaded((current) => ({ ...current, [section]: true }));
+        setPortalLoading((current) => ({ ...current, [section]: false }));
+      }
+    };
+
+    void loadPortalSection();
+  }, [accessToken, activeTab, portalLoaded, portalLoading]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -374,9 +420,20 @@ function AccountContent() {
 
                 {activeTab === 'orders' && <OrderHistory />}
 
-                {activeTab === 'shipments' && <MyShipments />}
+                {activeTab === 'shipments' && (
+                  <MyShipments
+                    data={{ packages: portalData.packages, board: portalData.board }}
+                    loading={portalLoading.shipments || !portalLoaded.shipments}
+                  />
+                )}
 
-                {activeTab === 'documents' && <FinancialDocuments />}
+                {activeTab === 'documents' && (
+                  <FinancialDocuments
+                    documents={portalData.documents}
+                    loading={portalLoading.documents || !portalLoaded.documents}
+                    accessToken={accessToken}
+                  />
+                )}
 
                 {activeTab === 'deliveries' && <DeliveryRequests />}
 

@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { formatStoreMoney } from '@/lib/currency';
-import { downloadElementAsPdf } from '@/lib/download-pdf';
+import { downloadElementAsPdf, preloadPdfLibraries } from '@/lib/download-pdf';
 import FinancialDocumentPaper, {
   type FinancialDocumentRecord,
 } from '@/components/FinancialDocumentPaper';
@@ -87,33 +86,48 @@ function DocumentRow({
   );
 }
 
-export default function FinancialDocuments() {
+type FinancialDocumentsProps = {
+  documents: FinancialDocumentRecord[];
+  loading: boolean;
+  accessToken: string;
+};
+
+export default function FinancialDocuments({
+  documents,
+  loading,
+  accessToken,
+}: FinancialDocumentsProps) {
   const searchParams = useSearchParams();
   const requestedId = searchParams.get('document');
-  const [documents, setDocuments] = useState<FinancialDocumentRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fetchingId, setFetchingId] = useState<string | null>(null);
   const [pending, setPending] = useState<FinancialDocumentRecord | null>(null);
   const paperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return setLoading(false);
-      await fetch('/api/orders/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: '{}',
-      }).catch(() => null);
-      const response = await fetch('/api/account/portal', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    if (loading || documents.length === 0) return;
+    const timer = window.setTimeout(preloadPdfLibraries, 400);
+    return () => window.clearTimeout(timer);
+  }, [documents.length, loading]);
+
+  const prepareDownload = async (row: FinancialDocumentRecord) => {
+    setFetchingId(row.id);
+    try {
+      const response = await fetch(
+        `/api/account/portal?document=${encodeURIComponent(row.id)}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
       const result = await response.json();
-      setDocuments(response.ok ? result.documents || [] : []);
-      setLoading(false);
-    };
-    void load();
-  }, []);
+      if (!response.ok || !result.document) {
+        throw new Error(result.error || 'Could not load the document.');
+      }
+      setPending(result.document);
+    } catch (error) {
+      console.error('[document detail]', error);
+      alert('Could not load the document. Please try again.');
+    } finally {
+      setFetchingId(null);
+    }
+  };
 
   // The paper only exists while a download is running, so the page stays a
   // simple list instead of a wall of invoice sheets.
@@ -195,8 +209,8 @@ export default function FinancialDocuments() {
                   key={row.id}
                   row={row}
                   highlight={row.id === requestedId}
-                  busy={pending?.id === row.id}
-                  onDownload={() => setPending(row)}
+                  busy={fetchingId === row.id || pending?.id === row.id}
+                  onDownload={() => void prepareDownload(row)}
                 />
               ))}
             </div>

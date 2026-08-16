@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import {
   daysUntil,
   formatGhs,
@@ -11,29 +10,15 @@ import {
   type ShippingPackageStatus,
 } from '@/lib/shipping';
 
-export default function MyShipments() {
-  const [data, setData] = useState<any>({ packages: [], board: null });
-  const [loading, setLoading] = useState(true);
+type MyShipmentsProps = {
+  data: { packages: any[]; board: any | null };
+  loading: boolean;
+};
+
+export default function MyShipments({ data, loading }: MyShipmentsProps) {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const load = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) return setLoading(false);
-      await fetch('/api/orders/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: '{}',
-      }).catch(() => null);
-      const response = await fetch('/api/account/portal', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await response.json();
-      if (response.ok) setData(result);
-      setLoading(false);
-    };
-    void load();
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
