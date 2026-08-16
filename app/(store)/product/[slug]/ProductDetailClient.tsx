@@ -816,7 +816,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 <div className="border-t border-gray-200 pt-6 space-y-4">
                   <div className="flex items-center text-gray-700">
                     <Store className="w-5 h-5 text-brand-primary mr-3" />
-                    <span>Free store pickup available</span>
+                    <span>Ghana only. Pickup or delivery after arrival</span>
                   </div>
                   <div className="flex items-center text-gray-700">
                     <RefreshCcw className="w-5 h-5 text-brand-primary mr-3" />

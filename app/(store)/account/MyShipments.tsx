@@ -134,7 +134,11 @@ export default function MyShipments() {
               return (
                 <Link
                   key={pkg.id}
-                  href={`/order/${encodeURIComponent(orderNumber)}/shipping?email=${encodeURIComponent(email)}`}
+                  href={
+                    pkg.status === 'ready'
+                      ? '/account?tab=deliveries'
+                      : `/order/${encodeURIComponent(orderNumber)}/shipping?email=${encodeURIComponent(email)}`
+                  }
                   className="grid gap-3 p-4 transition hover:bg-slate-50 md:grid-cols-[1.5fr_.7fr_.9fr_.9fr_.6fr] md:items-center"
                 >
                   <div>
@@ -187,6 +191,11 @@ export default function MyShipments() {
                     <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-semibold text-orange-800">
                       {SHIPPING_STATUS_LABELS[pkg.status as ShippingPackageStatus]}
                     </span>
+                    {pkg.status === 'ready' ? (
+                      <span className="mt-1 block text-[11px] font-bold text-brand-primary">
+                        Schedule handoff
+                      </span>
+                    ) : null}
                   </div>
                 </Link>
               );

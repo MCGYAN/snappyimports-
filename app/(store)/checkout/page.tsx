@@ -62,7 +62,6 @@ export default function CheckoutPage() {
   const { cart, subtotal: cartSubtotal, clearCart } = useCart();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [saveAddress, setSaveAddress] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   const [shippingData, setShippingData] = useState({
@@ -75,27 +74,6 @@ export default function CheckoutPage() {
     region: ''
   });
 
-  // The 16 regions of Ghana
-  const regionOptions = [
-    'Greater Accra',
-    'Ashanti',
-    'Western',
-    'Western North',
-    'Central',
-    'Eastern',
-    'Volta',
-    'Oti',
-    'Northern',
-    'Savannah',
-    'North East',
-    'Upper East',
-    'Upper West',
-    'Bono',
-    'Bono East',
-    'Ahafo'
-  ];
-
-  const [deliveryMethod, setDeliveryMethod] = useState('pickup');
   const [paymentMethod, setPaymentMethod] = useState<'moolre' | 'invoice'>('moolre');
   const [errors, setErrors] = useState<any>({});
 
@@ -133,8 +111,6 @@ export default function CheckoutPage() {
     setPaymentMethod(resolveCheckoutPaymentChannel(total));
   }, [total, isLoading]);
 
-  const needsAddress = deliveryMethod === 'doorstep';
-
   const validate = () => {
     const newErrors: any = {};
     if (!shippingData.firstName) newErrors.firstName = 'First name is required';
@@ -142,12 +118,6 @@ export default function CheckoutPage() {
     if (!shippingData.email) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(shippingData.email)) newErrors.email = 'Invalid email';
     if (!shippingData.phone) newErrors.phone = 'Phone is required';
-    if (needsAddress) {
-      if (!shippingData.address) newErrors.address = 'Address is required for delivery';
-      if (!shippingData.city) newErrors.city = 'City is required for delivery';
-      if (!shippingData.region) newErrors.region = 'Region is required for delivery';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -200,7 +170,6 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           recaptchaToken: recaptchaToken || '',
           shippingData,
-          deliveryMethod,
           paymentMethod: channel,
           cart: cart.map((item: { id: string; name: string; variant?: string; variantId?: string; quantity: number; price: number; image?: string; slug?: string }) => ({
             id: item.id,
@@ -322,7 +291,14 @@ export default function CheckoutPage() {
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
-        <p className="text-sm text-gray-600 mb-6">One step. Fill your details, choose delivery, done.</p>
+        <p className="text-sm text-gray-600 mb-3">One step. Add your contact details and pay.</p>
+        <div className="mb-6 rounded-xl border border-brand-accent/25 bg-brand-accent/10 px-4 py-3 text-sm text-brand-primary">
+          <p className="font-bold">Orders are currently available in Ghana only.</p>
+          <p className="mt-1 text-xs leading-relaxed">
+            You will choose pickup or delivery after your package is ready in Ghana. We will not
+            ask for a delivery address now.
+          </p>
+        </div>
 
         {user && (
           <p className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-light px-4 py-2 text-sm font-medium text-brand-primary">
@@ -402,115 +378,6 @@ export default function CheckoutPage() {
                     {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone}</p>}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Delivery choice. Address appears only when it is actually needed */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Delivery</h2>
-              <div className="space-y-4">
-                <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'pickup' ? 'border-brand-primary bg-brand-light' : 'border-gray-300 hover:border-gray-400'
-                  }`}>
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="radio"
-                      name="delivery"
-                      value="pickup"
-                      checked={deliveryMethod === 'pickup'}
-                      onChange={(e) => setDeliveryMethod(e.target.value)}
-                      className="w-5 h-5 text-brand-primary"
-                    />
-                    <div>
-                      <p className="font-semibold text-gray-900">Store Pickup</p>
-                      <p className="text-sm text-gray-600">Pick up from our store. No address needed.</p>
-                    </div>
-                  </div>
-                  <p className="font-bold text-brand-primary">FREE</p>
-                </label>
-
-                <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'doorstep' ? 'border-brand-primary bg-brand-light' : 'border-gray-300 hover:border-gray-400'
-                  }`}>
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="radio"
-                      name="delivery"
-                      value="doorstep"
-                      checked={deliveryMethod === 'doorstep'}
-                      onChange={(e) => setDeliveryMethod(e.target.value)}
-                      className="w-5 h-5 text-brand-primary"
-                    />
-                    <div>
-                      <p className="font-semibold text-gray-900">Doorstep Delivery</p>
-                      <p className="text-sm text-gray-600">We will contact you with the delivery cost</p>
-                    </div>
-                  </div>
-                  <p className="font-semibold text-amber-600 text-sm">At a Cost</p>
-                </label>
-
-                {needsAddress && (
-                  <div className="space-y-4 rounded-lg border-2 border-brand-primary/15 bg-brand-light/40 p-4">
-                    <p className="text-sm font-semibold text-brand-primary">Where should we deliver?</p>
-                    <div data-error={Boolean(errors.address)}>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Street Address *
-                      </label>
-                      <input
-                        type="text"
-                        autoComplete="street-address"
-                        value={shippingData.address}
-                        onChange={(e) => setShippingData({ ...shippingData, address: e.target.value })}
-                        className={inputClass(Boolean(errors.address))}
-                        placeholder="House number and street name"
-                      />
-                      {errors.address && <p className="text-sm text-red-600 mt-1">{errors.address}</p>}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div data-error={Boolean(errors.city)}>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          City *
-                        </label>
-                        <input
-                          type="text"
-                          autoComplete="address-level2"
-                          value={shippingData.city}
-                          onChange={(e) => setShippingData({ ...shippingData, city: e.target.value })}
-                          className={inputClass(Boolean(errors.city))}
-                          placeholder="City"
-                        />
-                        {errors.city && <p className="text-sm text-red-600 mt-1">{errors.city}</p>}
-                      </div>
-                      <div data-error={Boolean(errors.region)}>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Region *
-                        </label>
-                        <select
-                          value={shippingData.region}
-                          onChange={(e) => setShippingData({ ...shippingData, region: e.target.value })}
-                          className={`${inputClass(Boolean(errors.region))} bg-white`}
-                        >
-                          <option value="">Select Region</option>
-                          {regionOptions.map((region) => (
-                            <option key={region} value={region}>{region}</option>
-                          ))}
-                        </select>
-                        {errors.region && <p className="text-sm text-red-600 mt-1">{errors.region}</p>}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {user && (
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={saveAddress}
-                      onChange={(e) => setSaveAddress(e.target.checked)}
-                      className="w-5 h-5 text-brand-primary rounded border-gray-300 focus:ring-brand-accent"
-                    />
-                    <span className="text-sm text-gray-700">Save this address for future orders</span>
-                  </label>
-                )}
               </div>
             </div>
 

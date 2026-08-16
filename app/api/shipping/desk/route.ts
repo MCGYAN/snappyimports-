@@ -352,13 +352,34 @@ export async function POST(req: Request) {
 
   if (action === 'mark_ready' || action === 'mark_delivered') {
     const status = action === 'mark_ready' ? 'ready' : 'delivered';
+    const eligibleIds =
+      status === 'ready'
+        ? (packages || [])
+            .filter(
+              (pkg: any) =>
+                ['arrived', 'clearing'].includes(pkg.status) &&
+                (pkg.freight_included || pkg.shipping_payment_status === 'paid'),
+            )
+            .map((pkg: any) => pkg.id)
+        : packageIds;
+    if (!eligibleIds.length) {
+      return NextResponse.json(
+        {
+          error:
+            status === 'ready'
+              ? 'Only packages that are in Ghana with freight cleared can be marked ready.'
+              : 'Select packages to update.',
+        },
+        { status: 400 },
+      );
+    }
     const { error } = await supabaseAdmin
       .from('shipping_packages')
       .update({ status, updated_at: new Date().toISOString() })
-      .in('id', packageIds);
+      .in('id', eligibleIds);
     if (error) return NextResponse.json({ error: 'Could not update packages.' }, { status: 500 });
     await Promise.all(orderIds.map((id) => refreshOrderShippingStage(id, auth.user?.id)));
-    return NextResponse.json({ success: true, updated: packageIds.length });
+    return NextResponse.json({ success: true, updated: eligibleIds.length });
   }
 
   if (action === 'confirm_shipping_payment') {
@@ -395,6 +416,13 @@ export async function POST(req: Request) {
       if (pkg.shipping_payment_status !== 'paid' || !paidAt || Date.now() - paidAt > 2 * 60_000) {
         continue;
       }
+      if (['ready', 'delivered'].includes(pkg.status)) continue;
+      const { count: openRequests } = await supabaseAdmin
+        .from('delivery_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('shipping_package_id', pkg.id)
+        .neq('status', 'cancelled');
+      if (openRequests) continue;
       const now = new Date().toISOString();
       await Promise.all([
         supabaseAdmin

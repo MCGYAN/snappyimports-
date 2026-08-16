@@ -180,7 +180,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                 </span>
               </div>
               <p className="mb-4 text-xs leading-relaxed text-gray-500">
-                Free pickup. Doorstep delivery quoted after your order.
+                Ghana only. Choose pickup or delivery after your package is ready.
               </p>
               <div className="space-y-2.5">
                 <Link

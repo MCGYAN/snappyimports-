@@ -6,7 +6,6 @@ import { useParams, useSearchParams } from 'next/navigation';
 import InvoiceDocument from '@/components/InvoiceDocument';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import {
-  canBookDelivery,
   deriveFulfillmentStage,
   FULFILLMENT_STAGES,
   fulfillmentIndex,
@@ -18,7 +17,6 @@ import {
   CheckCircle2,
   Clock,
   Download,
-  MapPin,
   MessageCircle,
   Package,
   Printer,
@@ -42,13 +40,6 @@ export default function OrderHubPage() {
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [autoDownloadHint, setAutoDownloadHint] = useState(false);
-  const [deliveryForm, setDeliveryForm] = useState({
-    address: '',
-    city: '',
-    preferredDate: '',
-    preferredTime: '',
-    notes: '',
-  });
   const [now, setNow] = useState(Date.now());
 
   const loadOrder = useCallback(async (orderNum: string, mail: string) => {
@@ -74,12 +65,6 @@ export default function OrderHubPage() {
       }
       setOrder(data.order);
       setPackageCount(shippingRes.ok ? (shippingData.packages || []).length : 0);
-      const addr = data.order?.shipping_address || {};
-      setDeliveryForm((prev) => ({
-        ...prev,
-        address: prev.address || addr.address || '',
-        city: prev.city || addr.city || '',
-      }));
     } catch {
       setError('Something went wrong. Try again.');
     } finally {
@@ -135,31 +120,6 @@ export default function OrderHubPage() {
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || 'Could not submit');
-        return;
-      }
-      setOrder(data.order);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleBookDelivery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!order) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/orders/delivery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderNumber: order.order_number,
-          email: order.email,
-          ...deliveryForm,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || 'Could not book delivery');
         return;
       }
       setOrder(data.order);
@@ -542,80 +502,6 @@ export default function OrderHubPage() {
               ) : null}
             </section>
 
-            {order.payment_status === 'paid' &&
-              (canBookDelivery(stage) || order.metadata?.delivery_booking) && (
-              <section className="store-card p-5 sm:p-8 print:hidden">
-                <div className="mb-4 flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-brand-accent" />
-                  <h2 className="text-xl font-bold text-brand-primary">Book delivery</h2>
-                </div>
-                {order.metadata?.delivery_booking ? (
-                  <div className="rounded-xl bg-brand-light/60 p-4 text-sm text-brand-primary">
-                    <p className="font-bold">Delivery requested</p>
-                    <p className="mt-1">{order.metadata.delivery_booking.address}</p>
-                    {order.metadata.delivery_booking.preferredDate ? (
-                      <p>
-                        Preferred: {order.metadata.delivery_booking.preferredDate}
-                        {order.metadata.delivery_booking.preferredTime
-                          ? `, ${order.metadata.delivery_booking.preferredTime}`
-                          : ''}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <form onSubmit={handleBookDelivery} className="space-y-3">
-                    <p className="text-sm text-slate-600">
-                      When your goods are in Ghana, tell us where and when to deliver.
-                    </p>
-                    <input
-                      required
-                      value={deliveryForm.address}
-                      onChange={(e) => setDeliveryForm({ ...deliveryForm, address: e.target.value })}
-                      placeholder="Delivery address"
-                      className="w-full rounded-xl border-2 border-slate-200 px-4 py-3"
-                    />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <input
-                        value={deliveryForm.city}
-                        onChange={(e) => setDeliveryForm({ ...deliveryForm, city: e.target.value })}
-                        placeholder="City"
-                        className="rounded-xl border-2 border-slate-200 px-4 py-3"
-                      />
-                      <input
-                        type="date"
-                        value={deliveryForm.preferredDate}
-                        onChange={(e) =>
-                          setDeliveryForm({ ...deliveryForm, preferredDate: e.target.value })
-                        }
-                        className="rounded-xl border-2 border-slate-200 px-4 py-3"
-                      />
-                    </div>
-                    <input
-                      value={deliveryForm.preferredTime}
-                      onChange={(e) =>
-                        setDeliveryForm({ ...deliveryForm, preferredTime: e.target.value })
-                      }
-                      placeholder="Preferred time (optional)"
-                      className="w-full rounded-xl border-2 border-slate-200 px-4 py-3"
-                    />
-                    <textarea
-                      value={deliveryForm.notes}
-                      onChange={(e) => setDeliveryForm({ ...deliveryForm, notes: e.target.value })}
-                      placeholder="Notes for the driver"
-                      className="w-full rounded-xl border-2 border-slate-200 px-4 py-3"
-                      rows={2}
-                    />
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="rounded-xl bg-brand-accent px-6 py-3 font-bold text-white disabled:opacity-60"
-                    >
-                      {submitting ? 'Saving…' : 'Request delivery'}
-                    </button>
-                  </form>
-                )}
-              </section>
-            )}
           </div>
         ) : null}
       </div>

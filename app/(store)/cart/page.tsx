@@ -36,15 +36,15 @@ export default function CartPage() {
     }
   }
 
-  // Same rule as checkout: pickup is free, doorstep delivery is quoted after the order.
-  // The total shown here must match the checkout total exactly.
+  // Last-mile pickup or delivery is chosen after the package is ready in Ghana.
+  // Product checkout has no delivery charge, so this total must match checkout exactly.
   const total = subtotal - couponDiscount;
 
   return (
     <div className="store-page flex flex-col">
       <PageHero
         title="Your basket"
-        subtitle="Check your items before checkout. You are one step closer to home delivery."
+        subtitle="Check your items before checkout. Ghana orders only for now."
       />
 
       <div className="store-container store-section flex-grow w-full">
@@ -169,10 +169,12 @@ export default function CartPage() {
                     )}
 
                     <div className="flex justify-between">
-                      <span>Delivery</span>
-                      <span className="font-bold text-gray-900">Free pickup</span>
+                      <span>Local handoff</span>
+                      <span className="font-bold text-gray-900">Later</span>
                     </div>
-                    <p className="text-xs text-gray-400">Doorstep delivery is quoted after your order.</p>
+                    <p className="text-xs text-gray-400">
+                      Choose pickup or delivery after your package is ready in Ghana.
+                    </p>
                   </div>
 
                   <div className="border-t border-gray-200 pt-6 mb-8">

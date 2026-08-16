@@ -146,6 +146,11 @@ export default function AdminLayout({
       path: '/admin/shipping'
     },
     {
+      title: 'Delivery Requests',
+      icon: 'ri-calendar-check-line',
+      path: '/admin/deliveries'
+    },
+    {
       title: 'Buy RMB',
       icon: 'ri-exchange-dollar-line',
       path: '/admin/exchange'

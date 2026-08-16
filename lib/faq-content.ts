@@ -20,7 +20,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'orders',
     question: 'How do I place an order?',
     answer:
-      'Browse products, add them to your cart, and check out. Enter your name, email, and phone. Choose store pickup or doorstep delivery, then complete payment.',
+      'Browse products, add them to your cart, and check out with your name, email, and phone. Snappy currently serves Ghana only. You choose pickup or delivery later, when your package is ready in Ghana.',
   },
   {
     category: 'orders',
@@ -50,7 +50,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'shipping',
     question: 'Do you deliver to my door?',
     answer:
-      'Yes. At checkout choose doorstep delivery, or choose store pickup. When goods are ready in Ghana, we confirm delivery details and any delivery cost with you.',
+      'Yes, within Ghana. When your package is ready, open Deliveries in your account and choose pickup or delivery. Submit your preferred day and address, then we call to confirm the arrangement and delivery cost.',
   },
   {
     category: 'shipping',

@@ -34,7 +34,6 @@ export async function POST(req: Request) {
     const {
       recaptchaToken,
       shippingData,
-      deliveryMethod,
       cart,
       userId
     } = body;
@@ -64,15 +63,6 @@ export async function POST(req: Request) {
 
     if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim()) {
       return NextResponse.json({ error: 'Name, email and phone are required.' }, { status: 400 });
-    }
-
-    // Address only matters when we deliver. Store pickup needs contact info only.
-    const isDoorstep = deliveryMethod === 'doorstep';
-    if (isDoorstep && (!address?.trim() || !city?.trim() || !region?.trim())) {
-      return NextResponse.json(
-        { error: 'Delivery address, city and region are required for doorstep delivery.' },
-        { status: 400 },
-      );
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
@@ -141,10 +131,30 @@ export async function POST(req: Request) {
       shipping_total: shippingTotal,
       discount_total: 0,
       total,
-      shipping_method: deliveryMethod ?? 'pickup',
+      shipping_method: 'schedule_later',
       payment_method: paymentChannel,
-      shipping_address: { firstName, lastName, email, phone, address, city, region },
-      billing_address: { firstName, lastName, email, phone, address, city, region },
+      shipping_address: {
+        firstName,
+        lastName,
+        email,
+        phone,
+        address,
+        city,
+        region,
+        country: 'GH',
+        countryName: 'Ghana',
+      },
+      billing_address: {
+        firstName,
+        lastName,
+        email,
+        phone,
+        address,
+        city,
+        region,
+        country: 'GH',
+        countryName: 'Ghana',
+      },
       metadata: {
         guest_checkout: !userId,
         first_name: firstName,
@@ -154,6 +164,8 @@ export async function POST(req: Request) {
         invoice_due_at: invoiceDueAt,
         fulfillment_stage: 'awaiting_payment',
         payment_ref: paymentRef,
+        service_country: 'Ghana',
+        handoff_choice: 'after_package_ready',
       }
     };
 

@@ -126,6 +126,36 @@ export async function POST(req: Request) {
       .is('customer_user_id', null)
       .ilike('customer_email', email);
 
+    // Attach packages owned by this email, and packages linked through claimed orders.
+    await supabaseAdmin
+      .from('shipping_packages')
+      .update({ customer_user_id: user.id, updated_at: claimedAt })
+      .is('customer_user_id', null)
+      .ilike('customer_email', email);
+
+    if (toClaim.length > 0) {
+      const claimedOrderIds = toClaim.map((order) => order.id);
+      const { data: claimedItems } = await supabaseAdmin
+        .from('order_items')
+        .select('id')
+        .in('order_id', claimedOrderIds);
+      const claimedItemIds = (claimedItems || []).map((item) => item.id);
+      if (claimedItemIds.length) {
+        const { data: packageLinks } = await supabaseAdmin
+          .from('shipping_package_items')
+          .select('package_id')
+          .in('order_item_id', claimedItemIds);
+        const packageIds = [...new Set((packageLinks || []).map((link) => link.package_id))];
+        if (packageIds.length) {
+          await supabaseAdmin
+            .from('shipping_packages')
+            .update({ customer_user_id: user.id, updated_at: claimedAt })
+            .in('id', packageIds)
+            .is('customer_user_id', null);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       claimed: toClaim.length + exchangesToClaim.length,

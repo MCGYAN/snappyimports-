@@ -103,8 +103,8 @@ export default function ShippingPage() {
                   Pickup or delivery
                 </h3>
                 <p className="text-sm leading-relaxed text-gray-600">
-                  At checkout you can choose store pickup or doorstep delivery. Delivery cost is
-                  confirmed with you when your goods are ready in Ghana.
+                  When your package is ready in Ghana, open Deliveries in your account and choose
+                  pickup or delivery. We call to confirm the arrangement and any delivery cost.
                 </p>
               </div>
 

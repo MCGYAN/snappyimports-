@@ -531,7 +531,12 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           {/* Order Summary */}
           <div className="flex justify-between mb-6">
             <div>
-              <p><span className="font-semibold">Shipping Method:</span> {order?.shipping_method || 'Standard'}</p>
+              <p>
+                <span className="font-semibold">Customer handoff:</span>{' '}
+                {order?.shipping_method === 'schedule_later'
+                  ? 'Chosen after package is ready'
+                  : (order?.shipping_method || 'Not chosen').replace(/_/g, ' ')}
+              </p>
               <p><span className="font-semibold">Payment:</span> {order?.payment_method} ({order?.payment_status})</p>
               {trackingNumber && <p><span className="font-semibold">Tracking #:</span> {trackingNumber}</p>}
             </div>
@@ -899,20 +904,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   </div>
                 )}
 
-                {order.metadata?.delivery_booking ? (
-                  <div className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                    <p className="font-bold">Delivery booked</p>
-                    <p>{order.metadata.delivery_booking.address}</p>
-                    <p>
-                      {[
-                        order.metadata.delivery_booking.preferredDate,
-                        order.metadata.delivery_booking.preferredTime,
-                      ]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                  </div>
-                ) : null}
               </div>
             </div>
 

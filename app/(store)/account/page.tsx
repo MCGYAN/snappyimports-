@@ -7,6 +7,7 @@ import OrderHistory from './OrderHistory';
 import AddressBook from './AddressBook';
 import MyShipments from './MyShipments';
 import FinancialDocuments from './FinancialDocuments';
+import DeliveryRequests from './DeliveryRequests';
 import { supabase } from '@/lib/supabase';
 
 function AccountContent() {
@@ -21,7 +22,12 @@ function AccountContent() {
   // Update active tab when URL param changes
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['profile', 'orders', 'shipments', 'documents', 'addresses', 'security'].includes(tab)) {
+    if (
+      tab &&
+      ['profile', 'orders', 'shipments', 'documents', 'deliveries', 'addresses', 'security'].includes(
+        tab,
+      )
+    ) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -195,6 +201,7 @@ function AccountContent() {
                     { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Order History' },
                     { id: 'shipments', icon: 'ri-ship-2-line', label: 'My Shipments' },
                     { id: 'documents', icon: 'ri-file-list-3-line', label: 'Invoices & Receipts' },
+                    { id: 'deliveries', icon: 'ri-calendar-check-line', label: 'Deliveries' },
                     { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Addresses' },
                     { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
                   ].map(tab => (
@@ -221,6 +228,7 @@ function AccountContent() {
                   { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Orders' },
                   { id: 'shipments', icon: 'ri-ship-2-line', label: 'Shipments' },
                   { id: 'documents', icon: 'ri-file-list-3-line', label: 'Receipts' },
+                  { id: 'deliveries', icon: 'ri-calendar-check-line', label: 'Deliveries' },
                   { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Address' },
                   { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
                 ].map(tab => (
@@ -369,6 +377,8 @@ function AccountContent() {
                 {activeTab === 'shipments' && <MyShipments />}
 
                 {activeTab === 'documents' && <FinancialDocuments />}
+
+                {activeTab === 'deliveries' && <DeliveryRequests />}
 
                 {activeTab === 'addresses' && <AddressBook />}
 

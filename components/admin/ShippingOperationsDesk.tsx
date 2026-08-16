@@ -372,7 +372,6 @@ export default function ShippingOperationsDesk({
           { key: 'billing', label: 'Ghana bills' },
           { key: 'confirm', label: 'Payment check' },
           { key: 'release', label: 'Release goods' },
-          { key: 'ready', label: 'Ready for customer' },
         ];
   const visibleJobCount = queueLabels.reduce((sum, tab) => sum + counts[tab.key], 0);
 
