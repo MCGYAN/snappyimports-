@@ -291,14 +291,7 @@ export default function CheckoutPage() {
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
-        <p className="text-sm text-gray-600 mb-3">One step. Add your contact details and pay.</p>
-        <div className="mb-6 rounded-xl border border-brand-accent/25 bg-brand-accent/10 px-4 py-3 text-sm text-brand-primary">
-          <p className="font-bold">Orders are currently available in Ghana only.</p>
-          <p className="mt-1 text-xs leading-relaxed">
-            You will choose pickup or delivery after your package is ready in Ghana. We will not
-            ask for a delivery address now.
-          </p>
-        </div>
+        <p className="text-sm text-gray-600 mb-6">One step. Add your contact details and pay.</p>
 
         {user && (
           <p className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-light px-4 py-2 text-sm font-medium text-brand-primary">
