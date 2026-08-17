@@ -5,6 +5,7 @@ import {
   calculateCbm,
   calculateShipping,
   createShippingTrackingId,
+  previousPackageStatus,
   rateForClass,
   SHIPPING_GOODS_CLASSES,
   type ShippingGoodsClass,
@@ -12,6 +13,7 @@ import {
 } from '@/lib/shipping';
 import { createShippingReceipt, issueShippingInvoice } from '@/lib/financial-documents';
 import { refreshOrderShippingStage } from '@/lib/shipping-sync';
+import { isOwnerRole } from '@/lib/admin-permissions';
 
 function boardFrom(row: any): ShippingRateBoard {
   return {
@@ -91,6 +93,7 @@ export async function GET(req: Request) {
     orders: orders || [],
     packages: packages || [],
     board: rateRow ? boardFrom(rateRow) : null,
+    canCorrectStatus: isOwnerRole(auth.role),
   });
 }
 
@@ -298,6 +301,193 @@ export async function POST(req: Request) {
       ),
     ),
   ];
+
+  if (action === 'correct_status') {
+    if (!isOwnerRole(auth.role)) {
+      return NextResponse.json(
+        { error: 'Only the account owner can correct a package status.' },
+        { status: 403 },
+      );
+    }
+    if (packageIds.length !== 1 || !packages?.[0]) {
+      return NextResponse.json(
+        { error: 'Choose one package to correct.' },
+        { status: 400 },
+      );
+    }
+
+    const pkg: any = packages[0];
+    const previousStatus = previousPackageStatus(pkg.status);
+    const reason = String(body.reason || '').trim().slice(0, 300);
+    if (!previousStatus) {
+      return NextResponse.json(
+        { error: 'This package is already at its earliest status.' },
+        { status: 400 },
+      );
+    }
+    if (reason.length < 5) {
+      return NextResponse.json(
+        { error: 'Enter a short reason for this correction.' },
+        { status: 400 },
+      );
+    }
+
+    if (['ready', 'delivered'].includes(pkg.status)) {
+      const { count: activeRequests, error: requestError } = await supabaseAdmin
+        .from('delivery_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('shipping_package_id', pkg.id)
+        .neq('status', 'cancelled');
+      if (requestError) {
+        return NextResponse.json(
+          { error: 'Could not check delivery requests.' },
+          { status: 500 },
+        );
+      }
+      if (activeRequests) {
+        return NextResponse.json(
+          {
+            error:
+              'Resolve or cancel the delivery request before correcting this package status.',
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    let withdrawInvoice = false;
+    if (pkg.status === 'arrived') {
+      const { data: documents, error: documentError } = await supabaseAdmin
+        .from('financial_documents')
+        .select('id, document_type, status')
+        .eq('flow', 'shipping')
+        .eq('entity_id', pkg.id)
+        .neq('status', 'void');
+      if (documentError) {
+        return NextResponse.json(
+          { error: 'Could not check shipping documents.' },
+          { status: 500 },
+        );
+      }
+      const hasReceipt = (documents || []).some(
+        (document) => document.document_type === 'receipt',
+      );
+      const hasPaidInvoice = (documents || []).some(
+        (document) =>
+          document.document_type === 'invoice' && document.status === 'paid',
+      );
+      if (
+        !pkg.freight_included &&
+        (hasReceipt ||
+          hasPaidInvoice ||
+          ['awaiting_confirmation', 'paid'].includes(pkg.shipping_payment_status))
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'Shipping payment activity exists. Correct the payment record before moving this package back.',
+          },
+          { status: 409 },
+        );
+      }
+      withdrawInvoice = true;
+    }
+
+    const now = new Date().toISOString();
+    const updates: Record<string, any> = {
+      status: previousStatus,
+      updated_at: now,
+    };
+    if (['loaded', 'in_transit'].includes(pkg.status)) {
+      Object.assign(updates, {
+        loaded_at: null,
+        estimated_arrival_at: null,
+        vessel: null,
+        arrived_at: null,
+      });
+    }
+    if (pkg.status === 'arrived') {
+      Object.assign(updates, {
+        arrived_at: null,
+        final_usd_to_ghs: null,
+        final_shipping_ghs: null,
+        shipping_payment_status: 'not_billed',
+        shipping_payment_sent_at: null,
+        shipping_paid_at: null,
+        shipping_payment_confirmed_by: null,
+      });
+    }
+
+    const { data: correctedPackage, error: updateError } = await supabaseAdmin
+      .from('shipping_packages')
+      .update(updates)
+      .eq('id', pkg.id)
+      .eq('status', pkg.status)
+      .select('id')
+      .maybeSingle();
+    if (updateError || !correctedPackage) {
+      return NextResponse.json(
+        {
+          error: updateError
+            ? 'Could not correct the package status.'
+            : 'The package changed while you were correcting it. Refresh and try again.',
+        },
+        { status: updateError ? 500 : 409 },
+      );
+    }
+
+    if (withdrawInvoice) {
+      const { error: voidError } = await supabaseAdmin
+        .from('financial_documents')
+        .update({ status: 'void', updated_at: now })
+        .eq('flow', 'shipping')
+        .eq('entity_id', pkg.id)
+        .eq('document_type', 'invoice')
+        .neq('status', 'void');
+      if (voidError) {
+        await supabaseAdmin
+          .from('shipping_packages')
+          .update({
+            status: pkg.status,
+            arrived_at: pkg.arrived_at,
+            final_usd_to_ghs: pkg.final_usd_to_ghs,
+            final_shipping_ghs: pkg.final_shipping_ghs,
+            shipping_payment_status: pkg.shipping_payment_status,
+            shipping_payment_sent_at: pkg.shipping_payment_sent_at,
+            shipping_paid_at: pkg.shipping_paid_at,
+            shipping_payment_confirmed_by: pkg.shipping_payment_confirmed_by,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', pkg.id)
+          .eq('status', previousStatus);
+        return NextResponse.json(
+          { error: 'Could not withdraw the shipping invoice.' },
+          { status: 500 },
+        );
+      }
+    }
+
+    const { error: auditError } = await supabaseAdmin
+      .from('shipping_package_status_corrections')
+      .insert({
+        shipping_package_id: pkg.id,
+        from_status: pkg.status,
+        to_status: previousStatus,
+        reason,
+        corrected_by: auth.user?.id,
+      });
+    if (auditError) {
+      console.error('[shipping status correction audit]', auditError);
+    }
+
+    await Promise.all(orderIds.map((id) => refreshOrderShippingStage(id, auth.user?.id)));
+    return NextResponse.json({
+      success: true,
+      packageId: pkg.id,
+      fromStatus: pkg.status,
+      toStatus: previousStatus,
+    });
+  }
 
   if (action === 'mark_in_transit') {
     const loadedAt = body.loadedAt ? new Date(body.loadedAt) : new Date();

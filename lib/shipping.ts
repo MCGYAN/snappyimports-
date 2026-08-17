@@ -49,6 +49,21 @@ export function shippingStatusIndex(status: string) {
 }
 
 /**
+ * Corrections follow operational milestones, not every stored status value.
+ * For example, the shipping desk moves directly from received to in transit.
+ */
+export function previousPackageStatus(
+  status: string,
+): ShippingPackageStatus | null {
+  if (status === 'loaded' || status === 'in_transit') return 'received';
+  if (status === 'arrived') return 'in_transit';
+  if (status === 'clearing') return 'arrived';
+  if (status === 'ready') return 'arrived';
+  if (status === 'delivered') return 'ready';
+  return null;
+}
+
+/**
  * The import journey is the single place staff move an order forward.
  * Packages follow it so nobody has to set the same milestone twice.
  */

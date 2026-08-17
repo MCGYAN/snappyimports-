@@ -7,6 +7,7 @@ import {
   calculateShipping,
   formatGhs,
   formatUsd,
+  previousPackageStatus,
   rateForClass,
   SHIPPING_CLASS_LABELS,
   SHIPPING_GOODS_CLASSES,
@@ -15,7 +16,15 @@ import {
   type ShippingPackageStatus,
 } from '@/lib/shipping';
 
-type Queue = 'pack' | 'load' | 'transit' | 'billing' | 'confirm' | 'release' | 'ready';
+type Queue =
+  | 'pack'
+  | 'load'
+  | 'transit'
+  | 'billing'
+  | 'confirm'
+  | 'release'
+  | 'ready'
+  | 'all';
 type WorkspaceMode = 'packages' | 'shipping';
 
 const emptyBuilder = {
@@ -100,6 +109,8 @@ export default function ShippingOperationsDesk({
   const [arrivalRate, setArrivalRate] = useState('');
   const [validDays, setValidDays] = useState('5');
   const [undoPackageIds, setUndoPackageIds] = useState<string[]>([]);
+  const [correctionPackage, setCorrectionPackage] = useState<any | null>(null);
+  const [correctionReason, setCorrectionReason] = useState('');
 
   const headers = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -183,6 +194,7 @@ export default function ShippingOperationsDesk({
   const packageQueues = useMemo(() => {
     const packages = data.packages || [];
     return {
+      all: packages,
       load: packages.filter((pkg: any) => pkg.status === 'received'),
       transit: packages.filter((pkg: any) => ['loaded', 'in_transit'].includes(pkg.status)),
       billing: packages.filter(
@@ -209,6 +221,7 @@ export default function ShippingOperationsDesk({
     confirm: packageQueues.confirm.length,
     release: packageQueues.release.length,
     ready: packageQueues.ready.length,
+    all: packageQueues.all.length,
   };
   const rows = queue === 'pack' ? [] : packageQueues[queue];
   const builderCustomer = packCustomers.find((customer: any) => customer.key === builderCustomerKey);
@@ -358,6 +371,33 @@ export default function ShippingOperationsDesk({
     await load();
   };
 
+  const correctPackageStatus = async () => {
+    if (!correctionPackage) return;
+    const previousStatus = previousPackageStatus(correctionPackage.status);
+    if (!previousStatus || correctionReason.trim().length < 5) {
+      return setError('Enter a short reason for the correction.');
+    }
+
+    setBusy(true);
+    setError('');
+    const response = await fetch('/api/shipping/desk', {
+      method: 'POST',
+      headers: await headers(),
+      body: JSON.stringify({
+        action: 'correct_status',
+        packageIds: [correctionPackage.id],
+        reason: correctionReason.trim(),
+      }),
+    });
+    const result = await response.json();
+    setBusy(false);
+    if (!response.ok) return setError(result.error || 'Could not correct the package status.');
+    setCorrectionPackage(null);
+    setCorrectionReason('');
+    setSelected([]);
+    await load();
+  };
+
   const toggleAll = () => {
     const ids = rows.map((row: any) => row.id);
     setSelected(selected.length === ids.length ? [] : ids);
@@ -372,8 +412,11 @@ export default function ShippingOperationsDesk({
           { key: 'billing', label: 'Ghana bills' },
           { key: 'confirm', label: 'Payment check' },
           { key: 'release', label: 'Release goods' },
+          { key: 'all', label: 'All packages' },
         ];
-  const visibleJobCount = queueLabels.reduce((sum, tab) => sum + counts[tab.key], 0);
+  const visibleJobCount = queueLabels
+    .filter((tab) => tab.key !== 'all')
+    .reduce((sum, tab) => sum + counts[tab.key], 0);
 
   if (loading) {
     return (
@@ -781,11 +824,13 @@ export default function ShippingOperationsDesk({
               <thead className="bg-slate-50 text-left text-xs text-slate-500">
                 <tr>
                   <th className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={rows.length > 0 && selected.length === rows.length}
-                      onChange={toggleAll}
-                    />
+                    {queue !== 'all' ? (
+                      <input
+                        type="checkbox"
+                        checked={rows.length > 0 && selected.length === rows.length}
+                        onChange={toggleAll}
+                      />
+                    ) : null}
                   </th>
                   <th className="p-3">Package</th>
                   <th className="p-3">Inside</th>
@@ -806,17 +851,19 @@ export default function ShippingOperationsDesk({
                   rows.map((pkg: any) => (
                     <tr key={pkg.id} className="hover:bg-slate-50">
                       <td className="p-3">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(pkg.id)}
-                          onChange={() =>
-                            setSelected((current) =>
-                              current.includes(pkg.id)
-                                ? current.filter((id) => id !== pkg.id)
-                                : [...current, pkg.id],
-                            )
-                          }
-                        />
+                        {queue !== 'all' ? (
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(pkg.id)}
+                            onChange={() =>
+                              setSelected((current) =>
+                                current.includes(pkg.id)
+                                  ? current.filter((id) => id !== pkg.id)
+                                  : [...current, pkg.id],
+                              )
+                            }
+                          />
+                        ) : null}
                       </td>
                       <td className="p-3">
                         <p className="font-semibold text-slate-900">{pkg.package_name}</p>
@@ -848,6 +895,19 @@ export default function ShippingOperationsDesk({
                         <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-semibold text-orange-800">
                           {SHIPPING_STATUS_LABELS[pkg.status as ShippingPackageStatus]}
                         </span>
+                        {data.canCorrectStatus && previousPackageStatus(pkg.status) ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCorrectionPackage(pkg);
+                              setCorrectionReason('');
+                              setError('');
+                            }}
+                            className="mt-2 block text-xs font-bold text-brand-primary underline decoration-brand-primary/30 underline-offset-2"
+                          >
+                            Fix status
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   ))
@@ -857,6 +917,66 @@ export default function ShippingOperationsDesk({
           </div>
         </>
       )}
+
+      {correctionPackage ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900">Fix package status</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {correctionPackage.package_name} will move from{' '}
+              <strong>
+                {SHIPPING_STATUS_LABELS[
+                  correctionPackage.status as ShippingPackageStatus
+                ]}
+              </strong>{' '}
+              to{' '}
+              <strong>
+                {SHIPPING_STATUS_LABELS[
+                  previousPackageStatus(
+                    correctionPackage.status,
+                  ) as ShippingPackageStatus
+                ]}
+              </strong>
+              .
+            </p>
+            <label className="mt-4 block text-sm font-semibold text-slate-700">
+              Why are you correcting it?
+              <textarea
+                value={correctionReason}
+                onChange={(event) => setCorrectionReason(event.target.value)}
+                maxLength={300}
+                rows={3}
+                autoFocus
+                placeholder="Example: Arrival was recorded on the wrong package."
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
+              />
+            </label>
+            {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrectionPackage(null);
+                  setCorrectionReason('');
+                  setError('');
+                }}
+                disabled={busy}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void correctPackageStatus()}
+                disabled={busy || correctionReason.trim().length < 5}
+                className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {busy ? 'Correcting…' : 'Confirm correction'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
