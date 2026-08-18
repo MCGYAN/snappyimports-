@@ -6,7 +6,7 @@ import PageHero from '@/components/PageHero';
 import { Search, HeadphonesIcon, ArrowRight, Inbox } from 'lucide-react';
 import { pageMetadata } from '@/lib/page-metadata';
 
-export const revalidate = 0;
+export const revalidate = 300;
 
 export const metadata: Metadata = pageMetadata('categories', { path: '/categories' });
 

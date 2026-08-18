@@ -127,7 +127,10 @@ export async function middleware(request: NextRequest) {
     // ============================================================
     if (pathname.startsWith('/api/')) {
         response.headers.set('X-Content-Type-Options', 'nosniff');
-        response.headers.set('Cache-Control', 'no-store');
+        // Public catalog APIs must stay cacheable. Private APIs stay uncached.
+        if (!pathname.startsWith('/api/storefront')) {
+            response.headers.set('Cache-Control', 'no-store');
+        }
     }
 
     return response;
