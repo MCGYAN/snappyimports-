@@ -654,6 +654,16 @@ img {
   }
 }
 
+/* iPhone zooms into fields smaller than 16px and often stays zoomed after typing.
+   Keep labels small. Typed fields stay at 16px so Safari does not pinch in. */
+@media (max-width: 1023px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Ensure bottom padding for mobile nav even in browser mode */
 @media (max-width: 1023px) {
 
