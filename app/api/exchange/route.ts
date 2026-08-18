@@ -19,9 +19,13 @@ import {
   type CorridorRateBoard,
   type ExchangeCountryCode,
 } from '@/lib/exchange-corridors';
+import {
+  randomImagePath,
+  sanitizeImageFile,
+  SecureImageError,
+} from '@/lib/secure-image';
 
 const ALIPAY_BUCKET = 'exchange-alipay';
-const ALLOWED_QR = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 function sanitizeExchange(row: any) {
   if (!row) return row;
@@ -129,14 +133,16 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    if (!ALLOWED_QR.has(alipayFile.type)) {
-      return NextResponse.json(
-        { error: 'Alipay QR must be a JPG, PNG, or WebP image.' },
-        { status: 400 },
-      );
-    }
-    if (alipayFile.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Alipay QR image must be under 5MB.' }, { status: 400 });
+
+    let safeQr;
+    try {
+      safeQr = await sanitizeImageFile(alipayFile, 'alipay');
+    } catch (error) {
+      const message =
+        error instanceof SecureImageError
+          ? error.message
+          : 'Alipay QR must be a JPG, PNG, or WebP image under 5MB.';
+      return NextResponse.json({ error: message }, { status: 400 });
     }
 
     const { data: boardRow, error: boardError } = await supabaseAdmin
@@ -184,15 +190,12 @@ export async function POST(req: Request) {
     const paymentRef = createPaymentReference('SN');
     const dueAt = new Date(Date.now() + EXCHANGE_DUE_HOURS * 3600000).toISOString();
 
-    const ext =
-      alipayFile.type.includes('png') ? 'png' : alipayFile.type.includes('webp') ? 'webp' : 'jpg';
-    const qrPath = `${exchangeNumber}/${crypto.randomUUID()}.${ext}`;
-    const buffer = Buffer.from(await alipayFile.arrayBuffer());
+    const qrPath = randomImagePath(exchangeNumber, safeQr.extension);
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(ALIPAY_BUCKET)
-      .upload(qrPath, buffer, {
-        contentType: alipayFile.type,
+      .upload(qrPath, safeQr.buffer, {
+        contentType: safeQr.contentType,
         upsert: false,
       });
 

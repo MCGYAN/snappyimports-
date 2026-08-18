@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
+import {
+  randomImagePath,
+  sanitizeImageFile,
+  SecureImageError,
+} from '@/lib/secure-image';
 
 const BUCKET = 'exchange-alipay';
-const ALLOWED = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 function phoneMatches(stored: string, provided: string) {
   const digits = (s: string) => s.replace(/\D/g, '');
@@ -111,12 +115,6 @@ export async function POST(req: Request) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'Alipay QR image is required.' }, { status: 400 });
     }
-    if (!ALLOWED.has(file.type)) {
-      return NextResponse.json(
-        { error: 'Upload a JPG, PNG, or WebP screenshot of your Alipay receive QR.' },
-        { status: 400 },
-      );
-    }
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: 'Image must be under 5MB.' }, { status: 400 });
     }
@@ -147,13 +145,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This request can no longer change Alipay details.' }, { status: 400 });
     }
 
-    const ext =
-      file.type.includes('png') ? 'png' : file.type.includes('webp') ? 'webp' : 'jpg';
-    const path = `${exchange.exchange_number}/${crypto.randomUUID()}.${ext}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
+    let safeQr;
+    try {
+      safeQr = await sanitizeImageFile(file, 'alipay');
+    } catch (error) {
+      const message =
+        error instanceof SecureImageError
+          ? error.message
+          : 'Upload a JPG, PNG, or WebP screenshot of your Alipay receive QR.';
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
 
-    const { error: uploadError } = await supabaseAdmin.storage.from(BUCKET).upload(path, buffer, {
-      contentType: file.type,
+    const path = randomImagePath(exchange.exchange_number, safeQr.extension);
+
+    const { error: uploadError } = await supabaseAdmin.storage.from(BUCKET).upload(path, safeQr.buffer, {
+      contentType: safeQr.contentType,
       upsert: false,
     });
     if (uploadError) {

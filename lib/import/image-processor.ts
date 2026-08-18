@@ -3,22 +3,14 @@
  */
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import {
+  PRODUCT_IMPORT_MAX_BYTES,
+  randomImagePath,
+  sanitizeUploadedImage,
+  SecureImageError,
+} from '@/lib/secure-image';
 
 const BUCKET = 'products';
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB per image
-const ALLOWED_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
-
-function getExt(name: string): string {
-  const i = name.lastIndexOf('.');
-  return i === -1 ? '' : name.slice(i).toLowerCase();
-}
-
-function safeStorageName(original: string): string {
-  return original
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9._-]/g, '');
-}
 
 export interface UploadProgress {
   current: number;
@@ -39,7 +31,7 @@ export async function uploadProductImages(
 
   for (const filename of toUpload) {
     const buf = images.get(filename)!;
-    if (buf.length > MAX_FILE_SIZE_BYTES) {
+    if (buf.length > PRODUCT_IMPORT_MAX_BYTES) {
       onProgress?.({
         current: ++current,
         total,
@@ -47,42 +39,42 @@ export async function uploadProductImages(
       });
       continue;
     }
-    const ext = getExt(filename);
-    if (!ALLOWED_EXT.has(ext)) {
+
+    try {
+      const safe = await sanitizeUploadedImage(buf, 'product', PRODUCT_IMPORT_MAX_BYTES);
+      const path = randomImagePath(`imports/${prefix}`, safe.extension);
+      const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, safe.buffer, {
+        contentType: safe.contentType,
+        upsert: false,
+      });
+
+      if (error) {
+        onProgress?.({
+          current: ++current,
+          total,
+          message: `Failed ${filename}: ${error.message}`,
+        });
+        continue;
+      }
+
+      const { data: { publicUrl } } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
+      urlMap.set(filename.toLowerCase().trim(), publicUrl);
+      urlMap.set(filename, publicUrl);
+      current++;
+      onProgress?.({
+        current,
+        total,
+        message: `Uploaded ${filename}`,
+      });
+    } catch (error) {
+      const reason =
+        error instanceof SecureImageError ? error.message : 'unsupported or unsafe image';
       onProgress?.({
         current: ++current,
         total,
-        message: `Skipped ${filename}: unsupported format`,
+        message: `Skipped ${filename}: ${reason}`,
       });
-      continue;
     }
-
-    const base = safeStorageName(filename);
-    const path = `${prefix}/${base}`;
-
-    const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, buf, {
-      contentType: ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : ext === '.webp' ? 'image/webp' : 'image/jpeg',
-      upsert: true,
-    });
-
-    if (error) {
-      onProgress?.({
-        current: ++current,
-        total,
-        message: `Failed ${filename}: ${error.message}`,
-      });
-      continue;
-    }
-
-    const { data: { publicUrl } } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
-    urlMap.set(filename.toLowerCase().trim(), publicUrl);
-    urlMap.set(filename, publicUrl);
-    current++;
-    onProgress?.({
-      current,
-      total,
-      message: `Uploaded ${filename}`,
-    });
   }
 
   return urlMap;

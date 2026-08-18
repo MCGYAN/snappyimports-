@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { uploadAdminImage } from '@/lib/admin-image-upload';
 
 export default function AdminCategoriesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -79,27 +80,13 @@ export default function AdminCategoriesPage() {
 
       setUploading(true);
       const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `cat-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Upload to 'products' bucket for simplicity, or create a 'categories' bucket
-      const { error: uploadError } = await supabase.storage
-        .from('products')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('products')
-        .getPublicUrl(filePath);
-
+      const publicUrl = await uploadAdminImage(file, 'category');
       setFormData({ ...formData, image_url: publicUrl });
-
     } catch (error: any) {
       alert('Error uploading image: ' + error.message);
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -373,7 +360,7 @@ export default function AdminCategoriesPage() {
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
                         <label className="cursor-pointer bg-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100">
                           Change Image
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                          <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
                     </div>
@@ -382,7 +369,7 @@ export default function AdminCategoriesPage() {
                       <i className="ri-upload-cloud-line text-4xl text-gray-400 mb-2 w-10 h-10 flex items-center justify-center mx-auto"></i>
                       <p className="text-gray-700 font-medium">Click to upload image</p>
                       <p className="text-sm text-gray-500 mt-1">Square (1:1) Recommended (e.g., 800x800px)</p>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
                     </label>
                   )}
                 </div>

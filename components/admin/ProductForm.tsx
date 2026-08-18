@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { IMPORT_TYPE_OPTIONS, IMPORT_TYPE_DESCRIPTIONS, parseProductCommerce, resolveDirectPayment } from '@/lib/product-commerce';
 import { getImportProductMode } from '@/lib/snappy-import';
 import { inferVariantSizeName } from '@/lib/product-variants';
+import { uploadAdminImage } from '@/lib/admin-image-upload';
 
 interface ProductFormProps {
     initialData?: any;
@@ -291,26 +292,13 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
             setUploading(true);
             const file = e.target.files[0];
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('products')
-                .upload(filePath, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('products')
-                .getPublicUrl(filePath);
-
+            const publicUrl = await uploadAdminImage(file, 'product');
             setImages([...images, { url: publicUrl, position: images.length }]);
-
         } catch (error: any) {
             alert('Error uploading image: ' + error.message);
         } finally {
             setUploading(false);
+            e.target.value = '';
         }
     };
 
@@ -1123,7 +1111,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     <span className="text-sm font-semibold">{uploading ? 'Uploading...' : 'Upload Image'}</span>
                                     <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/jpeg,image/png,image/webp"
                                         className="hidden"
                                         onChange={handleImageUpload}
                                         disabled={uploading}
