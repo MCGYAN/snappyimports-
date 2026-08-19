@@ -116,8 +116,8 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const buildVariantKey = (color: string, size: string) => `${color}|||${size}`;
 
     // Store variant data (price, stock) in a map keyed by "color|||size"
-    const [variantData, setVariantData] = useState<Record<string, { price: string; stock: string; sku: string }>>(() => {
-        const data: Record<string, { price: string; stock: string; sku: string }> = {};
+    const [variantData, setVariantData] = useState<Record<string, { price: string; stock: string; sku: string; id?: string }>>(() => {
+        const data: Record<string, { price: string; stock: string; sku: string; id?: string }> = {};
         existingVariants.forEach((v: any) => {
             const key = buildVariantKey(v.color || '', v.size || '');
             const stock = v.stock?.toString() || '0';
@@ -128,6 +128,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     price: priceValue || existing?.price || '',
                     stock,
                     sku: v.sku || existing?.sku || '',
+                    id: v.id,
                 };
             }
         });
@@ -390,32 +391,74 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     await supabase.from('product_images').insert(imageInserts);
                 }
 
-                // 2. Variants
-                if (isEditMode) {
-                    const { error: deleteVariantsError } = await supabase
+                // 2. Variants — update rows in place so order history keeps valid links when possible
+                if (variants.length > 0) {
+                    const hasSizes = selectedSizes.length > 0;
+                    const keptVariantIds: string[] = [];
+
+                    for (const combo of variantCombinations) {
+                        const d = variantData[combo.key] || { price: price, stock: '0', sku: '' };
+                        const colorHex = selectedColors.find((c) => c.name === combo.color)?.hex || null;
+                        let variantName = 'Default';
+                        if (selectedColors.length > 0 && hasSizes) variantName = combo.size;
+                        else if (selectedColors.length > 0) variantName = combo.color;
+                        else if (hasSizes) variantName = combo.size;
+
+                        const row = {
+                            product_id: productId,
+                            name: variantName,
+                            sku: d.sku || null,
+                            price: parseFloat(d.price) || parseFloat(price) || 0,
+                            quantity: parseInt(d.stock) || 0,
+                            option1: hasSizes ? variantName : null,
+                            option2: combo.color?.trim() || null,
+                            metadata: colorHex ? { color_hex: colorHex } : {},
+                        };
+
+                        if (isEditMode && d.id) {
+                            const { error: updateVariantError } = await supabase
+                                .from('product_variants')
+                                .update(row)
+                                .eq('id', d.id);
+                            if (updateVariantError) throw updateVariantError;
+                            keptVariantIds.push(d.id);
+                            continue;
+                        }
+
+                        const { data: inserted, error: insertVariantError } = await supabase
+                            .from('product_variants')
+                            .insert(row)
+                            .select('id')
+                            .single();
+                        if (insertVariantError) throw insertVariantError;
+                        if (inserted?.id) keptVariantIds.push(inserted.id);
+                    }
+
+                    if (isEditMode && keptVariantIds.length > 0) {
+                        const { data: currentVariants, error: listVariantsError } = await supabase
+                            .from('product_variants')
+                            .select('id')
+                            .eq('product_id', productId);
+                        if (listVariantsError) throw listVariantsError;
+
+                        const removeIds = (currentVariants || [])
+                            .map((variant) => variant.id)
+                            .filter((id) => !keptVariantIds.includes(id));
+
+                        if (removeIds.length > 0) {
+                            const { error: removeVariantsError } = await supabase
+                                .from('product_variants')
+                                .delete()
+                                .in('id', removeIds);
+                            if (removeVariantsError) throw removeVariantsError;
+                        }
+                    }
+                } else if (isEditMode) {
+                    const { error: clearVariantsError } = await supabase
                         .from('product_variants')
                         .delete()
                         .eq('product_id', productId);
-                    if (deleteVariantsError) throw deleteVariantsError;
-                }
-
-                if (variants.length > 0) {
-                    const variantInserts = variants.map((v) => {
-                        const colorHex = selectedColors.find((c) => c.name === v.color)?.hex || null;
-                        const hasSizes = selectedSizes.length > 0;
-                        return {
-                            product_id: productId,
-                            name: v.name || v.color || 'Default',
-                            sku: v.sku || null,
-                            price: parseFloat(v.price) || 0,
-                            quantity: parseInt(v.stock) || 0,
-                            option1: hasSizes ? v.name : null,
-                            option2: v.color?.trim() || null,
-                            metadata: colorHex ? { color_hex: colorHex } : {},
-                        };
-                    });
-                    const { error: varError } = await supabase.from('product_variants').insert(variantInserts);
-                    if (varError) throw varError;
+                    if (clearVariantsError) throw clearVariantsError;
                 }
             }
 
