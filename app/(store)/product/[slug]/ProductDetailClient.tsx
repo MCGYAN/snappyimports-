@@ -27,6 +27,7 @@ import {
   getVariantColor,
   getVariantSizeLabel,
   isColorOnlyCatalog,
+  variantsForColor,
   formatVariantLabel,
   dedupeStoreVariants,
   pickVariantForColor,
