@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
-import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
+import { SITE_LOGO_LIGHT_BG_PATH, SITE_LOGO_SIZE } from '@/lib/brand';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -67,11 +67,11 @@ export default function AdminLoginPage() {
             <Image
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt="Snappy Imports Global"
-              width={1024}
-              height={517}
+              width={SITE_LOGO_SIZE.width}
+              height={SITE_LOGO_SIZE.height}
               priority
               unoptimized
-              className="mx-auto h-auto w-[min(280px,85vw)] object-contain"
+              className="mx-auto h-auto w-[min(200px,70vw)] object-contain"
             />
           </Link>
           <h1 className="mt-6 font-heading text-2xl font-bold text-brand-primary">Admin</h1>

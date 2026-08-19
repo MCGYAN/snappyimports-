@@ -128,7 +128,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-16 w-auto object-contain sm:h-20"
+              className="h-20 w-auto object-contain sm:h-24"
             />
             <div>
               <p className="text-sm font-bold sm:text-base">{SNAPPY_INVOICE_ISSUER.brand}</p>
@@ -251,7 +251,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-20 w-auto object-contain"
+              className="h-24 w-auto object-contain"
             />
             <div>
               <p className="text-sm font-bold">{SNAPPY_INVOICE_ISSUER.brand}</p>

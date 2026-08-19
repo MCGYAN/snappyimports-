@@ -1,6 +1,6 @@
 'use client';
 
-import { SITE_LOGO_LIGHT_BG_PATH, BRAND_PRIMARY, BRAND_ACCENT } from '@/lib/brand';
+import { SITE_LOGO_LIGHT_BG_PATH, SITE_LOGO_SIZE, BRAND_PRIMARY, BRAND_ACCENT } from '@/lib/brand';
 import { posterRateNumber } from '@/lib/rate-card-share';
 
 type BuyRmbRateCardProps = {
@@ -68,17 +68,17 @@ export default function BuyRmbRateCard({
         <img
           src={SITE_LOGO_LIGHT_BG_PATH}
           alt="Snappy Imports Global"
-          width={545}
-          height={221}
+          width={SITE_LOGO_SIZE.width}
+          height={SITE_LOGO_SIZE.height}
           decoding="sync"
           style={{
             display: 'block',
-            height: size * 0.17,
+            height: size * 0.24,
             width: 'auto',
             maxWidth: '86%',
             objectFit: 'contain',
             objectPosition: 'center',
-            marginTop: size * 0.03,
+            marginTop: size * 0.01,
           }}
         />
 

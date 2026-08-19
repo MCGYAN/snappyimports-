@@ -65,7 +65,7 @@ export default function Header() {
       <header className="sticky top-0 z-50 w-full flex flex-col font-sans pt-[env(safe-area-inset-top,0px)]">
         <div className="mobile-nav-bar text-white md:glass-panel-dark md:shadow-store-lg">
           <div className="store-container">
-            <div className="flex min-h-[3.5rem] items-center justify-between gap-3 py-2 sm:min-h-20 sm:gap-4 sm:py-0">
+            <div className="flex min-h-[4.25rem] items-center justify-between gap-3 py-2 sm:min-h-[5.5rem] sm:gap-4 sm:py-0">
 
               <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                 <button

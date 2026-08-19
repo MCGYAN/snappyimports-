@@ -127,7 +127,7 @@ export async function generateFinancialDocumentPdf(
   if (logo) {
     try {
       const base64 = Buffer.from(logo).toString('base64');
-      pdf.addImage(`data:image/png;base64,${base64}`, 'PNG', left, 12, 30, 18);
+      pdf.addImage(`data:image/png;base64,${base64}`, 'PNG', left, 10, 28, 19);
     } catch {
       // The branded text header below remains if the image cannot be decoded.
     }

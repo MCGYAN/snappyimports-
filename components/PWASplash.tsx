@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { SITE_LOGO_PATH, SITE_LOGO_SIZE } from '@/lib/brand';
+
 export default function PWASplash() {
   const [showSplash, setShowSplash] = useState(false);
 
@@ -26,7 +29,17 @@ export default function PWASplash() {
 
   return (
     <div className="pwa-splash" aria-hidden="true">
-      <div className="pwa-splash-logo mb-6 text-white text-3xl font-bold tracking-wide">Snappy Import</div>
+      <div className="pwa-splash-logo mb-6">
+        <Image
+          src={SITE_LOGO_PATH}
+          alt="Snappy Imports Global"
+          width={SITE_LOGO_SIZE.width}
+          height={SITE_LOGO_SIZE.height}
+          priority
+          unoptimized
+          className="h-28 w-auto object-contain sm:h-32"
+        />
+      </div>
       <p className="text-white/75 text-sm font-medium mb-8">Importing is no longer stressful</p>
       <div className="pwa-splash-dots flex gap-1.5">
         <span className="w-2 h-2 bg-white rounded-full" />

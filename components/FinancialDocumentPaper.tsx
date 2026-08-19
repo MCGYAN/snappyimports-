@@ -162,7 +162,7 @@ function Paper({
       (document.due_at ? new Date(document.due_at).getTime() < Date.now() : false));
 
   const base = variant === 'official' ? 'text-[11px]' : 'text-xs sm:text-[13px]';
-  const logoSize = variant === 'official' ? 'h-20' : 'h-16 sm:h-20';
+  const logoSize = variant === 'official' ? 'h-24' : 'h-20 sm:h-24';
   const titleSize = variant === 'official' ? 'text-2xl' : 'text-xl sm:text-2xl';
 
   return (

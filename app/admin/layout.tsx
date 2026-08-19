@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
+import { SITE_LOGO_LIGHT_BG_PATH, SITE_LOGO_SIZE } from '@/lib/brand';
 import AdminNotificationBell from '@/components/admin/AdminNotificationBell';
 import {
   canAccessAdminDashboard,
@@ -244,11 +244,11 @@ export default function AdminLayout({
             <Image
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt="Snappy Imports Global"
-              width={545}
-              height={221}
+              width={SITE_LOGO_SIZE.width}
+              height={SITE_LOGO_SIZE.height}
               priority
               unoptimized
-              className="h-auto w-full max-w-[200px] object-contain object-left"
+              className="h-auto w-full max-w-[168px] object-contain object-left"
             />
             <span className="mt-2 block text-[11px] font-semibold uppercase tracking-widest text-brand-accent">
               {isOwnerRole(userRole) ? 'Admin Dashboard' : 'Staff Dashboard'}

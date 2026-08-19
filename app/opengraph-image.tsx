@@ -1,15 +1,16 @@
 import { ImageResponse } from 'next/og';
 import { SEO } from '@/lib/seo';
+import { SITE_LOGO_PATH } from '@/lib/brand';
 
 /** Edge avoids a Node `@vercel/og` + `fileURLToPath` bug when the project path contains spaces. */
 export const runtime = 'edge';
 
-export const alt = `${SEO.brandName} — ${SEO.tagline}`;
+export const alt = `${SEO.brandName}. ${SEO.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default async function Image() {
-  const logoSrc = `${SEO.siteUrl}${SEO.logoLightBgPath}`;
+  const logoSrc = `${SEO.siteUrl}${SITE_LOGO_PATH}`;
 
   return new ImageResponse(
     (
@@ -30,8 +31,8 @@ export default async function Image() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={logoSrc}
-            width={300}
-            height={150}
+            width={280}
+            height={194}
             style={{ objectFit: 'contain' }}
             alt=""
           />

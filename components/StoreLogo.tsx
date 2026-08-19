@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCMS } from '@/context/CMSContext';
-import { SITE_LOGO_PATH } from '@/lib/brand';
+import { SITE_LOGO_PATH, SITE_LOGO_SIZE } from '@/lib/brand';
 
 interface StoreLogoProps {
   className?: string;
@@ -19,16 +19,16 @@ export default function StoreLogo({ className = '', priority = false, size = 'de
 
   const imageSizeClass =
     size === 'sm'
-      ? 'h-6 w-auto max-w-[9.5rem] object-contain object-left sm:h-7'
-      : 'h-8 w-auto max-w-[min(52vw,12.5rem)] object-contain object-left sm:h-9 md:h-10';
+      ? 'h-10 w-auto max-w-[11rem] object-contain object-left sm:h-12'
+      : 'h-12 w-auto max-w-[min(58vw,13.5rem)] object-contain object-left sm:h-14 md:h-[3.75rem]';
 
   return (
     <Link href="/" className={`inline-flex shrink-0 items-center ${className}`} aria-label={siteName}>
       <Image
         src={src}
         alt={siteName}
-        width={575}
-        height={292}
+        width={SITE_LOGO_SIZE.width}
+        height={SITE_LOGO_SIZE.height}
         priority={priority}
         unoptimized
         className={imageSizeClass}
