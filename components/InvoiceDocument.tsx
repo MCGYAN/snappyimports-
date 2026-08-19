@@ -6,7 +6,11 @@ import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details'
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
-import { invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
+import {
+  invoiceBodyClass,
+  invoiceOfficialPageClass,
+  invoicePaymentFooterClass,
+} from '@/lib/invoice-layout';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
 type InvoiceItem = {
@@ -86,7 +90,10 @@ function InlineCopy({ value }: { value: string }) {
 
 function PaymentDetailsSection({ withCopy }: { withCopy?: boolean }) {
   return (
-    <div className={withCopy ? 'pt-2 leading-normal' : invoicePaymentFooterClass}>
+    <div
+      {...(!withCopy ? { 'data-invoice-footer': '' } : {})}
+      className={withCopy ? 'pt-2 leading-normal' : invoicePaymentFooterClass}
+    >
       <p className="font-bold uppercase tracking-wide">Payment details:</p>
       <p className="mt-1">
         Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
@@ -119,34 +126,30 @@ function InvoiceTotalsTable({
 }) {
   return (
     <div className="mt-3 flex justify-end">
-      <table className={`border-collapse ${compact ? 'w-64 text-[11px]' : 'w-full max-w-[18rem]'}`}>
-        <tbody>
-          <tr>
-            <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
-            <td className="py-px text-right capitalize">{paymentLabel}</td>
-          </tr>
-          <tr>
-            <td className="whitespace-nowrap py-px pr-3 font-semibold">Subtotal ({currency}):</td>
-            <td className="py-px text-right">{formatMoney(order.subtotal || 0, currency)}</td>
-          </tr>
-          <tr>
-            <td className="whitespace-nowrap py-px pr-3 font-semibold">Shipping:</td>
-            <td className="py-px text-right">
-              {(order.shipping_total || 0) === 0
-                ? 'FREE / TBA'
-                : formatMoney(order.shipping_total || 0, currency)}
-            </td>
-          </tr>
-          <tr>
-            <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
-            <td
-              className={`pt-2 text-right font-bold ${compact ? 'text-sm' : 'text-sm sm:text-base'}`}
-            >
-              {formatMoney(order.total || 0, currency)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div className={`space-y-0.5 ${compact ? 'w-64 text-[11px]' : 'w-full max-w-[18rem]'}`}>
+        <div className="flex items-start justify-between gap-6">
+          <span className="whitespace-nowrap font-semibold">Payment method:</span>
+          <span className="text-right capitalize">{paymentLabel}</span>
+        </div>
+        <div className="flex items-start justify-between gap-6">
+          <span className="whitespace-nowrap font-semibold">Subtotal ({currency}):</span>
+          <span className="text-right">{formatMoney(order.subtotal || 0, currency)}</span>
+        </div>
+        <div className="flex items-start justify-between gap-6">
+          <span className="whitespace-nowrap font-semibold">Shipping:</span>
+          <span className="text-right">
+            {(order.shipping_total || 0) === 0
+              ? 'FREE / TBA'
+              : formatMoney(order.shipping_total || 0, currency)}
+          </span>
+        </div>
+        <div className="flex items-start justify-between gap-6 pt-2">
+          <span className="whitespace-nowrap font-bold">TOTAL DUE ({currency})</span>
+          <span className={`text-right font-bold ${compact ? 'text-sm' : 'text-sm sm:text-base'}`}>
+            {formatMoney(order.total || 0, currency)}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -277,8 +280,9 @@ export default function InvoiceDocument({ order }: Props) {
       {/* ─── Official PDF / print layout (fixed A4 structure, no buttons) ─── */}
       <div
         className={`invoice-official hidden text-[11px] leading-snug text-black ${invoiceOfficialPageClass}`}
+        data-invoice-a4=""
       >
-        <div className="flex-1">
+        <div className={invoiceBodyClass}>
         {/* Header band: logo + INVOICE on one row, issuer packed beside it */}
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
@@ -389,8 +393,16 @@ export default function InvoiceDocument({ order }: Props) {
             display: none !important;
           }
           #invoice-print .invoice-official {
-            display: flex !important;
-            flex-direction: column !important;
+            display: block !important;
+            position: relative !important;
+            height: 1043px !important;
+            overflow: hidden !important;
+          }
+          #invoice-print [data-invoice-footer] {
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
           }
         }
       `}</style>

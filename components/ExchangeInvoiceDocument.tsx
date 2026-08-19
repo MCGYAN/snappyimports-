@@ -12,7 +12,11 @@ import {
   parseExchangeCountryCode,
   resolvePayAccounts,
 } from '@/lib/exchange-corridors';
-import { invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
+import {
+  invoiceBodyClass,
+  invoiceOfficialPageClass,
+  invoicePaymentFooterClass,
+} from '@/lib/invoice-layout';
 
 type Props = {
   exchange: {
@@ -87,7 +91,10 @@ function PaymentAccountsBlock({
       : 'mt-2 pt-1.5 leading-normal';
 
   return (
-    <div className={footerClass}>
+    <div
+      {...(pinnedBottom ? { 'data-invoice-footer': '' } : {})}
+      className={footerClass}
+    >
       <p className="font-bold uppercase tracking-wide">Payment details ({countryName}):</p>
       <p className="mt-1">
         Account holder: {accounts[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
@@ -252,8 +259,11 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
         <PaymentAccountsBlock accounts={accounts} countryName={meta.name} withCopy />
       </div>
 
-      <div className={`invoice-official hidden text-[11px] leading-snug text-black ${invoiceOfficialPageClass}`}>
-        <div className="flex-1">
+      <div
+        className={`invoice-official hidden text-[11px] leading-snug text-black ${invoiceOfficialPageClass}`}
+        data-invoice-a4=""
+      >
+        <div className={invoiceBodyClass}>
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
             <img
@@ -350,24 +360,20 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
         </table>
 
         <div className="mt-3 flex justify-end">
-          <table className="w-64 border-collapse text-[11px]">
-            <tbody>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
-                <td className="py-px text-right">Bank / MoMo ({meta.name})</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">RMB to receive:</td>
-                <td className="py-px text-right">{formatAmount(amountTo)} RMB</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
-                <td className="pt-2 text-right text-sm font-bold">
-                  {formatMoney(amountFrom, currency)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="w-64 space-y-0.5 text-[11px]">
+            <div className="flex items-start justify-between gap-6">
+              <span className="whitespace-nowrap font-semibold">Payment method:</span>
+              <span className="text-right">Bank / MoMo ({meta.name})</span>
+            </div>
+            <div className="flex items-start justify-between gap-6">
+              <span className="whitespace-nowrap font-semibold">RMB to receive:</span>
+              <span className="text-right">{formatAmount(amountTo)} RMB</span>
+            </div>
+            <div className="flex items-start justify-between gap-6 pt-2">
+              <span className="whitespace-nowrap font-bold">TOTAL DUE ({currency})</span>
+              <span className="text-right text-sm font-bold">{formatMoney(amountFrom, currency)}</span>
+            </div>
+          </div>
         </div>
         </div>
 
@@ -380,8 +386,16 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             display: none !important;
           }
           #exchange-invoice-print .invoice-official {
-            display: flex !important;
-            flex-direction: column !important;
+            display: block !important;
+            position: relative !important;
+            height: 1043px !important;
+            overflow: hidden !important;
+          }
+          #exchange-invoice-print [data-invoice-footer] {
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
           }
         }
       `}</style>

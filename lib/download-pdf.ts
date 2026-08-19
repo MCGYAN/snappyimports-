@@ -1,9 +1,16 @@
 /** Client-side: capture a DOM node and save it as a PDF download. */
 
+import {
+  INVOICE_A4_ATTR,
+  INVOICE_FOOTER_ATTR,
+  INVOICE_PAGE_HEIGHT_PX,
+} from '@/lib/invoice-layout';
+
 /** A4 proportions at 96dpi. Rendering at this fixed width means phones and
  *  desktops produce the exact same document. */
 const RENDER_WIDTH_PX = 794;
 const RENDER_PADDING_PX = 40;
+const A4_CAPTURE_HEIGHT_PX = Math.round(RENDER_WIDTH_PX * (297 / 210));
 
 let pdfLibrariesPromise:
   | Promise<
@@ -72,6 +79,41 @@ function inlineComputedSpacing(source: HTMLElement, clone: HTMLElement): void {
   });
 }
 
+function findInvoicePageRoot(node: HTMLElement): HTMLElement | null {
+  if (node.hasAttribute(INVOICE_A4_ATTR)) return node;
+  return node.querySelector<HTMLElement>(`[${INVOICE_A4_ATTR}]`);
+}
+
+/**
+ * html2canvas ignores flex footers. Pin payment details with absolute positioning
+ * inside a fixed-height A4 page so downloads always match print layout.
+ */
+function prepareInvoiceForCapture(clone: HTMLElement): boolean {
+  const pageRoot = findInvoicePageRoot(clone);
+  if (!pageRoot) return false;
+
+  pageRoot.style.position = 'relative';
+  pageRoot.style.display = 'block';
+  pageRoot.style.boxSizing = 'border-box';
+  pageRoot.style.height = `${INVOICE_PAGE_HEIGHT_PX}px`;
+  pageRoot.style.minHeight = `${INVOICE_PAGE_HEIGHT_PX}px`;
+  pageRoot.style.maxHeight = `${INVOICE_PAGE_HEIGHT_PX}px`;
+  pageRoot.style.overflow = 'hidden';
+
+  const footer = pageRoot.querySelector<HTMLElement>(`[${INVOICE_FOOTER_ATTR}]`);
+  if (footer) {
+    footer.style.position = 'absolute';
+    footer.style.left = '0';
+    footer.style.right = '0';
+    footer.style.bottom = '0';
+    footer.style.marginTop = '0';
+    footer.style.background = '#ffffff';
+    footer.style.zIndex = '10';
+  }
+
+  return true;
+}
+
 export async function downloadElementAsPdf(
   element: HTMLElement,
   filename: string,
@@ -94,13 +136,9 @@ export async function downloadElementAsPdf(
 
   const clone = element.cloneNode(true) as HTMLElement;
   clone.classList.remove('hidden');
-  if (clone.classList.contains('flex')) {
-    clone.style.display = 'flex';
-    clone.style.flexDirection = 'column';
-  } else {
-    clone.style.display = 'block';
-  }
+  clone.style.display = 'block';
   inlineComputedSpacing(element, clone);
+  const singlePageInvoice = prepareInvoiceForCapture(clone);
   stage.appendChild(clone);
   document.body.appendChild(stage);
 
@@ -116,6 +154,12 @@ export async function downloadElementAsPdf(
       logging: false,
       width: RENDER_WIDTH_PX,
       windowWidth: RENDER_WIDTH_PX,
+      ...(singlePageInvoice
+        ? {
+            height: A4_CAPTURE_HEIGHT_PX,
+            windowHeight: A4_CAPTURE_HEIGHT_PX,
+          }
+        : {}),
     });
 
     const pdf = new jsPDF({
@@ -132,8 +176,16 @@ export async function downloadElementAsPdf(
 
     const fullHeightMm = (canvas.height * usableWidth) / canvas.width;
 
-    if (fullHeightMm <= usableHeight) {
-      // Everything fits on one official page
+    if (singlePageInvoice) {
+      pdf.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        margin,
+        margin,
+        usableWidth,
+        usableHeight,
+      );
+    } else if (fullHeightMm <= usableHeight) {
       pdf.addImage(
         canvas.toDataURL('image/png'),
         'PNG',
@@ -143,8 +195,6 @@ export async function downloadElementAsPdf(
         fullHeightMm,
       );
     } else {
-      // Paginate by cropping clean, non-overlapping slices of the canvas so
-      // no row is duplicated or cut across the page boundary region.
       const slicePxHeight = Math.floor((usableHeight / usableWidth) * canvas.width);
       let renderedPx = 0;
       let pageIndex = 0;

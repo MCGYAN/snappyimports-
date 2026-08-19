@@ -7,7 +7,7 @@ import {
   parseExchangeCountryCode,
 } from '@/lib/exchange-corridors';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
-import { invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
+import { invoiceBodyClass, invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
 import { formatMoney } from '@/lib/payment-routing';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
@@ -168,7 +168,10 @@ function Paper({
   const isOfficial = variant === 'official';
 
   const footer = isReceipt ? (
-    <div className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}>
+    <div
+      {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
+      className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}
+    >
       <p className="font-bold uppercase tracking-wide">Payment received</p>
       <p className="mt-1">
         Snappy Imports Global confirms full payment of{' '}
@@ -181,7 +184,10 @@ function Paper({
       </p>
     </div>
   ) : (
-    <div className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}>
+    <div
+      {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
+      className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}
+    >
       <p className="font-bold uppercase tracking-wide">Payment details:</p>
       <p className="mt-1">
         Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
@@ -208,8 +214,9 @@ function Paper({
   return (
     <div
       className={`${base} bg-white leading-snug text-black ${isOfficial ? invoiceOfficialPageClass : ''}`}
+      {...(isOfficial ? { 'data-invoice-a4': '' } : {})}
     >
-      <div className={isOfficial ? 'flex-1' : undefined}>
+      <div className={isOfficial ? invoiceBodyClass : undefined}>
       <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <img
@@ -310,34 +317,32 @@ function Paper({
       </table>
 
       <div className="mt-3 flex justify-end">
-        <table className="w-full max-w-[18rem] border-collapse">
-          <tbody>
-            {data.payment_method ? (
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
-                <td className="py-px text-right capitalize">
-                  {String(data.payment_method) === 'invoice'
-                    ? 'Bank Transfer'
-                    : String(data.payment_method)}
-                </td>
-              </tr>
-            ) : null}
-            {!isReceipt && data.invoice_valid_note ? (
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Rate held until:</td>
-                <td className="py-px text-right">{formatDate(document.due_at)}</td>
-              </tr>
-            ) : null}
-            <tr>
-              <td className="whitespace-nowrap pt-2 pr-3 font-bold">
-                {isReceipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`}
-              </td>
-              <td className="pt-2 text-right text-sm font-bold sm:text-base">
-                {formatMoney(Number(document.amount) || 0, currency)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="w-full max-w-[18rem] space-y-0.5 text-right">
+          {data.payment_method ? (
+            <div className="flex items-start justify-end gap-3">
+              <span className="whitespace-nowrap font-semibold">Payment method:</span>
+              <span className="capitalize">
+                {String(data.payment_method) === 'invoice'
+                  ? 'Bank Transfer'
+                  : String(data.payment_method)}
+              </span>
+            </div>
+          ) : null}
+          {!isReceipt && data.invoice_valid_note ? (
+            <div className="flex items-start justify-end gap-3">
+              <span className="whitespace-nowrap font-semibold">Rate held until:</span>
+              <span>{formatDate(document.due_at)}</span>
+            </div>
+          ) : null}
+          <div className="flex items-start justify-end gap-3 pt-2">
+            <span className="whitespace-nowrap font-bold">
+              {isReceipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`}
+            </span>
+            <span className="text-sm font-bold sm:text-base">
+              {formatMoney(Number(document.amount) || 0, currency)}
+            </span>
+          </div>
+        </div>
       </div>
       </div>
 

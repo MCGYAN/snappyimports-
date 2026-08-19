@@ -1,7 +1,16 @@
-/** A4 inner height for html2canvas capture at 794px stage width (see download-pdf.ts). */
-export const INVOICE_OFFICIAL_MIN_HEIGHT_PX = 1043;
+/** Inner content height for one A4 page at 794px capture width (see download-pdf.ts). */
+export const INVOICE_PAGE_HEIGHT_PX = 1043;
 
-export const invoiceOfficialPageClass = 'flex min-h-[1043px] flex-col';
+/** Space reserved so body content does not overlap the pinned footer. */
+export const INVOICE_FOOTER_RESERVE_PX = 148;
 
-/** Pins payment details to the page bottom and keeps account lines clear of capture artifacts. */
-export const invoicePaymentFooterClass = 'relative z-10 mt-auto bg-white pt-6 leading-normal';
+export const invoiceOfficialPageClass = 'relative box-border h-[1043px] overflow-hidden';
+
+export const invoiceBodyClass = 'pb-[148px]';
+
+/** Pinned to the page bottom during PDF capture via absolute positioning. */
+export const invoicePaymentFooterClass =
+  'absolute inset-x-0 bottom-0 bg-white pt-4 leading-normal';
+
+export const INVOICE_A4_ATTR = 'data-invoice-a4';
+export const INVOICE_FOOTER_ATTR = 'data-invoice-footer';
