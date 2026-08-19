@@ -231,7 +231,7 @@ function ShopContent({
               className={`${isFilterOpen ? 'fixed inset-0 z-50 overflow-y-auto liquid-glass' : 'hidden'} md:block md:w-64 md:flex-shrink-0`}
             >
               <div className="md:sticky md:top-28">
-                <div className="liquid-glass-card p-6 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none md:border-0">
+                <div className="liquid-glass-card p-6 md:bg-transparent md:px-4 md:py-0 md:shadow-none md:backdrop-blur-none md:border-0">
                   <div className="mb-6 flex items-center justify-between md:hidden">
                     <h2 className="text-xl font-bold text-brand-primary">Filters</h2>
                     <button
@@ -313,8 +313,8 @@ function ShopContent({
 
                     {/* Price Range */}
                     <div className="border-t border-gray-200 pt-8">
-                      <h3 className="font-semibold text-gray-900 mb-4">Max Price: GH¢{priceRange[1]}</h3>
-                      <div className="space-y-4">
+                      <h3 className="font-semibold text-gray-900 mb-4 px-0.5">Max Price: GH¢{priceRange[1]}</h3>
+                      <div className="space-y-4 px-1">
                         <input
                           type="range"
                           min="0"
@@ -325,9 +325,9 @@ function ShopContent({
                             setPriceRange([0, parseInt(e.target.value)]);
                             setPage(1);
                           }}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-primary"
+                          className="block w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-primary"
                         />
-                        <div className="flex items-center justify-between text-sm text-gray-600">
+                        <div className="flex items-center justify-between gap-3 text-sm text-gray-600 px-0.5">
                           <span>GH¢0</span>
                           <span>GH¢5000+</span>
                         </div>
@@ -336,7 +336,7 @@ function ShopContent({
 
                     {/* Rating */}
                     <div className="border-t border-gray-200 pt-8">
-                      <h3 className="font-semibold text-gray-900 mb-4">Rating</h3>
+                      <h3 className="font-semibold text-gray-900 mb-4 px-0.5">Rating</h3>
                       <div className="space-y-2">
                         {[4, 3, 2, 1].map(rating => (
                           <button
