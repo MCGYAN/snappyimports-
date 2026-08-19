@@ -17,6 +17,75 @@ export function getVariantColor(variant: StoreVariant): string {
   return (variant.option2 || variant.color || '').trim();
 }
 
+export function getVariantStock(variant: StoreVariant): number {
+  const raw = variant.stock ?? variant.quantity ?? 0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
+/** Stable key for color × size (or color-only / size-only). */
+export function variantOptionKey(variant: StoreVariant): string {
+  const color = getVariantColor(variant).toLowerCase();
+  const size = getVariantSizeLabel(variant).toLowerCase();
+  return `${color}|${size}`;
+}
+
+/**
+ * Collapse duplicate variant rows (same color/size) keeping the best stock row.
+ * Fixes stale zero-qty duplicates left from partial saves.
+ */
+export function dedupeStoreVariants(variants: StoreVariant[]): StoreVariant[] {
+  const map = new Map<string, StoreVariant>();
+
+  for (const variant of variants) {
+    const key = variantOptionKey(variant);
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, variant);
+      continue;
+    }
+
+    const stock = getVariantStock(variant);
+    const existingStock = getVariantStock(existing);
+    if (stock > existingStock) {
+      map.set(key, variant);
+      continue;
+    }
+    if (stock === existingStock && variant.id && existing.id && variant.id > existing.id) {
+      map.set(key, variant);
+    }
+  }
+
+  return [...map.values()];
+}
+
+/** Pick the in-stock variant row for a color (color-only or first size match). */
+export function pickVariantForColor(variants: StoreVariant[], selectedColor: string): StoreVariant | null {
+  const matching = dedupeStoreVariants(variantsForColor(variants, selectedColor));
+  if (!matching.length) return null;
+
+  if (isColorOnlyCatalog(matching)) {
+    return matching.reduce((best, variant) =>
+      getVariantStock(variant) > getVariantStock(best) ? variant : best,
+    );
+  }
+
+  if (matching.length === 1) return matching[0];
+
+  const colorOnly = matching.find(
+    (variant) => inferVariantSizeName(getVariantColor(variant), variant.name || variant.option1 || '') === '',
+  );
+  if (colorOnly) return colorOnly;
+
+  return matching.reduce((best, variant) =>
+    getVariantStock(variant) > getVariantStock(best) ? variant : best,
+  );
+}
+
+export function sumVariantStock(variants: StoreVariant[]): number {
+  return dedupeStoreVariants(variants).reduce((sum, variant) => sum + getVariantStock(variant), 0);
+}
+
 export function inferVariantSizeName(color: string, variantName: string): string {
   const c = color.trim().toLowerCase();
   const n = variantName.trim();

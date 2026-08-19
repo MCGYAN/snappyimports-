@@ -120,11 +120,16 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         const data: Record<string, { price: string; stock: string; sku: string }> = {};
         existingVariants.forEach((v: any) => {
             const key = buildVariantKey(v.color || '', v.size || '');
-            data[key] = {
-                price: v.price?.toString() || '',
-                stock: v.stock?.toString() || '0',
-                sku: v.sku || ''
-            };
+            const stock = v.stock?.toString() || '0';
+            const priceValue = v.price?.toString() || '';
+            const existing = data[key];
+            if (!existing || (parseInt(stock) || 0) >= (parseInt(existing.stock) || 0)) {
+                data[key] = {
+                    price: priceValue || existing?.price || '',
+                    stock,
+                    sku: v.sku || existing?.sku || '',
+                };
+            }
         });
         return data;
     });
@@ -387,11 +392,11 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
                 // 2. Variants
                 if (isEditMode) {
-                    // Be careful not to delete ALL variants if we want to preserve IDs etc, 
-                    // but for now, full replacement is safer to ensure sync.
-                    // Note: This might break order-item references if they rely on variant_id hard constraints without cascading.
-                    // Our Schema migration has ON DELETE SET NULL for order_items -> variant_id, so this is safe for now (but distinct from "archiving").
-                    await supabase.from('product_variants').delete().eq('product_id', productId);
+                    const { error: deleteVariantsError } = await supabase
+                        .from('product_variants')
+                        .delete()
+                        .eq('product_id', productId);
+                    if (deleteVariantsError) throw deleteVariantsError;
                 }
 
                 if (variants.length > 0) {

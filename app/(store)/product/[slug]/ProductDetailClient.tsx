@@ -26,10 +26,12 @@ import {
   getSizeOptionsForColor,
   getVariantColor,
   getVariantSizeLabel,
-  inferVariantSizeName,
   isColorOnlyCatalog,
-  variantsForColor,
   formatVariantLabel,
+  dedupeStoreVariants,
+  pickVariantForColor,
+  sumVariantStock,
+  getVariantStock,
 } from '@/lib/product-variants';
 import SocialShareButtons from '@/components/SocialShareButtons';
 import ImportDetailsCard from '@/components/snappy/ImportDetailsCard';
@@ -105,11 +107,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
         // Transform product data
         // Map variant colors from option2, and extract color_hex from metadata
-        const rawVariants = (productData.product_variants || []).map((v: any) => ({
-          ...v,
-          color: v.option2 || '',
-          colorHex: v.metadata?.color_hex || ''
-        }));
+        const rawVariants = dedupeStoreVariants(
+          (productData.product_variants || []).map((v: any) => ({
+            ...v,
+            color: v.option2 || '',
+            colorHex: v.metadata?.color_hex || '',
+          })),
+        );
 
         // Build a color-to-hex map from variants (prefer stored hex, fallback to colorNameToHex)
         const colorHexMap: Record<string, string> = {};
@@ -128,7 +132,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           categorySlug: productData.categories?.slug || '',
           rating: productData.rating_avg || 0,
           reviewCount: 0,
-          stockCount: productData.quantity,
+          stockCount: dedupeStoreVariants(rawVariants).length
+            ? sumVariantStock(rawVariants)
+            : productData.quantity,
           moq: productData.moq || 1,
           colors: getProductColorOptions(rawVariants),
           colorHexMap,
@@ -220,7 +226,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   // Determine the active price: variant price if selected, otherwise base price
   const activePrice = selectedVariant?.price ?? product?.price ?? 0;
-  const activeStock = selectedVariant ? (selectedVariant.stock ?? selectedVariant.quantity ?? product?.stockCount ?? 0) : (product?.stockCount ?? 0);
+  const activeStock = selectedVariant
+    ? getVariantStock(selectedVariant)
+    : hasVariants
+      ? sumVariantStock(product?.variants || [])
+      : (product?.stockCount ?? 0);
 
   const addCurrentSelectionToCart = (openCart: boolean): boolean => {
     if (!product) return false;
@@ -229,8 +239,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     // Color-only catalog: ensure a concrete variant row is attached
     let variantRow = selectedVariant;
     if (!variantRow && selectedColor && colorOnlyCatalog) {
-      const matching = variantsForColor(product.variants || [], selectedColor);
-      variantRow = matching[0] || null;
+      variantRow = pickVariantForColor(product.variants || [], selectedColor);
     }
 
     if (hasVariants && !variantRow) return false;
@@ -523,9 +532,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <div className="flex flex-wrap gap-3">
                       {product.colors.map((color: string) => {
                         const isSelected = selectedColor === color;
-                        const colorVariants = variantsForColor(product.variants, color);
+                        const colorVariants = dedupeStoreVariants(variantsForColor(product.variants, color));
                         const colorStock = colorVariants.reduce(
-                          (sum: number, v: any) => sum + (v.stock ?? v.quantity ?? 0),
+                          (sum: number, v: any) => sum + getVariantStock(v),
                           0,
                         );
                         const isOutOfStock = colorStock === 0 && product.stockCount === 0;
@@ -534,17 +543,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                             key={color}
                             onClick={() => {
                               setSelectedColor(color);
-                              const matching = variantsForColor(product.variants, color);
-                              const colorOnlyMatch = matching.find(
-                                (v: any) =>
-                                  inferVariantSizeName(getVariantColor(v), v.name || '') === '',
-                              );
-                              if (colorOnlyMatch) {
-                                setSelectedVariant(colorOnlyMatch);
-                                setSelectedSize(getVariantSizeLabel(colorOnlyMatch));
-                              } else if (matching.length === 1) {
-                                setSelectedVariant(matching[0]);
-                                setSelectedSize(getVariantSizeLabel(matching[0]));
+                              const picked = pickVariantForColor(product.variants, color);
+                              if (picked) {
+                                setSelectedVariant(picked);
+                                setSelectedSize(getVariantSizeLabel(picked));
                               } else {
                                 setSelectedVariant(null);
                                 setSelectedSize('');
@@ -594,7 +596,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                         })
                         .map((variant: any) => {
                           const isSelected = selectedVariant?.id === variant.id;
-                          const variantStock = variant.stock ?? variant.quantity ?? 0;
+                          const variantStock = getVariantStock(variant);
                           const isOutOfStock = variantStock === 0 && product.stockCount === 0;
                           const sizeLabel = getVariantSizeLabel(variant);
                           return (
@@ -638,7 +640,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <div className="flex flex-wrap gap-3">
                       {variantsWithoutColors.map((variant: any) => {
                         const isSelected = selectedVariant?.id === variant.id;
-                        const variantStock = variant.stock ?? variant.quantity ?? 0;
+                        const variantStock = getVariantStock(variant);
                         const isOutOfStock = variantStock === 0 && product.stockCount === 0;
                         const label = getVariantSizeLabel(variant) || 'Default';
                         return (
