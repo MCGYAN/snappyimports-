@@ -12,6 +12,7 @@ import {
   parseExchangeCountryCode,
   resolvePayAccounts,
 } from '@/lib/exchange-corridors';
+import { invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
 
 type Props = {
   exchange: {
@@ -72,27 +73,35 @@ function PaymentAccountsBlock({
   accounts,
   countryName,
   withCopy,
+  pinnedBottom,
 }: {
   accounts: BankAccount[];
   countryName: string;
   withCopy?: boolean;
+  pinnedBottom?: boolean;
 }) {
+  const footerClass = pinnedBottom
+    ? invoicePaymentFooterClass
+    : withCopy
+      ? 'mt-3 pt-2 leading-normal'
+      : 'mt-2 pt-1.5 leading-normal';
+
   return (
-    <div className={withCopy ? 'mt-3 pt-2' : 'mt-2 pt-1.5'}>
+    <div className={footerClass}>
       <p className="font-bold uppercase tracking-wide">Payment details ({countryName}):</p>
-      <p className="mt-0.5">
+      <p className="mt-1">
         Account holder: {accounts[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
       </p>
       <p className="mt-0.5 text-[10px]">
         Pay only these {countryName} accounts for this Buy RMB invoice.
       </p>
-      <div className={withCopy ? 'mt-1 space-y-1.5' : 'mt-0.5 space-y-0.5'}>
+      <div className={withCopy ? 'mt-1 space-y-1.5' : 'mt-1.5 space-y-1.5'}>
         {accounts.map((acc) => (
-          <p key={`${acc.bank}-${acc.accountNumber}`}>
+          <p key={`${acc.bank}-${acc.accountNumber}`} className="leading-normal">
             {acc.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {acc.bank}
             {acc.branch ? ` (${acc.branch})` : ''}
             {acc.registeredName ? `, Reg: ${acc.registeredName}` : ''}, Account No.:{' '}
-            <span className="font-mono font-semibold">{acc.accountNumber}</span>
+            <span className="font-semibold tabular-nums tracking-wide">{acc.accountNumber}</span>
             {withCopy ? <InlineCopy value={acc.accountNumber} /> : null}
           </p>
         ))}
@@ -243,7 +252,8 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
         <PaymentAccountsBlock accounts={accounts} countryName={meta.name} withCopy />
       </div>
 
-      <div className="invoice-official hidden text-[11px] leading-snug text-black">
+      <div className={`invoice-official hidden text-[11px] leading-snug text-black ${invoiceOfficialPageClass}`}>
+        <div className="flex-1">
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
             <img
@@ -359,8 +369,9 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             </tbody>
           </table>
         </div>
+        </div>
 
-        <PaymentAccountsBlock accounts={accounts} countryName={meta.name} />
+        <PaymentAccountsBlock accounts={accounts} countryName={meta.name} pinnedBottom />
       </div>
 
       <style jsx global>{`
@@ -369,7 +380,8 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             display: none !important;
           }
           #exchange-invoice-print .invoice-official {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
         }
       `}</style>

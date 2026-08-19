@@ -6,6 +6,7 @@ import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details'
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
+import { invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
 type InvoiceItem = {
@@ -80,6 +81,73 @@ function InlineCopy({ value }: { value: string }) {
       {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
       <span>{copied ? 'Copied' : 'Copy'}</span>
     </button>
+  );
+}
+
+function PaymentDetailsSection({ withCopy }: { withCopy?: boolean }) {
+  return (
+    <div className={withCopy ? 'pt-2 leading-normal' : invoicePaymentFooterClass}>
+      <p className="font-bold uppercase tracking-wide">Payment details:</p>
+      <p className="mt-1">
+        Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
+      </p>
+      <div className="mt-1.5 space-y-1.5">
+        {SNAPPY_BANK_ACCOUNTS.map((acc) => (
+          <p key={acc.accountNumber} className="leading-normal">
+            {acc.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {acc.bank}
+            {acc.branch ? ` (${acc.branch})` : ''}
+            {acc.registeredName ? `, Reg: ${acc.registeredName}` : ''}, Account No.:{' '}
+            <span className="font-semibold tabular-nums tracking-wide">{acc.accountNumber}</span>
+            {withCopy ? <InlineCopy value={acc.accountNumber} /> : null}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InvoiceTotalsTable({
+  order,
+  currency,
+  paymentLabel,
+  compact,
+}: {
+  order: Props['order'];
+  currency: string;
+  paymentLabel: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="mt-3 flex justify-end">
+      <table className={`border-collapse ${compact ? 'w-64 text-[11px]' : 'w-full max-w-[18rem]'}`}>
+        <tbody>
+          <tr>
+            <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
+            <td className="py-px text-right capitalize">{paymentLabel}</td>
+          </tr>
+          <tr>
+            <td className="whitespace-nowrap py-px pr-3 font-semibold">Subtotal ({currency}):</td>
+            <td className="py-px text-right">{formatMoney(order.subtotal || 0, currency)}</td>
+          </tr>
+          <tr>
+            <td className="whitespace-nowrap py-px pr-3 font-semibold">Shipping:</td>
+            <td className="py-px text-right">
+              {(order.shipping_total || 0) === 0
+                ? 'FREE / TBA'
+                : formatMoney(order.shipping_total || 0, currency)}
+            </td>
+          </tr>
+          <tr>
+            <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
+            <td
+              className={`pt-2 text-right font-bold ${compact ? 'text-sm' : 'text-sm sm:text-base'}`}
+            >
+              {formatMoney(order.total || 0, currency)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -202,60 +270,15 @@ export default function InvoiceDocument({ order }: Props) {
           </tbody>
         </table>
 
-        {/* Totals under the items, official style */}
-        <div className="mt-3 flex justify-end">
-          <table className="w-full max-w-[18rem] border-collapse">
-            <tbody>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
-                <td className="py-px text-right capitalize">{paymentLabel}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">
-                  Subtotal ({currency}):
-                </td>
-                <td className="py-px text-right">{formatMoney(order.subtotal || 0, currency)}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Shipping:</td>
-                <td className="py-px text-right">
-                  {(order.shipping_total || 0) === 0
-                    ? 'FREE / TBA'
-                    : formatMoney(order.shipping_total || 0, currency)}
-                </td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
-                <td className="pt-2 text-right text-sm font-bold sm:text-base">
-                  {formatMoney(order.total || 0, currency)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Payment details */}
-        <div className="mt-3 pt-2">
-          <p className="font-bold uppercase tracking-wide">Payment details:</p>
-          <p className="mt-0.5">
-            Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
-          </p>
-          <div className="mt-1 space-y-1.5">
-            {SNAPPY_BANK_ACCOUNTS.map((acc) => (
-              <p key={acc.accountNumber}>
-                {acc.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {acc.bank}
-                {acc.branch ? ` (${acc.branch})` : ''}
-                {acc.registeredName ? `, Reg: ${acc.registeredName}` : ''}, Account No.:{' '}
-                <span className="font-mono font-semibold">{acc.accountNumber}</span>
-                <InlineCopy value={acc.accountNumber} />
-              </p>
-            ))}
-          </div>
-        </div>
+        <InvoiceTotalsTable order={order} currency={currency} paymentLabel={paymentLabel} />
+        <PaymentDetailsSection withCopy />
       </div>
 
       {/* ─── Official PDF / print layout (fixed A4 structure, no buttons) ─── */}
-      <div className="invoice-official hidden text-[11px] leading-snug text-black">
+      <div
+        className={`invoice-official hidden text-[11px] leading-snug text-black ${invoiceOfficialPageClass}`}
+      >
+        <div className="flex-1">
         {/* Header band: logo + INVOICE on one row, issuer packed beside it */}
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
@@ -349,52 +372,15 @@ export default function InvoiceDocument({ order }: Props) {
           </tbody>
         </table>
 
-        {/* Totals under the items, official style */}
-        <div className="mt-3 flex justify-end">
-          <table className="w-64 border-collapse text-[11px]">
-            <tbody>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Payment method:</td>
-                <td className="py-px text-right capitalize">{paymentLabel}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Subtotal ({currency}):</td>
-                <td className="py-px text-right">{formatMoney(order.subtotal || 0, currency)}</td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap py-px pr-3 font-semibold">Shipping:</td>
-                <td className="py-px text-right">
-                  {(order.shipping_total || 0) === 0
-                    ? 'FREE / TBA'
-                    : formatMoney(order.shipping_total || 0, currency)}
-                </td>
-              </tr>
-              <tr>
-                <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
-                <td className="pt-2 text-right text-sm font-bold">
-                  {formatMoney(order.total || 0, currency)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <InvoiceTotalsTable
+            order={order}
+            currency={currency}
+            paymentLabel={paymentLabel}
+            compact
+          />
         </div>
 
-        <div className="mt-3 pt-1.5">
-          <p className="font-bold uppercase tracking-wide">Payment details:</p>
-          <p className="mt-0.5">
-            Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
-          </p>
-          <div className="mt-0.5 space-y-0.5">
-            {SNAPPY_BANK_ACCOUNTS.map((acc) => (
-              <p key={acc.accountNumber}>
-                {acc.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {acc.bank}
-                {acc.branch ? ` (${acc.branch})` : ''}
-                {acc.registeredName ? `, Reg: ${acc.registeredName}` : ''}, Account No.:{' '}
-                <span className="font-mono font-semibold">{acc.accountNumber}</span>
-              </p>
-            ))}
-          </div>
-        </div>
+        <PaymentDetailsSection />
       </div>
 
       <style jsx global>{`
@@ -403,7 +389,8 @@ export default function InvoiceDocument({ order }: Props) {
             display: none !important;
           }
           #invoice-print .invoice-official {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
         }
       `}</style>

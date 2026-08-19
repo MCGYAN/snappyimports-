@@ -94,7 +94,12 @@ export async function downloadElementAsPdf(
 
   const clone = element.cloneNode(true) as HTMLElement;
   clone.classList.remove('hidden');
-  clone.style.display = 'block';
+  if (clone.classList.contains('flex')) {
+    clone.style.display = 'flex';
+    clone.style.flexDirection = 'column';
+  } else {
+    clone.style.display = 'block';
+  }
   inlineComputedSpacing(element, clone);
   stage.appendChild(clone);
   document.body.appendChild(stage);

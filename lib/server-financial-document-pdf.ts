@@ -241,29 +241,31 @@ export async function generateFinancialDocumentPdf(
   pdf.setFontSize(9);
   text(pdf, summaryLabel, 125, y);
   text(pdf, amount(document.amount), right, y, { align: 'right' });
-  y += 11;
+
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const paymentStartY = pageHeight - 38;
 
   pdf.setFontSize(8);
   if (receipt) {
-    text(pdf, 'PAYMENT RECEIVED', left, y);
+    text(pdf, 'PAYMENT RECEIVED', left, paymentStartY);
     pdf.setFont('helvetica', 'normal');
     const confirmation = `Snappy Imports Global confirms full payment of ${currency} ${amount(
       document.amount,
     )} for ${SERVICE_LABELS[document.flow].toLowerCase()}${
       data.reference ? ` ${data.reference}` : ''
     }. Thank you for your business.`;
-    pdf.text(pdf.splitTextToSize(confirmation, right - left), left, y + 5);
+    pdf.text(pdf.splitTextToSize(confirmation, right - left), left, paymentStartY + 5);
     pdf.setFontSize(7);
     text(
       pdf,
       'Keep this receipt. It is your proof of payment and no further amount is owed on this item.',
       left,
-      y + 14,
+      paymentStartY + 14,
     );
   } else {
-    text(pdf, 'PAYMENT DETAILS', left, y);
+    text(pdf, 'PAYMENT DETAILS', left, paymentStartY);
     pdf.setFont('helvetica', 'normal');
-    let paymentY = y + 5;
+    let paymentY = paymentStartY + 5;
     for (const account of SNAPPY_BANK_ACCOUNTS) {
       const label = account.channel === 'momo' ? 'Mobile Money' : 'Bank';
       const details = `${label}: ${account.bank}${

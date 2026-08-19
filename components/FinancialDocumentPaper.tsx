@@ -7,6 +7,7 @@ import {
   parseExchangeCountryCode,
 } from '@/lib/exchange-corridors';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
+import { invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
 import { formatMoney } from '@/lib/payment-routing';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
@@ -164,9 +165,51 @@ function Paper({
   const base = variant === 'official' ? 'text-[11px]' : 'text-xs sm:text-[13px]';
   const logoSize = variant === 'official' ? 'h-24' : 'h-20 sm:h-24';
   const titleSize = variant === 'official' ? 'text-2xl' : 'text-xl sm:text-2xl';
+  const isOfficial = variant === 'official';
+
+  const footer = isReceipt ? (
+    <div className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}>
+      <p className="font-bold uppercase tracking-wide">Payment received</p>
+      <p className="mt-1">
+        Snappy Imports Global confirms full payment of{' '}
+        {formatMoney(Number(document.amount) || 0, currency)} for{' '}
+        {SERVICE_LABELS[document.flow].toLowerCase()}
+        {data.reference ? ` ${data.reference}` : ''}. Thank you for your business.
+      </p>
+      <p className="mt-1 text-[10px] text-slate-600">
+        Keep this receipt. It is your proof of payment and no further amount is owed on this item.
+      </p>
+    </div>
+  ) : (
+    <div className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}>
+      <p className="font-bold uppercase tracking-wide">Payment details:</p>
+      <p className="mt-1">
+        Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
+      </p>
+      <div className="mt-1.5 space-y-1.5">
+        {SNAPPY_BANK_ACCOUNTS.map((account) => (
+          <p key={account.accountNumber} className="leading-normal">
+            {account.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {account.bank}
+            {account.branch ? ` (${account.branch})` : ''}
+            {account.registeredName ? `, Reg: ${account.registeredName}` : ''}, Account No.:{' '}
+            <span className="font-semibold tabular-nums tracking-wide">{account.accountNumber}</span>
+          </p>
+        ))}
+      </div>
+      {document.flow === 'shipping' ? (
+        <p className="mt-2 text-[10px] text-slate-600">
+          This cedi amount is held until the due date because the dollar rate changes. After the
+          due date, request a fresh bill from your account page.
+        </p>
+      ) : null}
+    </div>
+  );
 
   return (
-    <div className={`${base} bg-white leading-snug text-black`}>
+    <div
+      className={`${base} bg-white leading-snug text-black ${isOfficial ? invoiceOfficialPageClass : ''}`}
+    >
+      <div className={isOfficial ? 'flex-1' : undefined}>
       <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <img
@@ -296,45 +339,9 @@ function Paper({
           </tbody>
         </table>
       </div>
+      </div>
 
-      {isReceipt ? (
-        <div className="mt-3 pt-2">
-          <p className="font-bold uppercase tracking-wide">Payment received</p>
-          <p className="mt-0.5">
-            Snappy Imports Global confirms full payment of{' '}
-            {formatMoney(Number(document.amount) || 0, currency)} for{' '}
-            {SERVICE_LABELS[document.flow].toLowerCase()}
-            {data.reference ? ` ${data.reference}` : ''}. Thank you for your business.
-          </p>
-          <p className="mt-1 text-[10px] text-slate-600">
-            Keep this receipt. It is your proof of payment and no further amount is owed on this
-            item.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-3 pt-2">
-          <p className="font-bold uppercase tracking-wide">Payment details:</p>
-          <p className="mt-0.5">
-            Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
-          </p>
-          <div className="mt-1 space-y-1.5">
-            {SNAPPY_BANK_ACCOUNTS.map((account) => (
-              <p key={account.accountNumber}>
-                {account.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {account.bank}
-                {account.branch ? ` (${account.branch})` : ''}
-                {account.registeredName ? `, Reg: ${account.registeredName}` : ''}, Account No.:{' '}
-                <span className="font-mono font-semibold">{account.accountNumber}</span>
-              </p>
-            ))}
-          </div>
-          {document.flow === 'shipping' ? (
-            <p className="mt-2 text-[10px] text-slate-600">
-              This cedi amount is held until the due date because the dollar rate changes. After the
-              due date, request a fresh bill from your account page.
-            </p>
-          ) : null}
-        </div>
-      )}
+      {footer}
     </div>
   );
 }
