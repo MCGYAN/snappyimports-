@@ -232,21 +232,17 @@ export async function generateFinancialDocumentPdf(
     pdf.setFont('helvetica', 'bold');
     text(pdf, amount(line.amount), totalX, y, { align: 'right' });
     y += rowHeight;
-    pdf.setDrawColor(180);
-    pdf.line(left, y - 3, right, y - 3);
   }
 
-  y += 4;
+  y += 6;
   const summaryLabel = receipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`;
   pdf.setDrawColor(0);
-  pdf.line(125, y - 3, right, y - 3);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
   text(pdf, summaryLabel, 125, y);
   text(pdf, amount(document.amount), right, y, { align: 'right' });
   y += 11;
 
-  pdf.line(left, y - 4, right, y - 4);
   pdf.setFontSize(8);
   if (receipt) {
     text(pdf, 'PAYMENT RECEIVED', left, y);

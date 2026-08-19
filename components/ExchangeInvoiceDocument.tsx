@@ -78,7 +78,7 @@ function PaymentAccountsBlock({
   withCopy?: boolean;
 }) {
   return (
-    <div className={withCopy ? 'mt-3 border-t border-black pt-2' : 'mt-2 border-t border-black pt-1.5'}>
+    <div className={withCopy ? 'mt-3 pt-2' : 'mt-2 pt-1.5'}>
       <p className="font-bold uppercase tracking-wide">Payment details ({countryName}):</p>
       <p className="mt-0.5">
         Account holder: {accounts[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
@@ -202,7 +202,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-slate-300 align-top">
+            <tr className="align-top">
               <td className="py-1.5 pr-2">
                 <span className="font-medium">{description}</span>
                 <span className="block text-[10px] text-slate-600 sm:text-[11px]">
@@ -219,7 +219,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
           </tbody>
         </table>
 
-        <div className="mt-1.5 flex justify-end">
+        <div className="mt-3 flex justify-end">
           <table className="w-full max-w-[18rem] border-collapse">
             <tbody>
               <tr>
@@ -231,10 +231,8 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
                 <td className="py-px text-right">{formatAmount(amountTo)} RMB</td>
               </tr>
               <tr>
-                <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1 font-bold">
-                  TOTAL DUE ({currency})
-                </td>
-                <td className="border-t border-black py-0.5 pt-1 text-right text-sm font-bold sm:text-base">
+                <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
+                <td className="pt-2 text-right text-sm font-bold sm:text-base">
                   {formatMoney(amountFrom, currency)}
                 </td>
               </tr>
@@ -324,7 +322,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-slate-300 align-top">
+            <tr className="align-top">
               <td className="py-1 pr-2">
                 <span className="font-medium">{description}</span>
                 <span className="block text-[10px]">
@@ -341,7 +339,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
           </tbody>
         </table>
 
-        <div className="mt-1 flex justify-end">
+        <div className="mt-3 flex justify-end">
           <table className="w-64 border-collapse text-[11px]">
             <tbody>
               <tr>
@@ -353,10 +351,8 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
                 <td className="py-px text-right">{formatAmount(amountTo)} RMB</td>
               </tr>
               <tr>
-                <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1 font-bold">
-                  TOTAL DUE ({currency})
-                </td>
-                <td className="border-t border-black py-0.5 pt-1 text-right text-sm font-bold">
+                <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
+                <td className="pt-2 text-right text-sm font-bold">
                   {formatMoney(amountFrom, currency)}
                 </td>
               </tr>

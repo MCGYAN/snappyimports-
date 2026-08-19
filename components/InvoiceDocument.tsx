@@ -181,7 +181,7 @@ export default function InvoiceDocument({ order }: Props) {
             {items.map((item, i) => {
               const variantLabel = itemVariantLabel(item);
               return (
-                <tr key={i} className="border-b border-slate-300 align-top">
+                <tr key={i} className="align-top">
                   <td className="py-1.5 pr-2">
                     <span className="font-medium">{item.product_name}</span>
                     {variantLabel ? (
@@ -203,7 +203,7 @@ export default function InvoiceDocument({ order }: Props) {
         </table>
 
         {/* Totals under the items, official style */}
-        <div className="mt-1.5 flex justify-end">
+        <div className="mt-3 flex justify-end">
           <table className="w-full max-w-[18rem] border-collapse">
             <tbody>
               <tr>
@@ -225,10 +225,8 @@ export default function InvoiceDocument({ order }: Props) {
                 </td>
               </tr>
               <tr>
-                <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1 font-bold">
-                  TOTAL DUE ({currency})
-                </td>
-                <td className="border-t border-black py-0.5 pt-1 text-right text-sm font-bold sm:text-base">
+                <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
+                <td className="pt-2 text-right text-sm font-bold sm:text-base">
                   {formatMoney(order.total || 0, currency)}
                 </td>
               </tr>
@@ -237,7 +235,7 @@ export default function InvoiceDocument({ order }: Props) {
         </div>
 
         {/* Payment details */}
-        <div className="mt-3 border-t border-black pt-2">
+        <div className="mt-3 pt-2">
           <p className="font-bold uppercase tracking-wide">Payment details:</p>
           <p className="mt-0.5">
             Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
@@ -335,7 +333,7 @@ export default function InvoiceDocument({ order }: Props) {
             {items.map((item, i) => {
               const variantLabel = itemVariantLabel(item);
               return (
-                <tr key={i} className="border-b border-slate-300 align-top">
+                <tr key={i} className="align-top">
                   <td className="py-1 pr-2">
                     <span className="font-medium">{item.product_name}</span>
                     {variantLabel ? <span className="text-[10px]"> ({variantLabel})</span> : null}
@@ -352,7 +350,7 @@ export default function InvoiceDocument({ order }: Props) {
         </table>
 
         {/* Totals under the items, official style */}
-        <div className="mt-1 flex justify-end">
+        <div className="mt-3 flex justify-end">
           <table className="w-64 border-collapse text-[11px]">
             <tbody>
               <tr>
@@ -372,10 +370,8 @@ export default function InvoiceDocument({ order }: Props) {
                 </td>
               </tr>
               <tr>
-                <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1 font-bold">
-                  TOTAL DUE ({currency})
-                </td>
-                <td className="border-t border-black py-0.5 pt-1 text-right text-sm font-bold">
+                <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
+                <td className="pt-2 text-right text-sm font-bold">
                   {formatMoney(order.total || 0, currency)}
                 </td>
               </tr>
@@ -383,7 +379,7 @@ export default function InvoiceDocument({ order }: Props) {
           </table>
         </div>
 
-        <div className="mt-2 border-t border-black pt-1.5">
+        <div className="mt-3 pt-1.5">
           <p className="font-bold uppercase tracking-wide">Payment details:</p>
           <p className="mt-0.5">
             Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}

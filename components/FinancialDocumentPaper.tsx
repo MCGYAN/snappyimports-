@@ -249,7 +249,7 @@ function Paper({
         </thead>
         <tbody>
           {lines.map((line, index) => (
-            <tr key={`${line.description}-${index}`} className="border-b border-slate-300 align-top">
+            <tr key={`${line.description}-${index}`} className="align-top">
               <td className="py-1.5 pr-2">
                 <span className="font-medium">{line.description}</span>
                 {line.detail ? (
@@ -266,7 +266,7 @@ function Paper({
         </tbody>
       </table>
 
-      <div className="mt-1.5 flex justify-end">
+      <div className="mt-3 flex justify-end">
         <table className="w-full max-w-[18rem] border-collapse">
           <tbody>
             {data.payment_method ? (
@@ -286,10 +286,10 @@ function Paper({
               </tr>
             ) : null}
             <tr>
-              <td className="whitespace-nowrap border-t border-black py-0.5 pr-3 pt-1 font-bold">
+              <td className="whitespace-nowrap pt-2 pr-3 font-bold">
                 {isReceipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`}
               </td>
-              <td className="border-t border-black py-0.5 pt-1 text-right text-sm font-bold sm:text-base">
+              <td className="pt-2 text-right text-sm font-bold sm:text-base">
                 {formatMoney(Number(document.amount) || 0, currency)}
               </td>
             </tr>
@@ -298,7 +298,7 @@ function Paper({
       </div>
 
       {isReceipt ? (
-        <div className="mt-3 border-t border-black pt-2">
+        <div className="mt-3 pt-2">
           <p className="font-bold uppercase tracking-wide">Payment received</p>
           <p className="mt-0.5">
             Snappy Imports Global confirms full payment of{' '}
@@ -312,7 +312,7 @@ function Paper({
           </p>
         </div>
       ) : (
-        <div className="mt-3 border-t border-black pt-2">
+        <div className="mt-3 pt-2">
           <p className="font-bold uppercase tracking-wide">Payment details:</p>
           <p className="mt-0.5">
             Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
