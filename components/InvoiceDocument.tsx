@@ -8,8 +8,12 @@ import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import {
   invoiceBodyClass,
+  invoiceOfficialMultiPageClass,
   invoiceOfficialPageClass,
   invoicePaymentFooterClass,
+  invoicePaymentFooterMultiClass,
+  resolveInvoicePdfMode,
+  type InvoicePdfMode,
 } from '@/lib/invoice-layout';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
@@ -88,11 +92,23 @@ function InlineCopy({ value }: { value: string }) {
   );
 }
 
-function PaymentDetailsSection({ withCopy }: { withCopy?: boolean }) {
+function PaymentDetailsSection({
+  withCopy,
+  pdfMode = 'single',
+}: {
+  withCopy?: boolean;
+  pdfMode?: InvoicePdfMode;
+}) {
+  const footerClass = withCopy
+    ? 'pt-2 leading-normal'
+    : pdfMode === 'multi'
+      ? invoicePaymentFooterMultiClass
+      : invoicePaymentFooterClass;
+
   return (
     <div
       {...(!withCopy ? { 'data-invoice-footer': '' } : {})}
-      className={withCopy ? 'pt-2 leading-normal' : invoicePaymentFooterClass}
+      className={footerClass}
     >
       <p className="font-bold uppercase tracking-wide">Payment details:</p>
       <p className="mt-1">
@@ -170,6 +186,8 @@ export default function InvoiceDocument({ order }: Props) {
   );
   const paymentLabel =
     order.payment_method === 'invoice' ? 'Bank Transfer' : order.payment_method || '—';
+  const pdfMode = resolveInvoicePdfMode(items.length);
+  const isSinglePage = pdfMode === 'single';
 
   return (
     <div id="invoice-print" className="bg-white text-slate-900">
@@ -279,10 +297,13 @@ export default function InvoiceDocument({ order }: Props) {
 
       {/* ─── Official PDF / print layout (fixed A4 structure, no buttons) ─── */}
       <div
-        className={`invoice-official hidden text-[11px] leading-snug text-black ${invoiceOfficialPageClass}`}
-        data-invoice-a4=""
+        className={`invoice-official hidden text-[11px] leading-snug text-black ${
+          isSinglePage ? invoiceOfficialPageClass : invoiceOfficialMultiPageClass
+        }`}
+        data-invoice-mode={pdfMode}
+        {...(isSinglePage ? { 'data-invoice-a4': '' } : {})}
       >
-        <div className={invoiceBodyClass}>
+        <div className={isSinglePage ? invoiceBodyClass : undefined}>
         {/* Header band: logo + INVOICE on one row, issuer packed beside it */}
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
@@ -384,7 +405,7 @@ export default function InvoiceDocument({ order }: Props) {
           />
         </div>
 
-        <PaymentDetailsSection />
+        <PaymentDetailsSection pdfMode={pdfMode} />
       </div>
 
       <style jsx global>{`
@@ -395,10 +416,13 @@ export default function InvoiceDocument({ order }: Props) {
           #invoice-print .invoice-official {
             display: block !important;
             position: relative !important;
+            overflow: visible !important;
+          }
+          #invoice-print .invoice-official[data-invoice-mode='single'] {
             height: 1043px !important;
             overflow: hidden !important;
           }
-          #invoice-print [data-invoice-footer] {
+          #invoice-print .invoice-official[data-invoice-mode='single'] [data-invoice-footer] {
             position: absolute !important;
             left: 0 !important;
             right: 0 !important;

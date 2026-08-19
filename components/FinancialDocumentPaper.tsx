@@ -7,7 +7,14 @@ import {
   parseExchangeCountryCode,
 } from '@/lib/exchange-corridors';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
-import { invoiceBodyClass, invoiceOfficialPageClass, invoicePaymentFooterClass } from '@/lib/invoice-layout';
+import {
+  invoiceBodyClass,
+  invoiceOfficialMultiPageClass,
+  invoiceOfficialPageClass,
+  invoicePaymentFooterClass,
+  invoicePaymentFooterMultiClass,
+  resolveInvoicePdfMode,
+} from '@/lib/invoice-layout';
 import { formatMoney } from '@/lib/payment-routing';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
@@ -166,11 +173,17 @@ function Paper({
   const logoSize = variant === 'official' ? 'h-24' : 'h-20 sm:h-24';
   const titleSize = variant === 'official' ? 'text-2xl' : 'text-xl sm:text-2xl';
   const isOfficial = variant === 'official';
+  const pdfMode = isOfficial ? resolveInvoicePdfMode(lines.length) : 'single';
+  const isSinglePage = pdfMode === 'single';
+
+  const officialFooterClass = isSinglePage
+    ? invoicePaymentFooterClass
+    : invoicePaymentFooterMultiClass;
 
   const footer = isReceipt ? (
     <div
       {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
-      className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}
+      className={isOfficial ? officialFooterClass : 'mt-3 pt-2 leading-normal'}
     >
       <p className="font-bold uppercase tracking-wide">Payment received</p>
       <p className="mt-1">
@@ -186,7 +199,7 @@ function Paper({
   ) : (
     <div
       {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
-      className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}
+      className={isOfficial ? officialFooterClass : 'mt-3 pt-2 leading-normal'}
     >
       <p className="font-bold uppercase tracking-wide">Payment details:</p>
       <p className="mt-1">
@@ -213,10 +226,17 @@ function Paper({
 
   return (
     <div
-      className={`${base} bg-white leading-snug text-black ${isOfficial ? invoiceOfficialPageClass : ''}`}
-      {...(isOfficial ? { 'data-invoice-a4': '' } : {})}
+      className={`${base} bg-white leading-snug text-black ${
+        isOfficial
+          ? isSinglePage
+            ? invoiceOfficialPageClass
+            : invoiceOfficialMultiPageClass
+          : ''
+      }`}
+      {...(isOfficial ? { 'data-invoice-mode': pdfMode } : {})}
+      {...(isOfficial && isSinglePage ? { 'data-invoice-a4': '' } : {})}
     >
-      <div className={isOfficial ? invoiceBodyClass : undefined}>
+      <div className={isOfficial && isSinglePage ? invoiceBodyClass : undefined}>
       <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <img

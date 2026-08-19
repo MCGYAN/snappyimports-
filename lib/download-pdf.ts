@@ -3,7 +3,9 @@
 import {
   INVOICE_A4_ATTR,
   INVOICE_FOOTER_ATTR,
+  INVOICE_MODE_ATTR,
   INVOICE_PAGE_HEIGHT_PX,
+  type InvoicePdfMode,
 } from '@/lib/invoice-layout';
 
 /** A4 proportions at 96dpi. Rendering at this fixed width means phones and
@@ -80,15 +82,26 @@ function inlineComputedSpacing(source: HTMLElement, clone: HTMLElement): void {
 }
 
 function findInvoicePageRoot(node: HTMLElement): HTMLElement | null {
-  if (node.hasAttribute(INVOICE_A4_ATTR)) return node;
-  return node.querySelector<HTMLElement>(`[${INVOICE_A4_ATTR}]`);
+  if (node.hasAttribute(INVOICE_A4_ATTR) || node.hasAttribute(INVOICE_MODE_ATTR)) return node;
+  return node.querySelector<HTMLElement>(`[${INVOICE_A4_ATTR}], [${INVOICE_MODE_ATTR}]`);
+}
+
+function getInvoiceCaptureMode(clone: HTMLElement): InvoicePdfMode | null {
+  const pageRoot = findInvoicePageRoot(clone);
+  if (!pageRoot) return null;
+  const mode = pageRoot.getAttribute(INVOICE_MODE_ATTR);
+  if (mode === 'multi') return 'multi';
+  if (pageRoot.hasAttribute(INVOICE_A4_ATTR) || mode === 'single') return 'single';
+  return null;
 }
 
 /**
  * html2canvas ignores flex footers. Pin payment details with absolute positioning
- * inside a fixed-height A4 page so downloads always match print layout.
+ * inside a fixed-height A4 page so short invoices match print layout.
  */
-function prepareInvoiceForCapture(clone: HTMLElement): boolean {
+function prepareSinglePageInvoiceForCapture(clone: HTMLElement): boolean {
+  if (getInvoiceCaptureMode(clone) !== 'single') return false;
+
   const pageRoot = findInvoicePageRoot(clone);
   if (!pageRoot) return false;
 
@@ -138,7 +151,8 @@ export async function downloadElementAsPdf(
   clone.classList.remove('hidden');
   clone.style.display = 'block';
   inlineComputedSpacing(element, clone);
-  const singlePageInvoice = prepareInvoiceForCapture(clone);
+  const captureMode = getInvoiceCaptureMode(clone);
+  const singlePageInvoice = prepareSinglePageInvoiceForCapture(clone);
   stage.appendChild(clone);
   document.body.appendChild(stage);
 
@@ -185,16 +199,7 @@ export async function downloadElementAsPdf(
         usableWidth,
         usableHeight,
       );
-    } else if (fullHeightMm <= usableHeight) {
-      pdf.addImage(
-        canvas.toDataURL('image/png'),
-        'PNG',
-        margin,
-        margin,
-        usableWidth,
-        fullHeightMm,
-      );
-    } else {
+    } else if (captureMode === 'multi' || fullHeightMm > usableHeight) {
       const slicePxHeight = Math.floor((usableHeight / usableWidth) * canvas.width);
       let renderedPx = 0;
       let pageIndex = 0;
@@ -234,6 +239,15 @@ export async function downloadElementAsPdf(
         renderedPx += currentSlicePx;
         pageIndex += 1;
       }
+    } else {
+      pdf.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        margin,
+        margin,
+        usableWidth,
+        fullHeightMm,
+      );
     }
 
     const safeName = filename.replace(/[^\w.\-]+/g, '_');

@@ -14,8 +14,10 @@ import {
 } from '@/lib/exchange-corridors';
 import {
   invoiceBodyClass,
+  invoiceOfficialMultiPageClass,
   invoiceOfficialPageClass,
   invoicePaymentFooterClass,
+  resolveInvoicePdfMode,
 } from '@/lib/invoice-layout';
 
 type Props = {
@@ -135,6 +137,8 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
     { country_code: country, pay_accounts: [] },
     exchange.metadata?.pay_accounts,
   );
+  const pdfMode = resolveInvoicePdfMode(1);
+  const isSinglePage = pdfMode === 'single';
 
   return (
     <div id="exchange-invoice-print" className="bg-white text-slate-900">
@@ -260,10 +264,13 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
       </div>
 
       <div
-        className={`invoice-official hidden text-[11px] leading-snug text-black ${invoiceOfficialPageClass}`}
-        data-invoice-a4=""
+        className={`invoice-official hidden text-[11px] leading-snug text-black ${
+          isSinglePage ? invoiceOfficialPageClass : invoiceOfficialMultiPageClass
+        }`}
+        data-invoice-mode={pdfMode}
+        {...(isSinglePage ? { 'data-invoice-a4': '' } : {})}
       >
-        <div className={invoiceBodyClass}>
+        <div className={isSinglePage ? invoiceBodyClass : undefined}>
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
             <img
@@ -388,10 +395,13 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
           #exchange-invoice-print .invoice-official {
             display: block !important;
             position: relative !important;
+            overflow: visible !important;
+          }
+          #exchange-invoice-print .invoice-official[data-invoice-mode='single'] {
             height: 1043px !important;
             overflow: hidden !important;
           }
-          #exchange-invoice-print [data-invoice-footer] {
+          #exchange-invoice-print .invoice-official[data-invoice-mode='single'] [data-invoice-footer] {
             position: absolute !important;
             left: 0 !important;
             right: 0 !important;
