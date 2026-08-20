@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { formatStoreMoney } from '@/lib/currency';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
-
-type HistoryKind = 'shop' | 'rmb';
+import { isPastRmbOrder, isPastShopOrder } from '@/lib/account-order-status';
 
 interface ShopOrder {
   kind: 'shop';
@@ -41,11 +40,7 @@ interface RmbOrder {
 
 type HistoryItem = ShopOrder | RmbOrder;
 
-function formatStatusLabel(status: string) {
-  if (status === 'shipped') return 'Packaged';
-  return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
-}
-
+/** Archive only. No live status. Active tracking lives in Order status. */
 export default function OrderHistory() {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +48,9 @@ export default function OrderHistory() {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (!session) return;
 
         if (session.access_token) {
@@ -87,43 +84,47 @@ export default function OrderHistory() {
         if (shopRes.error) throw shopRes.error;
         if (rmbRes.error) throw rmbRes.error;
 
-        const shopOrders: ShopOrder[] = (shopRes.data || []).map((order: any) => ({
-          kind: 'shop' as const,
-          id: order.id,
-          orderNumber: order.order_number,
-          email: order.email || session.user.email || '',
-          date: order.created_at,
-          status: order.status,
-          paymentStatus: order.payment_status,
-          total: order.total,
-          items: (order.order_items || []).map((item: any) => ({
-            id: item.id,
-            name: item.product_name,
-            image: item.metadata?.image || 'https://via.placeholder.com/150',
-            quantity: item.quantity,
-            price: item.unit_price,
-            variant: cleanVariantDisplayLabel(item.variant_name) || undefined,
-          })),
-        }));
+        const shopOrders: ShopOrder[] = (shopRes.data || [])
+          .filter((order: any) => isPastShopOrder(order))
+          .map((order: any) => ({
+            kind: 'shop' as const,
+            id: order.id,
+            orderNumber: order.order_number,
+            email: order.email || session.user.email || '',
+            date: order.created_at,
+            status: order.status,
+            paymentStatus: order.payment_status,
+            total: order.total,
+            items: (order.order_items || []).map((item: any) => ({
+              id: item.id,
+              name: item.product_name,
+              image: item.metadata?.image || 'https://via.placeholder.com/150',
+              quantity: item.quantity,
+              price: item.unit_price,
+              variant: cleanVariantDisplayLabel(item.variant_name) || undefined,
+            })),
+          }));
 
-        const rmbOrders: RmbOrder[] = (rmbRes.data || []).map((ex: any) => ({
-          kind: 'rmb' as const,
-          id: ex.id,
-          exchangeNumber: ex.exchange_number,
-          phone: ex.phone || '',
-          date: ex.created_at,
-          status: ex.status,
-          amountFrom: Number(ex.amount_from),
-          amountTo: Number(ex.amount_to),
-          rate: Number(ex.rate),
-        }));
+        const rmbOrders: RmbOrder[] = (rmbRes.data || [])
+          .filter((ex: any) => isPastRmbOrder(ex))
+          .map((ex: any) => ({
+            kind: 'rmb' as const,
+            id: ex.id,
+            exchangeNumber: ex.exchange_number,
+            phone: ex.phone || '',
+            date: ex.created_at,
+            status: ex.status,
+            amountFrom: Number(ex.amount_from),
+            amountTo: Number(ex.amount_to),
+            rate: Number(ex.rate),
+          }));
 
         const merged = [...shopOrders, ...rmbOrders].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
         setItems(merged);
       } catch (err) {
-        console.error('Error fetching order history:', err);
+        console.error('Error fetching past orders:', err);
       } finally {
         setLoading(false);
       }
@@ -132,94 +133,51 @@ export default function OrderHistory() {
     fetchHistory();
   }, []);
 
-  const getStatusColor = (status: string, kind: HistoryKind) => {
-    if (kind === 'rmb') {
-      switch (status) {
-        case 'completed':
-          return 'bg-green-100 text-green-700';
-        case 'confirmed':
-          return 'bg-brand-light text-brand-primary';
-        case 'payment_sent':
-          return 'bg-yellow-100 text-yellow-700';
-        case 'expired':
-          return 'bg-red-100 text-red-700';
-        default:
-          return 'bg-gray-100 text-gray-700';
-      }
-    }
-
-    switch (status) {
-      case 'delivered':
-        return 'bg-green-100 text-green-700';
-      case 'shipped':
-        return 'bg-brand-light text-brand-primary';
-      case 'processing':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'cancelled':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const handleReorder = (order: ShopOrder) => {
-    console.log('Reordering:', order);
-    alert('Reorder feature coming soon!');
-  };
-
   if (loading) {
     return (
       <div className="py-8 text-center">
         <i className="ri-loader-4-line animate-spin text-3xl text-brand-primary"></i>
-        <p className="mt-2 text-gray-500">Loading orders...</p>
+        <p className="mt-2 text-gray-500">Loading past orders…</p>
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="py-12 text-center bg-white rounded-lg border border-gray-200">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <i className="ri-shopping-bag-line text-3xl text-gray-400"></i>
+      <div className="rounded-lg border border-gray-200 bg-white py-12 text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+          <i className="ri-archive-line text-3xl text-gray-400"></i>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">No orders yet</h3>
-        <p className="text-gray-500 mb-6">
-          Shop orders and Buy RMB invoices show up here in one place.
+        <h3 className="mb-1 text-lg font-semibold text-gray-900">No past orders yet</h3>
+        <p className="mb-6 text-gray-500">
+          Finished and cancelled orders appear here. Live progress is only in{' '}
+          <Link href="/account?tab=status" className="font-semibold text-brand-primary underline">
+            Order status
+          </Link>
+          .
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/shop"
-            className="inline-block bg-brand-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-[#0d2747] transition-colors"
-          >
-            Go to Shop
-          </Link>
-          <Link
-            href="/exchange"
-            className="inline-block border-2 border-gray-300 text-gray-900 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-          >
-            Buy RMB
-          </Link>
-        </div>
+        <Link
+          href="/account?tab=status"
+          className="inline-block rounded-lg bg-brand-primary px-6 py-2 font-medium text-white hover:bg-[#0d2747]"
+        >
+          Open Order status
+        </Link>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Past orders</h2>
         <div className="text-sm text-gray-600">
           Total: <span className="font-bold text-gray-900">{items.length}</span>
         </div>
       </div>
       <p className="mb-6 text-sm text-gray-500">
-        What you ordered. For live progress open{' '}
+        Archive of finished shop and Buy RMB orders. No live status here. Track active work in{' '}
         <Link href="/account?tab=status" className="font-semibold text-brand-primary underline">
           Order status
-        </Link>
-        . Bills and receipts live in{' '}
-        <Link href="/account?tab=documents" className="font-semibold text-brand-primary underline">
-          Invoices and receipts
         </Link>
         .
       </p>
@@ -227,20 +185,23 @@ export default function OrderHistory() {
       <div className="space-y-6">
         {items.map((item) =>
           item.kind === 'shop' ? (
-            <div key={`shop-${item.id}`} className="bg-white border-2 border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-4">
-                  <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
+            <div
+              key={`shop-${item.id}`}
+              className="overflow-hidden rounded-lg border-2 border-gray-200 bg-white"
+            >
+              <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                <div className="flex flex-col flex-wrap items-start justify-between gap-4 sm:flex-row sm:items-center">
+                  <div className="flex w-full flex-col flex-wrap items-start gap-4 sm:w-auto sm:flex-row sm:items-center sm:gap-6">
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">Type</p>
+                      <p className="mb-1 text-xs text-gray-600">Type</p>
                       <p className="font-semibold text-brand-primary">Shop order</p>
                     </div>
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">Order Number</p>
+                      <p className="mb-1 text-xs text-gray-600">Order number</p>
                       <p className="font-bold text-gray-900">{item.orderNumber}</p>
                     </div>
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">Date</p>
+                      <p className="mb-1 text-xs text-gray-600">Date</p>
                       <p className="font-semibold text-gray-900">
                         {new Date(item.date).toLocaleDateString('en-GB', {
                           day: 'numeric',
@@ -250,103 +211,80 @@ export default function OrderHistory() {
                       </p>
                     </div>
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">Total</p>
-                      <p className="font-bold text-brand-primary">{formatStoreMoney(item.total)}</p>
+                      <p className="mb-1 text-xs text-gray-600">Total</p>
+                      <p className="font-bold text-brand-primary">
+                        {formatStoreMoney(item.total)}
+                      </p>
                     </div>
-                  </div>
-                  <div className="w-full sm:w-auto">
-                    <span
-                      className={`inline-block px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap ${getStatusColor(item.status, 'shop')}`}
-                    >
-                      {formatStatusLabel(item.status)}
-                    </span>
                   </div>
                 </div>
               </div>
 
               <div className="p-6">
-                <div className="space-y-4 mb-4">
+                <div className="mb-4 space-y-4">
                   {item.items.map((line) => (
                     <div key={line.id} className="flex space-x-4">
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
+                      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
                         <img
                           src={line.image}
                           alt={line.name}
-                          className="w-full h-full object-cover object-center"
+                          className="h-full w-full object-cover object-center"
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900 mb-1">{line.name}</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="mb-1 font-semibold text-gray-900">{line.name}</h4>
                         {line.variant ? (
                           <p className="text-sm font-semibold text-brand-primary">{line.variant}</p>
                         ) : null}
                         <p className="text-sm text-gray-600">Quantity: {line.quantity}</p>
-                        <p className="text-sm font-bold text-gray-900 mt-1">{formatStoreMoney(line.price)}</p>
+                        <p className="mt-1 text-sm font-bold text-gray-900">
+                          {formatStoreMoney(line.price)}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-gray-200">
-                  {item.paymentStatus === 'paid' ? (
-                    <>
-                      <Link
-                        href={`/account?tab=status&order=${encodeURIComponent(item.orderNumber)}`}
-                        className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
-                      >
-                        <i className="ri-map-pin-line mr-2"></i>
-                        Order status
-                      </Link>
-                      <Link
-                        href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
-                        className="flex-1 sm:flex-none text-center px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
-                      >
-                        <i className="ri-file-list-3-line mr-2"></i>
-                        Order page
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleReorder(item)}
-                        className="flex-1 sm:flex-none px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
-                      >
-                        <i className="ri-refresh-line mr-2"></i>
-                        Reorder
-                      </button>
-                    </>
-                  ) : (
-                    <Link
-                      href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
-                      className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
-                    >
-                      <i className="ri-bank-card-line mr-2"></i>
-                      Pay now
-                    </Link>
-                  )}
+                <div className="flex flex-col flex-wrap gap-3 border-t border-gray-200 pt-4 sm:flex-row">
+                  <Link
+                    href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
+                    className="flex-1 whitespace-nowrap rounded-lg border-2 border-gray-300 px-4 py-2 text-center font-semibold text-gray-900 transition-colors hover:bg-gray-50 sm:flex-none"
+                  >
+                    View order
+                  </Link>
+                  <Link
+                    href="/account?tab=documents"
+                    className="flex-1 whitespace-nowrap rounded-lg border-2 border-gray-300 px-4 py-2 text-center font-semibold text-gray-900 transition-colors hover:bg-gray-50 sm:flex-none"
+                  >
+                    Invoices and receipts
+                  </Link>
                   <Link
                     href="/contact"
-                    className="flex-1 sm:flex-none text-center px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
+                    className="flex-1 whitespace-nowrap rounded-lg border-2 border-gray-300 px-4 py-2 text-center font-semibold text-gray-900 transition-colors hover:bg-gray-50 sm:flex-none"
                   >
-                    <i className="ri-customer-service-line mr-2"></i>
-                    Get Help
+                    Get help
                   </Link>
                 </div>
               </div>
             </div>
           ) : (
-            <div key={`rmb-${item.id}`} className="bg-white border-2 border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-4">
-                  <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
+            <div
+              key={`rmb-${item.id}`}
+              className="overflow-hidden rounded-lg border-2 border-gray-200 bg-white"
+            >
+              <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                <div className="flex flex-col flex-wrap items-start justify-between gap-4 sm:flex-row sm:items-center">
+                  <div className="flex w-full flex-col flex-wrap items-start gap-4 sm:w-auto sm:flex-row sm:items-center sm:gap-6">
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">Type</p>
+                      <p className="mb-1 text-xs text-gray-600">Type</p>
                       <p className="font-semibold text-brand-accent">Buy RMB</p>
                     </div>
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">Exchange number</p>
+                      <p className="mb-1 text-xs text-gray-600">Exchange number</p>
                       <p className="font-bold text-gray-900">{item.exchangeNumber}</p>
                     </div>
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">Date</p>
+                      <p className="mb-1 text-xs text-gray-600">Date</p>
                       <p className="font-semibold text-gray-900">
                         {new Date(item.date).toLocaleDateString('en-GB', {
                           day: 'numeric',
@@ -356,50 +294,38 @@ export default function OrderHistory() {
                       </p>
                     </div>
                     <div className="w-full sm:w-auto">
-                      <p className="text-xs text-gray-600 mb-1">You pay</p>
-                      <p className="font-bold text-brand-primary">{formatStoreMoney(item.amountFrom)}</p>
+                      <p className="mb-1 text-xs text-gray-600">You paid</p>
+                      <p className="font-bold text-brand-primary">
+                        {formatStoreMoney(item.amountFrom)}
+                      </p>
                     </div>
-                  </div>
-                  <div className="w-full sm:w-auto">
-                    <span
-                      className={`inline-block px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap ${getStatusColor(item.status, 'rmb')}`}
-                    >
-                      {formatStatusLabel(item.status)}
-                    </span>
                   </div>
                 </div>
               </div>
 
               <div className="p-6">
-                <p className="text-sm text-gray-700 mb-4">
-                  You get <span className="font-bold text-gray-900">{item.amountTo.toFixed(2)} RMB</span>
-                  {' '}at rate {item.rate.toFixed(4)}.
+                <p className="mb-4 text-sm text-gray-700">
+                  You got{' '}
+                  <span className="font-bold text-gray-900">{item.amountTo.toFixed(2)} RMB</span> at
+                  rate {item.rate.toFixed(4)}.
                 </p>
 
-                <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <div className="flex flex-col flex-wrap gap-3 border-t border-gray-200 pt-4 sm:flex-row">
                   <Link
                     href={
                       item.phone
                         ? `/exchange/${encodeURIComponent(item.exchangeNumber)}?phone=${encodeURIComponent(item.phone)}`
                         : `/exchange/${encodeURIComponent(item.exchangeNumber)}`
                     }
-                    className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
+                    className="flex-1 whitespace-nowrap rounded-lg border-2 border-gray-300 px-4 py-2 text-center font-semibold text-gray-900 transition-colors hover:bg-gray-50 sm:flex-none"
                   >
-                    <i
-                      className={`mr-2 ${
-                        ['completed', 'confirmed'].includes(item.status)
-                          ? 'ri-eye-line'
-                          : 'ri-bank-card-line'
-                      }`}
-                    ></i>
-                    {['completed', 'confirmed'].includes(item.status) ? 'View details' : 'Pay now'}
+                    View details
                   </Link>
                   <Link
                     href="/contact"
-                    className="flex-1 sm:flex-none text-center px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
+                    className="flex-1 whitespace-nowrap rounded-lg border-2 border-gray-300 px-4 py-2 text-center font-semibold text-gray-900 transition-colors hover:bg-gray-50 sm:flex-none"
                   >
-                    <i className="ri-customer-service-line mr-2"></i>
-                    Get Help
+                    Get help
                   </Link>
                 </div>
               </div>

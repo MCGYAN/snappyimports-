@@ -325,3 +325,95 @@ export function accountOrderStatusIndex(key: AccountOrderStatusKey): number {
   if (key === 'cancelled') return -1;
   return ACCOUNT_ORDER_STATUS_STEPS.findIndex((step) => step.key === key);
 }
+
+export type AccountRmbStatusKey =
+  | 'awaiting_payment'
+  | 'payment_sent'
+  | 'confirmed'
+  | 'completed'
+  | 'expired';
+
+export const ACCOUNT_RMB_STATUS_STEPS: Array<{
+  key: AccountRmbStatusKey;
+  title: string;
+  description: string;
+}> = [
+  {
+    key: 'awaiting_payment',
+    title: 'Awaiting payment',
+    description: 'Your Buy RMB invoice is open. Pay to lock this rate.',
+  },
+  {
+    key: 'payment_sent',
+    title: 'Payment sent',
+    description: 'You marked payment as sent. Snappy is confirming it.',
+  },
+  {
+    key: 'confirmed',
+    title: 'Sending your RMB',
+    description: 'Payment confirmed. Snappy is sending your RMB.',
+  },
+  {
+    key: 'completed',
+    title: 'RMB sent',
+    description: 'Your Buy RMB request is complete.',
+  },
+];
+
+export function deriveAccountRmbStatus(exchange: {
+  status?: string;
+}): {
+  key: AccountRmbStatusKey;
+  title: string;
+  description: string;
+  nextHint: string;
+} {
+  const raw = String(exchange.status || 'awaiting_payment');
+  const key = (
+    ['awaiting_payment', 'payment_sent', 'confirmed', 'completed', 'expired'].includes(raw)
+      ? raw
+      : 'awaiting_payment'
+  ) as AccountRmbStatusKey;
+
+  if (key === 'expired') {
+    return {
+      key,
+      title: 'Expired',
+      description: 'This Buy RMB rate lock expired.',
+      nextHint: 'Start a new Buy RMB request if you still need RMB.',
+    };
+  }
+
+  const step =
+    ACCOUNT_RMB_STATUS_STEPS.find((entry) => entry.key === key) || ACCOUNT_RMB_STATUS_STEPS[0];
+  const nextHint =
+    key === 'awaiting_payment'
+      ? 'Open the invoice and pay, then tap I\'ve paid.'
+      : key === 'payment_sent'
+        ? 'Hang tight while Snappy confirms your transfer.'
+        : key === 'confirmed'
+          ? 'Your RMB is being sent.'
+          : 'This Buy RMB request is finished.';
+
+  return {
+    key,
+    title: step.title,
+    description: step.description,
+    nextHint,
+  };
+}
+
+export function accountRmbStatusIndex(key: AccountRmbStatusKey): number {
+  if (key === 'expired') return -1;
+  return ACCOUNT_RMB_STATUS_STEPS.findIndex((step) => step.key === key);
+}
+
+export function isPastShopOrder(order: {
+  status?: string;
+}): boolean {
+  return order.status === 'delivered' || order.status === 'cancelled';
+}
+
+export function isPastRmbOrder(exchange: { status?: string }): boolean {
+  return exchange.status === 'completed' || exchange.status === 'expired';
+}

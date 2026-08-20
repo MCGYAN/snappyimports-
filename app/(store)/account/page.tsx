@@ -25,7 +25,7 @@ const ACCOUNT_TABS = [
 function AccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'orders';
+  const initialTab = searchParams.get('tab') || 'status';
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [user, setUser] = useState<any>(null);
@@ -36,7 +36,8 @@ function AccountContent() {
     board: any | null;
     documents: any[];
     orderStatus: any[];
-  }>({ packages: [], board: null, documents: [], orderStatus: [] });
+    rmbStatus: any[];
+  }>({ packages: [], board: null, documents: [], orderStatus: [], rmbStatus: [] });
   const [portalLoading, setPortalLoading] = useState({
     shipments: false,
     documents: false,
@@ -298,7 +299,7 @@ function AccountContent() {
                   {[
                     { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile Settings' },
                     { id: 'status', icon: 'ri-map-pin-line', label: 'Order status' },
-                    { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Order History' },
+                    { id: 'orders', icon: 'ri-archive-line', label: 'Past orders' },
                     { id: 'shipments', icon: 'ri-ship-2-line', label: 'My Shipments' },
                     { id: 'documents', icon: 'ri-file-list-3-line', label: 'Invoices & Receipts' },
                     { id: 'deliveries', icon: 'ri-calendar-check-line', label: 'Deliveries' },
@@ -326,7 +327,7 @@ function AccountContent() {
                 {[
                   { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile' },
                   { id: 'status', icon: 'ri-map-pin-line', label: 'Status' },
-                  { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Orders' },
+                  { id: 'orders', icon: 'ri-archive-line', label: 'Past' },
                   { id: 'shipments', icon: 'ri-ship-2-line', label: 'Shipments' },
                   { id: 'documents', icon: 'ri-file-list-3-line', label: 'Receipts' },
                   { id: 'deliveries', icon: 'ri-calendar-check-line', label: 'Deliveries' },
@@ -476,6 +477,7 @@ function AccountContent() {
                 {activeTab === 'status' && (
                   <OrderStatus
                     orders={portalData.orderStatus || []}
+                    rmbOrders={portalData.rmbStatus || []}
                     loading={portalLoading.status || !portalLoaded.status}
                     focusOrderNumber={searchParams.get('order')}
                   />
