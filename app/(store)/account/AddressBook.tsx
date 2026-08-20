@@ -33,11 +33,11 @@ export default function AddressBook() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Address Book</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand-primary px-4 py-2.5 font-semibold text-white transition-colors hover:bg-[#0d2747] sm:w-auto"
         >
           <i className="ri-add-line mr-2"></i>
           Add New Address

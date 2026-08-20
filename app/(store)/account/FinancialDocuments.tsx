@@ -136,12 +136,12 @@ function DocumentRow({
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${
+      className={`flex flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between ${
         highlight ? 'bg-brand-light/40' : 'bg-white'
       }`}
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-slate-900">
+        <p className="break-words font-semibold text-slate-900 sm:truncate">
           {FLOW_LABELS[row.flow] || 'Payment'}
           {row.data?.reference ? ` ${row.data.reference}` : ''}
         </p>
@@ -149,10 +149,12 @@ function DocumentRow({
           {line}. Document {row.document_number}
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-        <span className="font-bold text-brand-primary">{money(row.amount, row.currency)}</span>
+      <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
+        <span className="col-span-2 font-bold text-brand-primary sm:col-span-1">
+          {money(row.amount, row.currency)}
+        </span>
         {waitingForConfirm ? (
-          <span className="rounded-xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+          <span className="col-span-2 rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-900">
             Waiting for Snappy to confirm
           </span>
         ) : null}
@@ -161,7 +163,7 @@ function DocumentRow({
             type="button"
             onClick={onPaymentSent}
             disabled={paying || busy}
-            className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+            className="min-h-11 rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
           >
             {paying ? 'Sending…' : "I've paid"}
           </button>
@@ -170,7 +172,7 @@ function DocumentRow({
           type="button"
           onClick={onView}
           disabled={busy || paying}
-          className="rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
+          className="min-h-11 rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
         >
           {busy ? 'Opening…' : 'View'}
         </button>
@@ -178,7 +180,7 @@ function DocumentRow({
           type="button"
           onClick={onDownload}
           disabled={busy || paying}
-          className="rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
+          className="min-h-11 rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
         >
           Download
         </button>
@@ -422,18 +424,18 @@ export default function FinancialDocuments({
       ))}
 
       {viewing ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-4">
-          <div className="my-6 w-full max-w-4xl rounded-2xl bg-white shadow-2xl">
-            <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto bg-slate-950/50 p-0 sm:items-start sm:p-4">
+          <div className="my-0 w-full max-w-4xl rounded-t-2xl bg-white shadow-2xl sm:my-6 sm:rounded-2xl">
+            <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-slate-100 bg-white px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-brand-accent">
                   {viewing.document_type === 'receipt' ? 'Receipt' : 'Invoice'}
                 </p>
                 <p className="font-bold text-brand-primary">{viewing.document_number}</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                 {viewingWaiting ? (
-                  <span className="rounded-xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+                  <span className="col-span-2 rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-900 sm:col-span-1">
                     Waiting for Snappy to confirm
                   </span>
                 ) : null}
@@ -442,7 +444,7 @@ export default function FinancialDocuments({
                     type="button"
                     onClick={() => void submitShippingPayment(viewing)}
                     disabled={payingId === viewing.id}
-                    className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                    className="min-h-11 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
                   >
                     {payingId === viewing.id ? 'Sending…' : "I've paid"}
                   </button>
@@ -451,20 +453,23 @@ export default function FinancialDocuments({
                   type="button"
                   onClick={() => void downloadFromView()}
                   disabled={fetchingId === viewing.id}
-                  className="rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary disabled:opacity-50"
+                  className="min-h-11 rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary disabled:opacity-50"
                 >
                   {fetchingId === viewing.id ? 'Saving…' : 'Download PDF'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewing(null)}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600"
+                  className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600"
                 >
                   Close
                 </button>
               </div>
             </div>
-            <div ref={viewPaperRef} className="overflow-x-auto bg-slate-50 p-4 sm:p-6">
+            <div
+              ref={viewPaperRef}
+              className="max-h-[70vh] overflow-x-auto overflow-y-auto bg-slate-50 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:max-h-none sm:p-6"
+            >
               <div className="mx-auto w-[794px] max-w-none">
                 <FinancialDocumentPaper document={viewing} />
               </div>

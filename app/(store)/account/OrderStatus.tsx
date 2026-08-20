@@ -178,23 +178,25 @@ export default function OrderStatus({
                   onClick={() =>
                     setExpanded((current) => (current === row.key ? null : row.key))
                   }
-                  className="flex w-full flex-wrap items-start justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50"
+                  className="flex w-full flex-col gap-3 px-4 py-4 text-left hover:bg-slate-50 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:px-5"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold uppercase tracking-wide text-brand-accent">
                       Buy RMB
                     </p>
-                    <p className="truncate font-bold text-slate-900">{exchange.exchange_number}</p>
+                    <p className="break-all font-bold text-slate-900 sm:truncate">
+                      {exchange.exchange_number}
+                    </p>
                     <p className="mt-1 text-sm text-slate-500">
                       {Number(exchange.amount_to).toFixed(2)} RMB for{' '}
                       {formatStoreMoney(Number(exchange.amount_from))}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone.badge}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 sm:block sm:text-right">
+                    <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-bold ${tone.badge}`}>
                       Now at {status.title}
                     </span>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                    <p className="w-full text-xs font-semibold text-slate-400 sm:mt-1 sm:w-auto">
                       {isOpen ? 'Hide timeline' : 'Show timeline'}
                     </p>
                   </div>
@@ -243,14 +245,14 @@ export default function OrderStatus({
                       })}
                     </ol>
 
-                    <div className="mt-5 flex flex-wrap gap-2">
+                    <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <Link
                         href={
                           exchange.phone
                             ? `/exchange/${encodeURIComponent(exchange.exchange_number)}?phone=${encodeURIComponent(exchange.phone)}`
                             : `/exchange/${encodeURIComponent(exchange.exchange_number)}`
                         }
-                        className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white"
                       >
                         {status.key === 'awaiting_payment' || status.key === 'payment_sent'
                           ? 'Open Buy RMB invoice'
@@ -258,7 +260,7 @@ export default function OrderStatus({
                       </Link>
                       <Link
                         href="/account?tab=documents"
-                        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700"
                       >
                         Invoices and receipts
                       </Link>
@@ -291,14 +293,14 @@ export default function OrderStatus({
                 onClick={() =>
                   setExpanded((current) => (current === row.key ? null : row.key))
                 }
-                className="flex w-full flex-wrap items-start justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50"
+                className="flex w-full flex-col gap-3 px-4 py-4 text-left hover:bg-slate-50 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:px-5"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                     Shop import
                   </p>
-                  <p className="truncate font-bold text-slate-900">{order.order_number}</p>
-                  <p className="mt-1 line-clamp-1 text-sm text-slate-500">
+                  <p className="break-all font-bold text-slate-900 sm:truncate">{order.order_number}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-slate-500 sm:line-clamp-1">
                     {(order.order_items || [])
                       .map(
                         (item) =>
@@ -311,21 +313,23 @@ export default function OrderStatus({
                       .join(', ') || 'Shop order'}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="flex flex-wrap items-center justify-between gap-2 sm:block sm:text-right">
                   <p className="text-sm font-bold text-brand-primary">
                     {formatStoreMoney(order.total)}
                   </p>
-                  <span className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone.badge}`}>
+                  <span
+                    className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-bold ${tone.badge}`}
+                  >
                     Now at {status.title}
                   </span>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                  <p className="w-full text-xs font-semibold text-slate-400 sm:mt-1 sm:w-auto">
                     {isOpen ? 'Hide timeline' : 'Show timeline'}
                   </p>
                 </div>
               </button>
 
               {isOpen ? (
-                <div className="border-t border-slate-100 px-5 py-5">
+                <div className="border-t border-slate-100 px-4 py-5 sm:px-5">
                   <div className={`rounded-xl px-4 py-3 ${tone.panel}`}>
                     <p className={`text-[10px] font-bold uppercase tracking-wide ${tone.label}`}>
                       Now at
@@ -354,7 +358,7 @@ export default function OrderStatus({
                                   : 'bg-slate-200'
                             }`}
                           />
-                          <div>
+                          <div className="min-w-0">
                             <p
                               className={`text-sm font-semibold ${
                                 active ? stepTone.title : 'text-slate-800'
@@ -362,7 +366,7 @@ export default function OrderStatus({
                             >
                               {step.title}
                             </p>
-                            <p className="text-xs text-slate-500">{step.description}</p>
+                            <p className="text-xs text-slate-500 sm:text-sm">{step.description}</p>
                           </div>
                         </li>
                       );
@@ -378,15 +382,15 @@ export default function OrderStatus({
                         {packages.map((pkg) => (
                           <li
                             key={pkg.id}
-                            className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                            className="flex flex-col gap-1 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2"
                           >
-                            <span className="font-semibold text-slate-800">
+                            <span className="min-w-0 font-semibold text-slate-800">
                               {pkg.package_name}{' '}
-                              <span className="font-mono text-[10px] text-slate-400">
+                              <span className="break-all font-mono text-[10px] text-slate-400">
                                 {pkg.tracking_id}
                               </span>
                             </span>
-                            <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-orange-800">
+                            <span className="w-fit rounded-full bg-white px-2 py-1 text-xs font-semibold text-orange-800">
                               {SHIPPING_STATUS_LABELS[pkg.status as ShippingPackageStatus] ||
                                 pkg.status}
                             </span>
@@ -396,11 +400,11 @@ export default function OrderStatus({
                     </div>
                   ) : null}
 
-                  <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     {['awaiting_payment', 'payment_sent'].includes(status.key) ? (
                       <Link
                         href={`/order/${encodeURIComponent(order.order_number)}?email=${encodeURIComponent(email)}`}
-                        className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white sm:w-auto"
                       >
                         Open invoice / pay
                       </Link>
@@ -408,7 +412,7 @@ export default function OrderStatus({
                     {status.packageCount > 0 ? (
                       <Link
                         href="/account?tab=shipments"
-                        className="rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary"
                       >
                         Open My Shipments
                       </Link>
@@ -416,7 +420,7 @@ export default function OrderStatus({
                     {status.openShippingInvoiceId ? (
                       <Link
                         href={`/account?tab=documents&document=${encodeURIComponent(status.openShippingInvoiceId)}`}
-                        className="rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary"
                       >
                         Shipping bill
                       </Link>
@@ -424,14 +428,14 @@ export default function OrderStatus({
                     {['ready_for_you', 'release_goods', 'arrived_in_ghana'].includes(status.key) ? (
                       <Link
                         href="/account?tab=deliveries"
-                        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700"
                       >
                         Deliveries
                       </Link>
                     ) : null}
                     <Link
                       href={`/order/${encodeURIComponent(order.order_number)}?email=${encodeURIComponent(email)}`}
-                      className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700"
+                      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700"
                     >
                       Order page
                     </Link>

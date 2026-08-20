@@ -547,6 +547,7 @@ export default function ShippingOperationsDesk({
           { key: 'awaiting_payment', label: queueMeta.awaiting_payment.label },
           { key: 'confirm', label: queueMeta.confirm.label },
           { key: 'release', label: queueMeta.release.label },
+          { key: 'ready', label: queueMeta.ready.label },
           { key: 'all', label: queueMeta.all.label },
         ];
   const visibleJobCount = queueLabels
@@ -562,7 +563,7 @@ export default function ShippingOperationsDesk({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <section className="rounded-2xl border border-slate-200 bg-white">
       <div className="border-b border-slate-100 px-5 py-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -580,25 +581,48 @@ export default function ShippingOperationsDesk({
           </p>
         </div>
         {mode === 'shipping' ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {queueLabels.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => {
-                  setQueue(tab.key);
-                  setSelected([]);
-                  setBuilderCustomerKey('');
-                }}
-                className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-bold ${
-                  queue === tab.key
-                    ? 'bg-brand-primary text-white'
-                    : 'border border-slate-200 text-slate-600'
-                }`}
-              >
-                {tab.label} {counts[tab.key]}
-              </button>
-            ))}
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+            {queueLabels.map((tab) => {
+              const short =
+                tab.key === 'load'
+                  ? 'Warehouse'
+                  : tab.key === 'transit'
+                    ? 'Transit'
+                    : tab.key === 'billing'
+                      ? 'Arrived'
+                      : tab.key === 'awaiting_payment'
+                        ? 'Pay shipping'
+                        : tab.key === 'confirm'
+                          ? 'Pay check'
+                          : tab.key === 'release'
+                            ? 'Release'
+                            : tab.key === 'ready'
+                              ? 'Ready'
+                              : tab.label;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    setQueue(tab.key);
+                    setSelected([]);
+                    setBuilderCustomerKey('');
+                  }}
+                  className={`min-h-10 whitespace-nowrap rounded-full px-3 py-2.5 text-xs font-bold ${
+                    queue === tab.key
+                      ? 'bg-brand-primary text-white'
+                      : 'border border-slate-200 text-slate-600'
+                  }`}
+                >
+                  <span className="sm:hidden">
+                    {short} {counts[tab.key]}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {tab.label} {counts[tab.key]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <p className="mt-3 text-xs font-semibold text-slate-500">
@@ -866,65 +890,67 @@ export default function ShippingOperationsDesk({
       ) : (
         <>
           {selected.length > 0 ? (
-            <div className="flex flex-wrap items-end gap-3 border-b border-brand-primary/10 bg-brand-light/40 p-4">
-              <p className="self-center text-sm font-bold text-brand-primary">{selected.length} selected</p>
+            <div className="sticky bottom-0 z-20 flex flex-col gap-3 border-t border-brand-primary/10 bg-brand-light/95 p-4 backdrop-blur md:static md:flex-row md:flex-wrap md:items-end md:border-b md:border-t-0 md:bg-brand-light/40 md:backdrop-blur-none">
+              <p className="self-start text-sm font-bold text-brand-primary md:self-center">
+                {selected.length} selected
+              </p>
               {queue === 'load' ? (
                 <>
-                  <label className="text-xs font-semibold text-slate-600">
+                  <label className="w-full text-xs font-semibold text-slate-600 md:w-auto">
                     Vessel or container
                     <input
                       value={vessel}
                       onChange={(event) => setVessel(event.target.value)}
-                      className="mt-1 block rounded-lg border border-slate-200 px-3 py-2"
+                      className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 md:w-auto"
                     />
                   </label>
-                  <label className="text-xs font-semibold text-slate-600">
+                  <label className="w-full text-xs font-semibold text-slate-600 md:w-auto">
                     Loaded
                     <input
                       type="datetime-local"
                       value={loadedAt}
                       onChange={(event) => setLoadedAt(event.target.value)}
-                      className="mt-1 block rounded-lg border border-slate-200 px-3 py-2"
+                      className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 md:w-auto"
                     />
                   </label>
-                  <label className="text-xs font-semibold text-slate-600">
+                  <label className="w-full text-xs font-semibold text-slate-600 md:w-auto">
                     Days to Ghana
                     <input
                       value={transitDays}
                       onChange={(event) => setTransitDays(event.target.value)}
-                      className="mt-1 block w-24 rounded-lg border border-slate-200 px-3 py-2"
+                      className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 md:w-24"
                     />
                   </label>
                   <button
                     onClick={() => void runBatch('mark_in_transit')}
                     disabled={busy}
-                    className="rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white"
+                    className="min-h-11 w-full rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white md:w-auto"
                   >
                     Mark in transit
                   </button>
                 </>
               ) : queue === 'transit' || queue === 'billing' ? (
                 <>
-                  <label className="text-xs font-semibold text-slate-600">
+                  <label className="w-full text-xs font-semibold text-slate-600 md:w-auto">
                     Arrival day USD to GHS
                     <input
                       value={arrivalRate}
                       onChange={(event) => setArrivalRate(event.target.value)}
-                      className="mt-1 block w-28 rounded-lg border border-slate-200 px-3 py-2"
+                      className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 md:w-28"
                     />
                   </label>
-                  <label className="text-xs font-semibold text-slate-600">
+                  <label className="w-full text-xs font-semibold text-slate-600 md:w-auto">
                     Bill valid days
                     <input
                       value={validDays}
                       onChange={(event) => setValidDays(event.target.value)}
-                      className="mt-1 block w-24 rounded-lg border border-slate-200 px-3 py-2"
+                      className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 md:w-24"
                     />
                   </label>
                   <button
                     onClick={() => void runBatch('lock_arrival')}
                     disabled={busy}
-                    className="rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white"
+                    className="min-h-11 w-full rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white md:w-auto"
                   >
                     Arrived. Lock bills
                   </button>
@@ -933,7 +959,7 @@ export default function ShippingOperationsDesk({
                 <button
                   onClick={() => void runBatch('confirm_shipping_payment')}
                   disabled={busy}
-                  className="rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white"
+                  className="min-h-11 w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white md:w-auto"
                 >
                   Confirm payments
                 </button>
@@ -941,7 +967,7 @@ export default function ShippingOperationsDesk({
                 <button
                   onClick={() => void markAwaitingConfirmation()}
                   disabled={busy}
-                  className="rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white"
+                  className="min-h-11 w-full rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white md:w-auto"
                 >
                   Customer paid (move to Payment check)
                 </button>
@@ -949,7 +975,7 @@ export default function ShippingOperationsDesk({
                 <button
                   onClick={() => void runBatch('mark_ready')}
                   disabled={busy}
-                  className="rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white"
+                  className="min-h-11 w-full rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white md:w-auto"
                 >
                   Ready for pickup or delivery
                 </button>
@@ -957,7 +983,7 @@ export default function ShippingOperationsDesk({
                 <button
                   onClick={() => void runBatch('mark_delivered')}
                   disabled={busy}
-                  className="rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white"
+                  className="min-h-11 w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white md:w-auto"
                 >
                   Delivered or collected
                 </button>
@@ -965,7 +991,107 @@ export default function ShippingOperationsDesk({
             </div>
           ) : null}
 
-          <div className="overflow-x-auto">
+          <div className="space-y-3 p-3 md:hidden">
+            {rows.length === 0 ? (
+              <p className="py-10 text-center text-slate-400">Nothing in this queue.</p>
+            ) : (
+              rows.map((pkg: any) => {
+                const deskLabel = shippingPaymentDeskLabel(pkg);
+                return (
+                  <article
+                    key={`m-${pkg.id}`}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      {queue !== 'all' ? (
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-5 w-5"
+                          checked={selected.includes(pkg.id)}
+                          onChange={() =>
+                            setSelected((current) =>
+                              current.includes(pkg.id)
+                                ? current.filter((id) => id !== pkg.id)
+                                : [...current, pkg.id],
+                            )
+                          }
+                        />
+                      ) : null}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-slate-900">{pkg.package_name}</p>
+                        <p className="break-all font-mono text-[10px] text-slate-400">
+                          {pkg.tracking_id}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700">
+                          {customerName(packageCustomer(pkg))}
+                        </p>
+                        <p className="break-words text-xs text-slate-500">
+                          {contents(pkg) || 'No items recorded'}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                          <span className="font-semibold">CBM {Number(pkg.cbm).toFixed(3)}</span>
+                          <span className="font-semibold text-brand-primary">
+                            {pkg.freight_included
+                              ? 'Freight included'
+                              : pkg.final_shipping_ghs != null
+                                ? formatGhs(pkg.final_shipping_ghs)
+                                : formatUsd(pkg.estimated_shipping_usd)}
+                          </span>
+                        </div>
+                        <div className="mt-3 space-y-1">
+                          {deskLabel ? (
+                            <p className="text-xs font-bold text-sky-900">{deskLabel}</p>
+                          ) : null}
+                          <p className="text-xs text-slate-600">
+                            {SHIPPING_STATUS_LABELS[pkg.status as ShippingPackageStatus]}
+                          </p>
+                          {queue === 'confirm' &&
+                          pkg.shipping_payment_status === 'awaiting_confirmation' ? (
+                            <button
+                              type="button"
+                              onClick={() => void revertPaymentCheck([pkg.id])}
+                              disabled={busy}
+                              className="mt-1 block min-h-10 text-sm font-bold text-amber-800 underline disabled:opacity-50"
+                            >
+                              Undo
+                            </button>
+                          ) : null}
+                          {data.canCorrectStatus && previousPackageStatus(pkg.status) ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCorrectionPackage(pkg);
+                                setCorrectionReason('');
+                                setError('');
+                              }}
+                              className="mt-1 block min-h-10 text-sm font-bold text-brand-primary underline"
+                            >
+                              Fix travel
+                            </button>
+                          ) : null}
+                          {data.canRepack && pkg.status === 'received' && queue === 'load' ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRepackPackage(pkg);
+                                setRepackReason('');
+                                setError('');
+                              }}
+                              className="mt-1 block min-h-10 text-sm font-bold text-amber-800 underline"
+                            >
+                              Send back to Packages
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[860px] text-sm">
               <thead className="bg-slate-50 text-left text-xs text-slate-500">
                 <tr>
@@ -1099,8 +1225,8 @@ export default function ShippingOperationsDesk({
       )}
 
       {repackPackage ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl">
             <h3 className="text-lg font-bold text-slate-900">Send back to Packages</h3>
             <p className="mt-1 text-sm text-slate-500">
               {repackPackage.package_name} will be dissolved. Its items return to{' '}
@@ -1147,8 +1273,8 @@ export default function ShippingOperationsDesk({
       ) : null}
 
       {correctionPackage ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl">
             <h3 className="text-lg font-bold text-slate-900">Fix travel status</h3>
             <p className="mt-1 text-sm text-slate-500">
               {correctionPackage.package_name} will move from{' '}

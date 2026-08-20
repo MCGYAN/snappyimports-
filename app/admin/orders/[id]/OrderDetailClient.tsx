@@ -606,7 +606,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 no-print">
+      <div className="mx-auto max-w-7xl p-3 no-print sm:p-4 md:p-6">
         {/* Page Header with Print Button */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div className="flex items-center space-x-4 min-w-0">

@@ -23,7 +23,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -105,10 +105,23 @@ export default function AdminLayout({
   }, [showUserMenu]);
 
   useEffect(() => {
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
+    if (window.innerWidth >= 1024) {
+      setIsSidebarOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isMobile = window.innerWidth < 1024;
+    if (isSidebarOpen && isMobile) {
+      const previous = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previous;
+      };
+    }
+    return undefined;
+  }, [isSidebarOpen]);
 
   const handleLogout = async () => {
     // Clear auth cookies set during login
@@ -225,35 +238,45 @@ export default function AdminLayout({
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden glass-overlay"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden glass-overlay"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar - Mobile: Transform / Desktop: Width transition */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen liquid-glass border-r border-white/50 transition-all duration-300
-          w-64
+        className={`fixed top-0 left-0 z-50 h-screen liquid-glass border-r border-white/50 transition-all duration-300
+          w-[min(18rem,88vw)]
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
           ${isSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}
           lg:translate-x-0
         `}
       >
-        <div className="h-full px-4 py-6 overflow-y-auto flex flex-col">
-          <Link href="/admin" className="mb-8 block shrink-0 px-2">
-            <Image
-              src={SITE_LOGO_LIGHT_BG_PATH}
-              alt="Snappy Imports Global"
-              width={SITE_LOGO_SIZE.width}
-              height={SITE_LOGO_SIZE.height}
-              priority
-              unoptimized
-              className="h-auto w-full max-w-[168px] object-contain object-left"
-            />
-            <span className="mt-2 block text-[11px] font-semibold uppercase tracking-widest text-brand-accent">
-              {isOwnerRole(userRole) ? 'Admin Dashboard' : 'Staff Dashboard'}
-            </span>
-          </Link>
+        <div className="flex h-full flex-col overflow-y-auto px-4 py-6">
+          <div className="mb-6 flex items-start justify-between gap-2 px-2 lg:mb-8">
+            <Link href="/admin" className="min-w-0 block shrink">
+              <Image
+                src={SITE_LOGO_LIGHT_BG_PATH}
+                alt="Snappy Imports Global"
+                width={SITE_LOGO_SIZE.width}
+                height={SITE_LOGO_SIZE.height}
+                priority
+                unoptimized
+                className="h-auto w-full max-w-[168px] object-contain object-left"
+              />
+              <span className="mt-2 block text-[11px] font-semibold uppercase tracking-widest text-brand-accent">
+                {isOwnerRole(userRole) ? 'Admin Dashboard' : 'Staff Dashboard'}
+              </span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-brand-primary hover:bg-brand-primary/5 lg:hidden"
+              aria-label="Close menu"
+            >
+              <i className="ri-close-line text-2xl" />
+            </button>
+          </div>
 
           <nav className="space-y-1">
             {visibleMenuItems.map((item) => {
@@ -262,8 +285,8 @@ export default function AdminLayout({
                 <Link
                   key={item.path}
                   href={item.path}
-                  onClick={() => window.innerWidth < 1024 && setIsSidebarOpen(false)} // Close on mobile click
-                  className={`group flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-all duration-300 ${isActive
+                  onClick={() => window.innerWidth < 1024 && setIsSidebarOpen(false)}
+                  className={`group flex min-h-11 cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-all duration-300 ${isActive
                     ? 'border-l-4 border-brand-accent bg-brand-primary/5 font-semibold text-brand-accent'
                     : 'text-brand-primary/70 hover:-translate-y-[1px] hover:bg-brand-primary/5 hover:text-brand-primary hover:shadow-sm'
                     }`}
@@ -287,7 +310,7 @@ export default function AdminLayout({
               href="/"
               target="_blank"
               onClick={() => window.innerWidth < 1024 && setIsSidebarOpen(false)}
-              className="flex cursor-pointer items-center space-x-3 rounded-lg px-4 py-3 text-brand-primary/80 transition-colors hover:bg-brand-primary/5 hover:text-brand-accent"
+              className="flex min-h-11 cursor-pointer items-center space-x-3 rounded-lg px-4 py-3 text-brand-primary/80 transition-colors hover:bg-brand-primary/5 hover:text-brand-accent"
             >
               <i className="ri-external-link-line flex h-5 w-5 items-center justify-center text-xl text-brand-accent" />
               <span>View Store</span>
@@ -303,7 +326,7 @@ export default function AdminLayout({
             <div className="flex min-w-0 items-center gap-2 md:gap-3">
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="flex h-10 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg text-brand-primary transition-colors hover:bg-brand-primary/5 hover:text-brand-accent"
+                className="flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg text-brand-primary transition-colors hover:bg-brand-primary/5 hover:text-brand-accent"
                 aria-label="Toggle menu"
               >
                 <i className={`${isSidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'} text-xl`}></i>

@@ -343,7 +343,7 @@ export default function OrderHubPage() {
 
         {order ? (
           <div className="space-y-6">
-            <section className="store-card grid gap-4 p-5 sm:grid-cols-3 print:hidden">
+            <section className="store-card grid grid-cols-1 gap-4 p-4 sm:grid-cols-3 sm:p-5 print:hidden">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-0.5 h-5 w-5 text-brand-accent" />
                 <div>
@@ -381,8 +381,8 @@ export default function OrderHubPage() {
               </div>
             </section>
 
-            <section className="store-card p-5 sm:p-8">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <section className="store-card p-4 sm:p-8">
+              <div className="mb-6 flex flex-col gap-3 print:hidden sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-brand-primary">Invoice</h2>
                   {autoDownloadHint ? (
@@ -391,11 +391,11 @@ export default function OrderHubPage() {
                     </p>
                   ) : null}
                 </div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:flex">
                   <button
                     type="button"
                     onClick={handlePrint}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-brand-primary"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-brand-primary"
                   >
                     <Printer className="h-4 w-4" /> Print
                   </button>
@@ -405,14 +405,16 @@ export default function OrderHubPage() {
                       void handleDownloadPdf();
                     }}
                     disabled={downloading}
-                    className="inline-flex items-center gap-2 rounded-full bg-brand-accent px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-brand-accent px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
                   >
                     <Download className="h-4 w-4" />
                     {downloading ? 'Preparing PDF…' : 'Download PDF'}
                   </button>
                 </div>
               </div>
-              <InvoiceDocument order={order} />
+              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                <InvoiceDocument order={order} />
+              </div>
             </section>
 
             {order.payment_status !== 'paid' && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import OrderHistory from './OrderHistory';
@@ -65,6 +65,15 @@ function AccountContent() {
     if (tab !== 'documents') params.delete('document');
     router.replace(`/account?${params.toString()}`, { scroll: false });
   };
+
+  const mobileTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    const el = mobileTabRefs.current[activeTab];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [activeTab]);
 
   // Profile Form States
   const [profileData, setProfileData] = useState({
@@ -322,8 +331,8 @@ function AccountContent() {
             </div>
 
             {/* Mobile Horizontal Navigation */}
-            <div className="lg:hidden col-span-1 pb-2 -mx-4 px-4">
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="sticky top-16 z-20 -mx-4 mb-2 border-b border-slate-200/80 bg-gray-50/95 px-4 py-2 backdrop-blur lg:hidden">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide [-webkit-overflow-scrolling:touch]">
                 {[
                   { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile' },
                   { id: 'status', icon: 'ri-map-pin-line', label: 'Status' },
@@ -332,16 +341,22 @@ function AccountContent() {
                   { id: 'documents', icon: 'ri-file-list-3-line', label: 'Receipts' },
                   { id: 'deliveries', icon: 'ri-calendar-check-line', label: 'Deliveries' },
                   { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Address' },
-                  { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
-                ].map(tab => (
+                  { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' },
+                ].map((tab) => (
                   <button
                     key={tab.id}
+                    ref={(node) => {
+                      mobileTabRefs.current[tab.id] = node;
+                    }}
+                    type="button"
                     onClick={() => goToTab(tab.id)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold whitespace-nowrap transition-all border shadow-sm ${activeTab === tab.id
-                      ? 'bg-brand-primary text-white border-brand-primary'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                      }`}
+                    className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold whitespace-nowrap transition-all border shadow-sm ${
+                      activeTab === tab.id
+                        ? 'bg-brand-primary text-white border-brand-primary'
+                        : 'bg-white text-gray-600 border-gray-200'
+                    }`}
                   >
+                    <i className={`${tab.icon} text-base`} aria-hidden />
                     <span>{tab.label}</span>
                   </button>
                 ))}
@@ -350,7 +365,7 @@ function AccountContent() {
 
             {/* Main Content Area */}
             <div className="lg:col-span-3">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 min-h-[500px]">
+              <div className="min-h-[420px] rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:p-6 md:p-8">
                 {activeTab === 'profile' && (
                   <div className="max-w-2xl">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile Information</h2>
