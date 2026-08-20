@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import ExchangeInvoiceDocument from '@/components/ExchangeInvoiceDocument';
+import ScaledDocumentPreview from '@/components/ScaledDocumentPreview';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import { supabase } from '@/lib/supabase';
 import { EXCHANGE_CORRIDORS, parseExchangeCountryCode } from '@/lib/exchange-corridors';
