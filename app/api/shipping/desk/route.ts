@@ -661,22 +661,42 @@ export async function POST(req: Request) {
     }
     let issued = 0;
     let included = 0;
+    const failures: string[] = [];
     for (const pkg of packages || []) {
-      await supabaseAdmin
-        .from('shipping_packages')
-        .update({ status: 'arrived', arrived_at: new Date().toISOString() })
-        .eq('id', pkg.id);
-      const invoice = await issueShippingInvoice({
-        pkg,
-        finalUsdToGhs: finalRate,
-        validDays,
-        createdBy: auth.user?.id,
-      });
-      if (invoice) issued++;
-      else included++;
+      try {
+        await supabaseAdmin
+          .from('shipping_packages')
+          .update({ status: 'arrived', arrived_at: new Date().toISOString() })
+          .eq('id', pkg.id);
+        const invoice = await issueShippingInvoice({
+          pkg,
+          finalUsdToGhs: finalRate,
+          validDays,
+          createdBy: auth.user?.id,
+        });
+        if (invoice) issued++;
+        else included++;
+      } catch (lockError) {
+        console.error('[lock_arrival]', pkg.id, lockError);
+        failures.push(
+          `${pkg.package_name || pkg.tracking_id}: ${
+            lockError instanceof Error ? lockError.message : 'Could not lock bill.'
+          }`,
+        );
+      }
+    }
+    if (!issued && !included) {
+      return NextResponse.json(
+        {
+          error:
+            failures[0] ||
+            'Could not lock any shipping bills. Refresh the page and try again.',
+        },
+        { status: 500 },
+      );
     }
     await Promise.all(orderIds.map((id) => refreshOrderShippingStage(id, auth.user?.id)));
-    return NextResponse.json({ success: true, issued, included });
+    return NextResponse.json({ success: true, issued, included, failures });
   }
 
   if (action === 'mark_ready' || action === 'mark_delivered') {

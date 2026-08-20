@@ -223,16 +223,29 @@ export async function issueShippingInvoice({
 
   const amount = Number((Number(pkg.estimated_shipping_usd) * finalUsdToGhs).toFixed(2));
 
-  const { data: prior } = await supabaseAdmin
+  const { data: latestInvoice } = await supabaseAdmin
     .from('financial_documents')
     .select('id, version, amount, status, data, due_at')
     .eq('flow', 'shipping')
     .eq('entity_id', pkg.id)
     .eq('document_type', 'invoice')
-    .neq('status', 'void')
     .order('version', { ascending: false })
     .limit(1)
     .maybeSingle();
+  const prior = latestInvoice?.status !== 'void' ? latestInvoice : null;
+
+  const syncLockedPackage = async () => {
+    await supabaseAdmin
+      .from('shipping_packages')
+      .update({
+        final_usd_to_ghs: finalUsdToGhs,
+        final_shipping_ghs: amount,
+        shipping_payment_status: 'unpaid',
+        shipping_paid_at: null,
+        updated_at: now.toISOString(),
+      })
+      .eq('id', pkg.id);
+  };
 
   if (
     prior?.status === 'active' &&
@@ -240,6 +253,7 @@ export async function issueShippingInvoice({
     Number(prior.data?.usd_to_ghs) === finalUsdToGhs &&
     (!prior.due_at || new Date(prior.due_at).getTime() > Date.now())
   ) {
+    await syncLockedPackage();
     return prior;
   }
 
@@ -249,7 +263,7 @@ export async function issueShippingInvoice({
       .update({ status: 'void', updated_at: now.toISOString() })
       .eq('id', prior.id);
   }
-  const version = Number(prior?.version || 0) + 1;
+  const version = Number(latestInvoice?.version || 0) + 1;
   const dueAt = new Date(now.getTime() + validDays * 86_400_000).toISOString();
   const { data: invoice, error } = await supabaseAdmin
     .from('financial_documents')
@@ -289,16 +303,7 @@ export async function issueShippingInvoice({
     .single();
   if (error || !invoice) throw error || new Error('Could not create shipping invoice.');
 
-  await supabaseAdmin
-    .from('shipping_packages')
-    .update({
-      final_usd_to_ghs: finalUsdToGhs,
-      final_shipping_ghs: amount,
-      shipping_payment_status: 'unpaid',
-      shipping_paid_at: null,
-      updated_at: now.toISOString(),
-    })
-    .eq('id', pkg.id);
+  await syncLockedPackage();
   return invoice;
 }
 

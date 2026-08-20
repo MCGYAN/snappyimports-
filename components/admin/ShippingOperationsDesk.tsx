@@ -339,32 +339,54 @@ export default function ShippingOperationsDesk({
     if (!confirm(prompt)) return;
 
     setBusy(true);
-    const response = await fetch('/api/shipping/desk', {
-      method: 'POST',
-      headers: await headers(),
-      body: JSON.stringify({
-        action,
-        packageIds: selected,
-        vessel,
-        loadedAt,
-        transitDays: Number(transitDays),
-        finalUsdToGhs: Number(arrivalRate),
-        validDays: Number(validDays),
-      }),
-    });
-    const result = await response.json();
-    setBusy(false);
-    if (!response.ok) return alert(result.error || 'Could not update packages.');
-    if (action === 'confirm_shipping_payment' && result.confirmed > 0) {
-      setUndoPackageIds([...selected]);
-      window.setTimeout(() => setUndoPackageIds([]), 120_000);
-    }
-    setSelected([]);
-    await load();
-    if (action === 'confirm_shipping_payment') {
-      window.setTimeout(async () => {
-        void fetch('/api/cron/receipt-outbox', { method: 'POST', headers: await headers() });
-      }, 125_000);
+    try {
+      const response = await fetch('/api/shipping/desk', {
+        method: 'POST',
+        headers: await headers(),
+        body: JSON.stringify({
+          action,
+          packageIds: selected,
+          vessel,
+          loadedAt,
+          transitDays: Number(transitDays),
+          finalUsdToGhs: Number(arrivalRate),
+          validDays: Number(validDays),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(result.error || 'Could not update packages.');
+        return;
+      }
+      if (action === 'lock_arrival') {
+        const locked = Number(result.issued || 0) + Number(result.included || 0);
+        if (locked > 0) {
+          alert(
+            locked === 1
+              ? 'Shipping bill locked. The package moved to Waiting for payment.'
+              : `${locked} shipping bills locked.`,
+          );
+        }
+        if (Array.isArray(result.failures) && result.failures.length) {
+          alert(result.failures.join('\n'));
+        }
+      }
+      if (action === 'confirm_shipping_payment' && result.confirmed > 0) {
+        setUndoPackageIds([...selected]);
+        window.setTimeout(() => setUndoPackageIds([]), 120_000);
+      }
+      setSelected([]);
+      await load();
+      if (action === 'confirm_shipping_payment') {
+        window.setTimeout(async () => {
+          void fetch('/api/cron/receipt-outbox', { method: 'POST', headers: await headers() });
+        }, 125_000);
+      }
+    } catch (err) {
+      console.error('[shipping batch]', err);
+      alert('Could not reach the server. Check your connection and try again.');
+    } finally {
+      setBusy(false);
     }
   };
 
