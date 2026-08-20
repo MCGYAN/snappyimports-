@@ -24,24 +24,6 @@ function isMobilePdfDevice() {
   );
 }
 
-function isAppleMobileDevice() {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent || '';
-  if (/iPhone|iPad|iPod/i.test(ua)) return true;
-  return navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.platform || '');
-}
-
-/**
- * Real Safari on iPhone/iPad only.
- * Chrome/Firefox/Edge on iOS include "Safari" in the UA but also CriOS/FxiOS/EdgiOS.
- */
-function isIOSSafari() {
-  if (typeof navigator === 'undefined' || !isAppleMobileDevice()) return false;
-  const ua = navigator.userAgent || '';
-  if (/CriOS|FxiOS|EdgiOS|OPiOS|Chrome|Chromium|Android/i.test(ua)) return false;
-  return /Safari/i.test(ua);
-}
-
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -89,8 +71,6 @@ async function fetchMobilePdfBlob(
   throw lastError || new Error('Could not download the PDF.');
 }
 
-type MobilePdfDelivery = 'opened' | 'shared' | 'downloaded';
-
 function triggerPdfFileDownload(blobUrl: string, filename: string) {
   const link = document.createElement('a');
   link.href = blobUrl;
@@ -101,68 +81,39 @@ function triggerPdfFileDownload(blobUrl: string, filename: string) {
   link.remove();
 }
 
-/**
- * Deliver the invoice PDF on phones.
- * Safari iOS: open in Safari viewer (Telegram share from Web Share freezes).
- * Chrome / Android: save via share sheet or download attribute (blob tabs show blank / no Save).
- */
+/** Same save flow on Safari and Chrome: share sheet when available, otherwise download. */
 async function downloadMobileServerPdf(
   row: FinancialDocumentRecord,
   accessToken: string,
-): Promise<MobilePdfDelivery> {
-  const safariIOS = isIOSSafari();
-  // Must open synchronously from the tap. After await, Safari blocks window.open.
-  const previewWindow = safariIOS ? window.open('about:blank', '_blank') : null;
+): Promise<void> {
+  const blob = await fetchMobilePdfBlob(row, accessToken);
+  const filename = `${row.document_number}.pdf`.replace(/[^\w.\-]+/g, '_');
+  const blobUrl = URL.createObjectURL(blob);
+  const revokeLater = () => {
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 180_000);
+  };
 
-  try {
-    const blob = await fetchMobilePdfBlob(row, accessToken);
-    const filename = `${row.document_number}.pdf`.replace(/[^\w.\-]+/g, '_');
-    const blobUrl = URL.createObjectURL(blob);
-    const revokeLater = (ms = 180_000) => {
-      window.setTimeout(() => URL.revokeObjectURL(blobUrl), ms);
-    };
+  const file = new File([blob], filename, { type: 'application/pdf' });
+  const title = row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice';
+  const canShareFiles =
+    typeof navigator.share === 'function' &&
+    (typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] }));
 
-    if (safariIOS) {
-      if (previewWindow && !previewWindow.closed) {
-        previewWindow.location.href = blobUrl;
-      } else {
-        window.location.assign(blobUrl);
-      }
-      revokeLater();
-      return 'opened';
-    }
-
-    // Chrome (phone) and Android: let the customer save the file.
-    const file = new File([blob], filename, { type: 'application/pdf' });
-    const title = row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice';
-    const canShareFiles =
-      typeof navigator.share === 'function' &&
-      (typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] }));
-
-    if (canShareFiles && blob.size <= 1_500_000) {
-      try {
-        await navigator.share({ files: [file], title });
-        revokeLater();
-        return 'shared';
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          revokeLater();
-          return 'shared';
-        }
-      }
-    }
-
-    triggerPdfFileDownload(blobUrl, filename);
-    revokeLater();
-    return 'downloaded';
-  } catch (error) {
+  if (canShareFiles) {
     try {
-      previewWindow?.close();
-    } catch {
-      /* ignore */
+      await navigator.share({ files: [file], title });
+      revokeLater();
+      return;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        revokeLater();
+        return;
+      }
     }
-    throw error;
   }
+
+  triggerPdfFileDownload(blobUrl, filename);
+  revokeLater();
 }
 
 function money(amount: number, currency: string) {
