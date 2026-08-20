@@ -232,7 +232,8 @@ export function deriveAccountOrderStatus(
     if (fromPackages) {
       key = fromPackages;
     } else if (fulfillmentStage === 'sourcing') {
-      key = 'needs_packing';
+      // Admin started sourcing; no physical box yet. Next desk step is Needs packing.
+      key = 'sourcing';
     } else if (
       fulfillmentStage === 'en_route_ghana' ||
       fulfillmentStage === 'in_ghana' ||

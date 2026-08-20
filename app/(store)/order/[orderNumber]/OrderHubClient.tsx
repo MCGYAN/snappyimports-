@@ -6,10 +6,11 @@ import { useParams, useSearchParams } from 'next/navigation';
 import InvoiceDocument from '@/components/InvoiceDocument';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import {
-  deriveFulfillmentStage,
-  FULFILLMENT_STAGES,
-  fulfillmentIndex,
-} from '@/lib/order-journey';
+  accountOrderStatusIndex,
+  deriveAccountOrderStatus,
+  visibleAccountOrderStatusSteps,
+  type AccountOrderPackageSummary,
+} from '@/lib/account-order-status';
 import { formatMoney, isInvoiceExpired } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import { buildWhatsAppHref, resolveContactWhatsApp } from '@/lib/snappy-import';
@@ -33,8 +34,7 @@ export default function OrderHubPage() {
 
   const [email, setEmail] = useState(emailFromUrl);
   const [order, setOrder] = useState<any>(null);
-  const [packageStatuses, setPackageStatuses] = useState<string[]>([]);
-  const [packageCount, setPackageCount] = useState(0);
+  const [packages, setPackages] = useState<AccountOrderPackageSummary[]>([]);
   const [loading, setLoading] = useState(Boolean(emailFromUrl));
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
@@ -66,8 +66,19 @@ export default function OrderHubPage() {
       }
       setOrder(data.order);
       const pkgs = shippingRes.ok ? shippingData.packages || [] : [];
-      setPackageCount(pkgs.length);
-      setPackageStatuses(pkgs.map((pkg: { status?: string }) => pkg.status).filter(Boolean));
+      setPackages(
+        pkgs.map((pkg: any) => ({
+          id: pkg.id,
+          package_name: pkg.package_name,
+          tracking_id: pkg.tracking_id,
+          status: pkg.status,
+          freight_included: Boolean(pkg.freight_included),
+          final_usd_to_ghs: pkg.final_usd_to_ghs ?? null,
+          shipping_payment_status: pkg.shipping_payment_status ?? null,
+          final_shipping_ghs: pkg.final_shipping_ghs ?? null,
+          estimated_shipping_usd: pkg.estimated_shipping_usd ?? null,
+        })),
+      );
     } catch {
       setError('Something went wrong. Try again.');
     } finally {
@@ -84,7 +95,31 @@ export default function OrderHubPage() {
     return () => clearInterval(t);
   }, []);
 
-  const stage = order ? deriveFulfillmentStage(order, packageStatuses) : 'awaiting_payment';
+  const orderStatus = useMemo(() => {
+    if (!order) return null;
+    const openShippingInvoiceId =
+      packages.find(
+        (pkg) =>
+          !pkg.freight_included &&
+          Boolean(pkg.final_usd_to_ghs) &&
+          pkg.shipping_payment_status !== 'paid',
+      )?.id || null;
+    return deriveAccountOrderStatus(order, packages, openShippingInvoiceId);
+  }, [order, packages]);
+
+  const statusSteps = useMemo(() => {
+    if (!orderStatus) return [];
+    const needsShippingBill = packages.some(
+      (pkg) => !pkg.freight_included && Boolean(pkg.final_usd_to_ghs || pkg.estimated_shipping_usd),
+    );
+    return visibleAccountOrderStatusSteps(
+      orderStatus.key,
+      packages.length > 0 || orderStatus.key === 'needs_packing',
+      needsShippingBill,
+    );
+  }, [orderStatus, packages]);
+
+  const packageCount = packages.length;
   const dueAt = order?.metadata?.invoice_due_at as string | undefined;
   const expired = isInvoiceExpired(dueAt);
   const msLeft = dueAt ? new Date(dueAt).getTime() - now : 0;
@@ -319,9 +354,9 @@ export default function OrderHubPage() {
               <div className="flex items-start gap-3">
                 <Package className="mt-0.5 h-5 w-5 text-brand-accent" />
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Journey</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Order status</p>
                   <p className="font-bold text-brand-primary">
-                    {FULFILLMENT_STAGES.find((s) => s.key === stage)?.title || stage}
+                    {orderStatus?.title || 'Awaiting payment'}
                   </p>
                 </div>
               </div>
@@ -439,19 +474,25 @@ export default function OrderHubPage() {
             <section className="store-card p-5 sm:p-8 print:hidden">
               <div className="mb-2 flex items-center gap-2">
                 <Truck className="h-5 w-5 text-brand-accent" />
-                <h2 className="text-xl font-bold text-brand-primary">Import journey</h2>
+                <h2 className="text-xl font-bold text-brand-primary">Order status</h2>
               </div>
-              <p className="mb-6 text-sm text-slate-500">
-                {packageCount > 0
-                  ? 'This timeline stays in sync with your shipping packages. Open each package below for CBM, freight, and arrival details.'
-                  : 'Payment and sourcing stay on this page. After packing, follow each physical package for CBM, freight and days left to Ghana.'}
+              <p className="mb-2 text-sm text-slate-500">
+                Live tracking linked to what Snappy sets on the dashboard. Package CBM and freight
+                details stay under shipping packages.
               </p>
+              {orderStatus?.nextHint ? (
+                <p className="mb-6 rounded-xl bg-brand-light/50 px-4 py-3 text-sm font-semibold text-brand-primary">
+                  Now at {orderStatus.title}. {orderStatus.nextHint}
+                </p>
+              ) : (
+                <div className="mb-6" />
+              )}
               <ol className="space-y-4">
-                {FULFILLMENT_STAGES.filter((s) => s.key !== 'cancelled').map((s) => {
-                  const idx = fulfillmentIndex(s.key);
-                  const current = fulfillmentIndex(stage);
+                {statusSteps.map((s) => {
+                  const idx = accountOrderStatusIndex(s.key);
+                  const current = orderStatus ? accountOrderStatusIndex(orderStatus.key) : 0;
                   const done = idx >= 0 && current >= 0 && idx < current;
-                  const active = s.key === stage;
+                  const active = orderStatus?.key === s.key;
                   return (
                     <li key={s.key} className="flex gap-3">
                       <div
@@ -504,6 +545,13 @@ export default function OrderHubPage() {
                   <span aria-hidden>›</span>
                 </Link>
               ) : null}
+              <Link
+                href="/account?tab=status"
+                className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-primary/30"
+              >
+                <span>Open Order status in your account</span>
+                <span aria-hidden>›</span>
+              </Link>
             </section>
 
           </div>

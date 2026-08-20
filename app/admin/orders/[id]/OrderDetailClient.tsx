@@ -6,6 +6,10 @@ import { supabase } from '@/lib/supabase';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
 import OrderShippingDesk from '@/components/admin/OrderShippingDesk';
 import {
+  deriveAccountOrderStatus,
+  type AccountOrderPackageSummary,
+} from '@/lib/account-order-status';
+import {
   deriveFulfillmentStage,
   FULFILLMENT_STAGES,
   fulfillmentIndex,
@@ -26,7 +30,7 @@ interface FraudAnalysis {
 
 export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [order, setOrder] = useState<any>(null);
-  const [packageStatuses, setPackageStatuses] = useState<string[]>([]);
+  const [packages, setPackages] = useState<AccountOrderPackageSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -131,17 +135,25 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
         });
         const shippingData = await shippingRes.json();
         if (shippingRes.ok) {
-          setPackageStatuses(
-            (shippingData.packages || [])
-              .map((pkg: { status?: string }) => pkg.status)
-              .filter(Boolean),
+          setPackages(
+            (shippingData.packages || []).map((pkg: any) => ({
+              id: pkg.id,
+              package_name: pkg.package_name,
+              tracking_id: pkg.tracking_id,
+              status: pkg.status,
+              freight_included: Boolean(pkg.freight_included),
+              final_usd_to_ghs: pkg.final_usd_to_ghs ?? null,
+              shipping_payment_status: pkg.shipping_payment_status ?? null,
+              final_shipping_ghs: pkg.final_shipping_ghs ?? null,
+              estimated_shipping_usd: pkg.estimated_shipping_usd ?? null,
+            })),
           );
           if (shippingData.order) setOrder(shippingData.order);
         } else {
-          setPackageStatuses([]);
+          setPackages([]);
         }
       } catch {
-        setPackageStatuses([]);
+        setPackages([]);
       }
 
     } catch (err: any) {
@@ -482,10 +494,19 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     ? `${shippingAddress.firstName.trim()} ${shippingAddress.lastName.trim()}`
     : shippingAddress.full_name || shippingAddress.firstName || order.email?.split('@')[0] || 'Customer';
 
+  const packageStatuses = packages.map((pkg) => pkg.status).filter(Boolean);
   const storedJourney = storedFulfillmentStage(order);
   const currentJourney = deriveFulfillmentStage(order, packageStatuses);
+  const openShippingInvoiceId =
+    packages.find(
+      (pkg) =>
+        !pkg.freight_included &&
+        Boolean(pkg.final_usd_to_ghs) &&
+        pkg.shipping_payment_status !== 'paid',
+    )?.id || null;
+  const customerStatus = deriveAccountOrderStatus(order, packages, openShippingInvoiceId);
   const journeyOutOfSync =
-    packageStatuses.length > 0 &&
+    packages.length > 0 &&
     order.payment_status === 'paid' &&
     fulfillmentIndex(currentJourney) > fulfillmentIndex(storedJourney);
 
@@ -781,23 +802,27 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   </span>
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-brand-accent">
-                      Now at
+                      Customer sees
                     </p>
                     <p className="truncate text-sm font-semibold text-brand-primary">
-                      {FULFILLMENT_STAGES.find((s) => s.key === currentJourney)?.title ||
-                        currentJourney}
+                      {customerStatus.title}
                     </p>
+                    {customerStatus.nextHint ? (
+                      <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                        {customerStatus.nextHint}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 {journeyOutOfSync ? (
                   <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
                     Stored journey was{' '}
                     {FULFILLMENT_STAGES.find((s) => s.key === storedJourney)?.title || storedJourney}.
-                    Customer view now follows package status at{' '}
-                    {FULFILLMENT_STAGES.find((s) => s.key === currentJourney)?.title || currentJourney}.
+                    Customer tracking now shows {customerStatus.title} from package and shipping desk
+                    status.
                   </p>
                 ) : null}
-                {order.payment_status === 'paid' && currentJourney === 'paid' ? (
+                {order.payment_status === 'paid' && customerStatus.key === 'payment_confirmed' ? (
                   <button
                     type="button"
                     onClick={() => void handleStartSourcing()}
