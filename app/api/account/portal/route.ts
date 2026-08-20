@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabaseAdmin
       .from('financial_documents')
       .select(
-        'id, document_number, document_type, flow, currency, amount, status, issued_at, due_at, paid_at, customer_email, data',
+        'id, document_number, document_type, flow, currency, amount, status, issued_at, due_at, paid_at, customer_email, shipping_package_id, data, shipping_packages(shipping_payment_status)',
       )
       .eq('id', documentId)
       .or(customerOwnerFilter)

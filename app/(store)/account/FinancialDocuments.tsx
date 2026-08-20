@@ -89,11 +89,24 @@ function shippingPaymentStatus(row: FinancialDocumentRecord) {
   return nested?.shipping_payment_status || null;
 }
 
+function canMarkShippingPaid(row: FinancialDocumentRecord) {
+  const paymentStatus = shippingPaymentStatus(row);
+  return (
+    row.flow === 'shipping' &&
+    row.document_type === 'invoice' &&
+    row.status === 'active' &&
+    !isExpired(row) &&
+    paymentStatus !== 'paid' &&
+    paymentStatus !== 'awaiting_confirmation'
+  );
+}
+
 function DocumentRow({
   row,
   highlight,
   busy,
   paying,
+  onView,
   onDownload,
   onPaymentSent,
 }: {
@@ -101,19 +114,14 @@ function DocumentRow({
   highlight: boolean;
   busy: boolean;
   paying: boolean;
+  onView: () => void;
   onDownload: () => void;
   onPaymentSent?: () => void;
 }) {
   const receipt = row.document_type === 'receipt';
   const expired = isExpired(row);
   const paymentStatus = shippingPaymentStatus(row);
-  const showShippingPay =
-    row.flow === 'shipping' &&
-    row.document_type === 'invoice' &&
-    row.status === 'active' &&
-    !expired &&
-    paymentStatus !== 'paid' &&
-    paymentStatus !== 'awaiting_confirmation';
+  const showShippingPay = canMarkShippingPaid(row) && Boolean(onPaymentSent);
   const waitingForConfirm =
     row.flow === 'shipping' &&
     row.document_type === 'invoice' &&
@@ -148,7 +156,7 @@ function DocumentRow({
             Waiting for Snappy to confirm
           </span>
         ) : null}
-        {showShippingPay && onPaymentSent ? (
+        {showShippingPay ? (
           <button
             type="button"
             onClick={onPaymentSent}
@@ -160,11 +168,19 @@ function DocumentRow({
         ) : null}
         <button
           type="button"
+          onClick={onView}
+          disabled={busy || paying}
+          className="rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
+        >
+          {busy ? 'Opening…' : 'View'}
+        </button>
+        <button
+          type="button"
           onClick={onDownload}
           disabled={busy || paying}
           className="rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
         >
-          {busy ? 'Saving…' : 'Download'}
+          Download
         </button>
       </div>
     </div>
@@ -188,14 +204,41 @@ export default function FinancialDocuments({
   const requestedId = searchParams.get('document');
   const [fetchingId, setFetchingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
-  const [pending, setPending] = useState<FinancialDocumentRecord | null>(null);
+  const [viewing, setViewing] = useState<FinancialDocumentRecord | null>(null);
+  const [pendingDownload, setPendingDownload] = useState<FinancialDocumentRecord | null>(null);
   const paperRef = useRef<HTMLDivElement>(null);
+  const viewPaperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (loading || documents.length === 0 || isMobilePdfDevice()) return;
     const timer = window.setTimeout(preloadPdfLibraries, 400);
     return () => window.clearTimeout(timer);
   }, [documents.length, loading]);
+
+  const loadDocument = async (row: FinancialDocumentRecord) => {
+    const response = await fetch(
+      `/api/account/portal?document=${encodeURIComponent(row.id)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    const result = await response.json();
+    if (!response.ok || !result.document) {
+      throw new Error(result.error || 'Could not load the document.');
+    }
+    return result.document as FinancialDocumentRecord;
+  };
+
+  const openView = async (row: FinancialDocumentRecord) => {
+    setFetchingId(row.id);
+    try {
+      const document = await loadDocument(row);
+      setViewing(document);
+    } catch (error) {
+      console.error('[document view]', error);
+      alert('Could not open the document. Please try again.');
+    } finally {
+      setFetchingId(null);
+    }
+  };
 
   const prepareDownload = async (row: FinancialDocumentRecord) => {
     setFetchingId(row.id);
@@ -204,20 +247,31 @@ export default function FinancialDocuments({
         await downloadMobileServerPdf(row, accessToken);
         return;
       }
-
-      const response = await fetch(
-        `/api/account/portal?document=${encodeURIComponent(row.id)}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      );
-      const result = await response.json();
-      if (!response.ok || !result.document) {
-        throw new Error(result.error || 'Could not load the document.');
-      }
-      setPending(result.document);
+      const document = await loadDocument(row);
+      setPendingDownload(document);
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
       console.error('[document detail]', error);
       alert('Could not load the document. Please try again.');
+    } finally {
+      setFetchingId(null);
+    }
+  };
+
+  const downloadFromView = async () => {
+    if (!viewing) return;
+    setFetchingId(viewing.id);
+    try {
+      if (isMobilePdfDevice()) {
+        await downloadMobileServerPdf(viewing, accessToken);
+        return;
+      }
+      const paper = viewPaperRef.current?.querySelector<HTMLElement>('.document-official');
+      if (!paper) throw new Error('Invoice paper not ready.');
+      await downloadElementAsPdf(paper, `${viewing.document_number}.pdf`);
+    } catch (error) {
+      console.error('[document pdf from view]', error);
+      alert('Could not download the document. Please try again.');
     } finally {
       setFetchingId(null);
     }
@@ -246,6 +300,10 @@ export default function FinancialDocuments({
           'Thank you. Snappy will confirm after checking the bank or MoMo account.',
       );
       if (onRefresh) await onRefresh();
+      if (viewing?.id === row.id) {
+        const refreshed = await loadDocument(row);
+        setViewing(refreshed);
+      }
     } catch (error) {
       console.error('[shipping payment notice]', error);
       alert(error instanceof Error ? error.message : 'Could not submit payment notice.');
@@ -254,29 +312,34 @@ export default function FinancialDocuments({
     }
   };
 
-  // The paper only exists while a download is running, so the page stays a
-  // simple list instead of a wall of invoice sheets.
   useEffect(() => {
-    if (!pending) return;
+    if (!pendingDownload) return;
     let cancelled = false;
     const run = async () => {
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       if (cancelled) return;
       const paper = paperRef.current?.querySelector<HTMLElement>('.document-official');
       try {
-        if (paper) await downloadElementAsPdf(paper, `${pending.document_number}.pdf`);
+        if (paper) await downloadElementAsPdf(paper, `${pendingDownload.document_number}.pdf`);
       } catch (error) {
         console.error('[document pdf]', error);
         alert('Could not download the document. Please try again.');
       } finally {
-        if (!cancelled) setPending(null);
+        if (!cancelled) setPendingDownload(null);
       }
     };
     void run();
     return () => {
       cancelled = true;
     };
-  }, [pending]);
+  }, [pendingDownload]);
+
+  useEffect(() => {
+    if (!requestedId || loading || documents.length === 0 || viewing) return;
+    const match = documents.find((row) => row.id === requestedId);
+    if (match) void openView(match);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedId, loading, documents]);
 
   const { invoices, receipts } = useMemo(
     () => ({
@@ -292,7 +355,7 @@ export default function FinancialDocuments({
     {
       key: 'invoices',
       title: 'Bills to pay',
-      hint: 'These ask you for money. Pay before the date shown, then tap I\'ve paid on shipping bills.',
+      hint: 'Open View to see the bill. After you transfer, tap I\'ve paid on shipping bills.',
       empty: 'Nothing to pay right now.',
       rows: invoices,
     },
@@ -305,13 +368,20 @@ export default function FinancialDocuments({
     },
   ];
 
+  const viewingWaiting =
+    viewing &&
+    viewing.flow === 'shipping' &&
+    viewing.document_type === 'invoice' &&
+    shippingPaymentStatus(viewing) === 'awaiting_confirmation';
+  const viewingCanPay = viewing ? canMarkShippingPaid(viewing) : false;
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-brand-primary">Invoices and receipts</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Every paper for your product orders, Buy RMB and shipping. Download a copy or tap
-          I&apos;ve paid on a shipping bill after you transfer.
+          Every paper for your product orders, Buy RMB and shipping. Tap View to open a bill, then
+          I&apos;ve paid after you transfer shipping money.
         </p>
       </div>
 
@@ -335,8 +405,9 @@ export default function FinancialDocuments({
                   key={row.id}
                   row={row}
                   highlight={row.id === requestedId}
-                  busy={fetchingId === row.id || pending?.id === row.id}
+                  busy={fetchingId === row.id || pendingDownload?.id === row.id}
                   paying={payingId === row.id}
+                  onView={() => void openView(row)}
                   onDownload={() => void prepareDownload(row)}
                   onPaymentSent={
                     row.flow === 'shipping' && row.document_type === 'invoice'
@@ -350,9 +421,61 @@ export default function FinancialDocuments({
         </section>
       ))}
 
-      {pending ? (
+      {viewing ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-4">
+          <div className="my-6 w-full max-w-4xl rounded-2xl bg-white shadow-2xl">
+            <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-brand-accent">
+                  {viewing.document_type === 'receipt' ? 'Receipt' : 'Invoice'}
+                </p>
+                <p className="font-bold text-brand-primary">{viewing.document_number}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {viewingWaiting ? (
+                  <span className="rounded-xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+                    Waiting for Snappy to confirm
+                  </span>
+                ) : null}
+                {viewingCanPay ? (
+                  <button
+                    type="button"
+                    onClick={() => void submitShippingPayment(viewing)}
+                    disabled={payingId === viewing.id}
+                    className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    {payingId === viewing.id ? 'Sending…' : "I've paid"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void downloadFromView()}
+                  disabled={fetchingId === viewing.id}
+                  className="rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary disabled:opacity-50"
+                >
+                  {fetchingId === viewing.id ? 'Saving…' : 'Download PDF'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewing(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div ref={viewPaperRef} className="overflow-x-auto bg-slate-50 p-4 sm:p-6">
+              <div className="mx-auto w-[794px] max-w-none">
+                <FinancialDocumentPaper document={viewing} />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingDownload ? (
         <div ref={paperRef} className="pointer-events-none fixed -left-[10000px] top-0 w-[794px]">
-          <FinancialDocumentPaper document={pending} />
+          <FinancialDocumentPaper document={pendingDownload} />
         </div>
       ) : null}
     </div>
