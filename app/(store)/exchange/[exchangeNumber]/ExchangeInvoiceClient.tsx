@@ -219,7 +219,9 @@ export default function ExchangeInvoiceClient() {
                 </button>
               </div>
 
-              <ExchangeInvoiceDocument exchange={exchange} />
+              <ScaledDocumentPreview>
+                <ExchangeInvoiceDocument exchange={exchange} />
+              </ScaledDocumentPreview>
             </section>
 
             {!exchange.has_alipay_qr ? (
