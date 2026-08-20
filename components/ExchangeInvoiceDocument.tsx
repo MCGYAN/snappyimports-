@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { SNAPPY_INVOICE_ISSUER, type BankAccount } from '@/lib/bank-details';
+import InvoicePaymentFooter from '@/components/InvoicePaymentFooter';
+import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
@@ -19,7 +20,6 @@ import {
   invoiceLogoClass,
   invoiceOfficialMultiPageClass,
   invoiceOfficialPageClass,
-  invoicePaymentFooterClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
@@ -80,50 +80,6 @@ function InlineCopy({ value }: { value: string }) {
       {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
       <span>{copied ? 'Copied' : 'Copy'}</span>
     </button>
-  );
-}
-
-function PaymentAccountsBlock({
-  accounts,
-  countryName,
-  withCopy,
-  pinnedBottom,
-}: {
-  accounts: BankAccount[];
-  countryName: string;
-  withCopy?: boolean;
-  pinnedBottom?: boolean;
-}) {
-  const footerClass = pinnedBottom
-    ? invoicePaymentFooterClass
-    : withCopy
-      ? 'mt-3 pt-2 leading-normal'
-      : 'mt-2 pt-1.5 leading-normal';
-
-  return (
-    <div
-      {...(pinnedBottom ? { 'data-invoice-footer': '' } : {})}
-      className={footerClass}
-    >
-      <p className="font-bold uppercase tracking-wide">Payment details ({countryName}):</p>
-      <p className="mt-1">
-        Account holder: {accounts[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
-      </p>
-      <p className="mt-0.5 text-[10px]">
-        Pay only these {countryName} accounts for this Buy RMB invoice.
-      </p>
-      <div className={withCopy ? 'mt-1 space-y-1.5' : 'mt-1.5 space-y-1.5'}>
-        {accounts.map((acc) => (
-          <p key={`${acc.bank}-${acc.accountNumber}`} className="leading-normal">
-            {acc.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {acc.bank}
-            {acc.branch ? ` (${acc.branch})` : ''}
-            {acc.registeredName ? `, Reg: ${acc.registeredName}` : ''}, Account No.:{' '}
-            <span className="font-semibold tabular-nums tracking-wide">{acc.accountNumber}</span>
-            {withCopy ? <InlineCopy value={acc.accountNumber} /> : null}
-          </p>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -268,7 +224,12 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
           </table>
         </div>
 
-        <PaymentAccountsBlock accounts={accounts} countryName={meta.name} withCopy />
+        <InvoicePaymentFooter
+          accounts={accounts}
+          title={`Payment details (${meta.name}):`}
+          note={`Pay only these ${meta.name} accounts for this Buy RMB invoice.`}
+          withCopy
+        />
       </div>
 
       <div
@@ -392,7 +353,13 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
         </div>
         </div>
 
-        <PaymentAccountsBlock accounts={accounts} countryName={meta.name} pinnedBottom />
+        <InvoicePaymentFooter
+          accounts={accounts}
+          title={`Payment details (${meta.name}):`}
+          note={`Pay only these ${meta.name} accounts for this Buy RMB invoice.`}
+          pdfMode={pdfMode}
+          pinned
+        />
       </div>
 
       <style jsx global>{`

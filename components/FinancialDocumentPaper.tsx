@@ -1,5 +1,6 @@
 'use client';
 
+import InvoicePaymentFooter from '@/components/InvoicePaymentFooter';
 import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 import {
   EXCHANGE_CORRIDORS,
@@ -184,14 +185,16 @@ function Paper({
   const pdfMode = isOfficial ? resolveInvoicePdfMode(lines.length) : 'single';
   const isSinglePage = pdfMode === 'single';
 
-  const officialFooterClass = isSinglePage
-    ? invoicePaymentFooterClass
-    : invoicePaymentFooterMultiClass;
+  const receiptFooterClass = isOfficial
+    ? isSinglePage
+      ? invoicePaymentFooterClass
+      : invoicePaymentFooterMultiClass
+    : 'mt-3 pt-2 leading-normal';
 
   const footer = isReceipt ? (
     <div
       {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
-      className={isOfficial ? officialFooterClass : 'mt-3 pt-2 leading-normal'}
+      className={receiptFooterClass}
     >
       <p className="font-bold uppercase tracking-wide">Payment received</p>
       <p className="mt-1">
@@ -204,32 +207,27 @@ function Paper({
         Keep this receipt. It is your proof of payment and no further amount is owed on this item.
       </p>
     </div>
+  ) : isOfficial ? (
+    <InvoicePaymentFooter
+      accounts={SNAPPY_BANK_ACCOUNTS}
+      pdfMode={pdfMode}
+      pinned
+      note={
+        document.flow === 'shipping'
+          ? 'This cedi amount is held until the due date because the dollar rate changes. After the due date, request a fresh bill from your account page.'
+          : undefined
+      }
+    />
   ) : (
-    <div
-      {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
-      className={isOfficial ? officialFooterClass : 'mt-3 pt-2 leading-normal'}
-    >
-      <p className="font-bold uppercase tracking-wide">Payment details:</p>
-      <p className="mt-1">
-        Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
-      </p>
-      <div className="mt-1.5 space-y-1.5">
-        {SNAPPY_BANK_ACCOUNTS.map((account) => (
-          <p key={account.accountNumber} className="leading-normal">
-            {account.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {account.bank}
-            {account.branch ? ` (${account.branch})` : ''}
-            {account.registeredName ? `, Reg: ${account.registeredName}` : ''}, Account No.:{' '}
-            <span className="font-semibold tabular-nums tracking-wide">{account.accountNumber}</span>
-          </p>
-        ))}
-      </div>
-      {document.flow === 'shipping' ? (
-        <p className="mt-2 text-[10px] text-slate-600">
-          This cedi amount is held until the due date because the dollar rate changes. After the
-          due date, request a fresh bill from your account page.
-        </p>
-      ) : null}
-    </div>
+    <InvoicePaymentFooter
+      accounts={SNAPPY_BANK_ACCOUNTS}
+      withCopy
+      note={
+        document.flow === 'shipping'
+          ? 'This cedi amount is held until the due date because the dollar rate changes. After the due date, request a fresh bill from your account page.'
+          : undefined
+      }
+    />
   );
 
   return (

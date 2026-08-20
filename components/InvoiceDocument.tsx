@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
+import InvoicePaymentFooter from '@/components/InvoicePaymentFooter';
 import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import { formatMoney } from '@/lib/payment-routing';
@@ -13,15 +14,12 @@ import {
   invoiceLogoClass,
   invoiceOfficialMultiPageClass,
   invoiceOfficialPageClass,
-  invoicePaymentFooterClass,
-  invoicePaymentFooterMultiClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
   invoiceTypographyClass,
   invoiceVariantClass,
   resolveInvoicePdfMode,
-  type InvoicePdfMode,
 } from '@/lib/invoice-layout';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
@@ -97,43 +95,6 @@ function InlineCopy({ value }: { value: string }) {
       {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
       <span>{copied ? 'Copied' : 'Copy'}</span>
     </button>
-  );
-}
-
-function PaymentDetailsSection({
-  withCopy,
-  pdfMode = 'single',
-}: {
-  withCopy?: boolean;
-  pdfMode?: InvoicePdfMode;
-}) {
-  const footerClass = withCopy
-    ? 'pt-2 leading-normal'
-    : pdfMode === 'multi'
-      ? invoicePaymentFooterMultiClass
-      : invoicePaymentFooterClass;
-
-  return (
-    <div
-      {...(!withCopy ? { 'data-invoice-footer': '' } : {})}
-      className={footerClass}
-    >
-      <p className="font-bold uppercase tracking-wide">Payment details:</p>
-      <p className="mt-1">
-        Account holder: {SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}
-      </p>
-      <div className="mt-1.5 space-y-1.5">
-        {SNAPPY_BANK_ACCOUNTS.map((acc) => (
-          <p key={acc.accountNumber} className="leading-normal">
-            {acc.channel === 'momo' ? 'Mobile Money' : 'Bank'}: {acc.bank}
-            {acc.branch ? ` (${acc.branch})` : ''}
-            {acc.registeredName ? `, Reg: ${acc.registeredName}` : ''}, Account No.:{' '}
-            <span className="font-semibold tabular-nums tracking-wide">{acc.accountNumber}</span>
-            {withCopy ? <InlineCopy value={acc.accountNumber} /> : null}
-          </p>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -300,7 +261,7 @@ export default function InvoiceDocument({ order }: Props) {
         </table>
 
         <InvoiceTotalsTable order={order} currency={currency} paymentLabel={paymentLabel} />
-        <PaymentDetailsSection withCopy />
+        <InvoicePaymentFooter accounts={SNAPPY_BANK_ACCOUNTS} withCopy />
       </div>
 
       {/* ─── Official PDF / print layout (fixed A4 structure, no buttons) ─── */}
@@ -413,7 +374,11 @@ export default function InvoiceDocument({ order }: Props) {
           />
         </div>
 
-        <PaymentDetailsSection pdfMode={pdfMode} />
+        <InvoicePaymentFooter
+          accounts={SNAPPY_BANK_ACCOUNTS}
+          pdfMode={pdfMode}
+          pinned
+        />
       </div>
 
       <style jsx global>{`
