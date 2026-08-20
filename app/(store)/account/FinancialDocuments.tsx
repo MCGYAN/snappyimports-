@@ -24,6 +24,14 @@ function isMobilePdfDevice() {
   );
 }
 
+/** iPhone/iPad: Web Share of PDF files freezes Telegram (and sometimes the phone). */
+function isAppleMobileDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  return navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.platform || '');
+}
+
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -47,7 +55,6 @@ async function fetchMobilePdfBlob(
       if (!response.ok) {
         const result = await response.json().catch(() => null);
         const message = result?.error || 'Could not create the PDF.';
-        // Retry transient server / cold-start failures.
         if (response.status >= 500 && attempt < 2) {
           await delay(350 * (attempt + 1));
           continue;
@@ -72,55 +79,83 @@ async function fetchMobilePdfBlob(
   throw lastError || new Error('Could not download the PDF.');
 }
 
+type MobilePdfDelivery = 'opened' | 'shared' | 'downloaded';
+
+/**
+ * Deliver the invoice PDF on phones.
+ * On iOS we never call navigator.share({ files }) because Telegram freezes.
+ * Open a blank tab during the tap (keeps the user gesture), then load the PDF.
+ */
 async function downloadMobileServerPdf(
   row: FinancialDocumentRecord,
   accessToken: string,
-): Promise<void> {
-  const blob = await fetchMobilePdfBlob(row, accessToken);
-  const filename = `${row.document_number}.pdf`.replace(/[^\w.\-]+/g, '_');
-  const file = new File([blob], filename, { type: 'application/pdf' });
-  const blobUrl = URL.createObjectURL(blob);
-  const revokeLater = (ms = 120_000) => {
-    window.setTimeout(() => URL.revokeObjectURL(blobUrl), ms);
-  };
+): Promise<MobilePdfDelivery> {
+  const apple = isAppleMobileDevice();
+  // Must open synchronously from the tap. After await, iOS blocks window.open.
+  const previewWindow = apple ? window.open('about:blank', '_blank') : null;
 
-  const title = row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice';
-  const canShareFiles =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.share === 'function' &&
-    (typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] }));
+  try {
+    const blob = await fetchMobilePdfBlob(row, accessToken);
+    const filename = `${row.document_number}.pdf`.replace(/[^\w.\-]+/g, '_');
+    const blobUrl = URL.createObjectURL(blob);
+    const revokeLater = (ms = 180_000) => {
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), ms);
+    };
 
-  // Large PDFs freeze iOS share sheets. After compression invoices are small;
-  // still fall back to the native PDF viewer if share fails or the file is heavy.
-  const shareSafe = canShareFiles && blob.size <= 1_500_000;
-
-  if (shareSafe) {
-    try {
-      await navigator.share({ files: [file], title });
-      revokeLater();
-      return;
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        revokeLater();
-        return;
+    if (apple) {
+      if (previewWindow && !previewWindow.closed) {
+        previewWindow.location.href = blobUrl;
+      } else {
+        // Popup blocked: open in this tab so the customer still gets the file.
+        window.location.assign(blobUrl);
       }
-      // Fall through to open / download.
+      revokeLater();
+      return 'opened';
     }
-  }
 
-  // Safari/iOS: open the PDF in a new tab. Share from Safari's viewer is stable.
-  const opened = window.open(blobUrl, '_blank', 'noopener,noreferrer');
-  if (!opened) {
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = filename;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    const title = row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice';
+    const canShareFiles =
+      typeof navigator.share === 'function' &&
+      (typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] }));
+
+    if (canShareFiles && blob.size <= 1_500_000) {
+      try {
+        await navigator.share({ files: [file], title });
+        revokeLater();
+        return 'shared';
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          revokeLater();
+          return 'shared';
+        }
+      }
+    }
+
+    const opened = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      revokeLater();
+      return 'downloaded';
+    }
+
+    revokeLater();
+    return 'opened';
+  } catch (error) {
+    try {
+      previewWindow?.close();
+    } catch {
+      /* ignore */
+    }
+    throw error;
   }
-  revokeLater();
 }
 
 function money(amount: number, currency: string) {
@@ -269,6 +304,7 @@ export default function FinancialDocuments({
   const [payingId, setPayingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState<FinancialDocumentRecord | null>(null);
   const [pendingDownload, setPendingDownload] = useState<FinancialDocumentRecord | null>(null);
+  const [iosShareHint, setIosShareHint] = useState(false);
   const [mounted, setMounted] = useState(false);
   const paperRef = useRef<HTMLDivElement>(null);
   const viewPaperRef = useRef<HTMLDivElement>(null);
@@ -306,9 +342,13 @@ export default function FinancialDocuments({
 
   const prepareDownload = async (row: FinancialDocumentRecord) => {
     setFetchingId(row.id);
+    setIosShareHint(false);
     try {
       if (isMobilePdfDevice()) {
-        await downloadMobileServerPdf(row, accessToken);
+        const result = await downloadMobileServerPdf(row, accessToken);
+        if (result === 'opened' && isAppleMobileDevice()) {
+          setIosShareHint(true);
+        }
         return;
       }
       const document = await loadDocument(row);
@@ -325,9 +365,13 @@ export default function FinancialDocuments({
   const downloadFromView = async () => {
     if (!viewing) return;
     setFetchingId(viewing.id);
+    setIosShareHint(false);
     try {
       if (isMobilePdfDevice()) {
-        await downloadMobileServerPdf(viewing, accessToken);
+        const result = await downloadMobileServerPdf(viewing, accessToken);
+        if (result === 'opened' && isAppleMobileDevice()) {
+          setIosShareHint(true);
+        }
         return;
       }
       const paper = viewPaperRef.current?.querySelector<HTMLElement>('.document-official');
@@ -504,6 +548,12 @@ export default function FinancialDocuments({
                   </p>
                 ) : null}
 
+                {iosShareHint ? (
+                  <p className="mt-2 rounded-xl bg-sky-50 px-3 py-2 text-center text-sm font-semibold text-sky-950">
+                    PDF opened in Safari. Tap Share there, then choose Telegram. That avoids the freeze.
+                  </p>
+                ) : null}
+
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {viewingCanPay ? (
                     <button
@@ -561,6 +611,12 @@ export default function FinancialDocuments({
           I&apos;ve paid after you transfer shipping money.
         </p>
       </div>
+
+      {iosShareHint ? (
+        <p className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950">
+          PDF opened in Safari. Tap Share there, then choose Telegram. That avoids the freeze.
+        </p>
+      ) : null}
 
       {sections.map((section) => (
         <section key={section.key} className="overflow-hidden rounded-2xl border border-slate-200">
