@@ -345,6 +345,19 @@ export default function FinancialDocuments({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedId, loading, documents]);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!viewing) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [viewing]);
+
   const { invoices, receipts } = useMemo(
     () => ({
       invoices: documents.filter((row) => row.document_type === 'invoice'),
@@ -378,19 +391,6 @@ export default function FinancialDocuments({
     viewing.document_type === 'invoice' &&
     shippingPaymentStatus(viewing) === 'awaiting_confirmation';
   const viewingCanPay = viewing ? canMarkShippingPaid(viewing) : false;
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!viewing) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [viewing]);
 
   const previewModal =
     viewing && mounted
