@@ -359,16 +359,19 @@ export async function generateFinancialDocumentPdf(
     if (preparedLogo) {
       try {
         const logoColLeft = left + colWidth * SNAPPY_BANK_ACCOUNTS.length;
-        const logoW = Math.min(18, colWidth - 4);
+        const logoW = Math.min(20, colWidth - 3);
         const logoH = logoW * (19 / 28);
-        // Reuse the same embedded image alias so the logo is not packed twice.
+        // Use the prepared JPEG again (tiny). Alias reuse fails in some jsPDF builds
+        // and left this footer cell blank on mobile downloads.
         pdf.addImage(
-          PDF_LOGO_ALIAS,
+          preparedLogo.dataUrl,
           preparedLogo.format,
           logoColLeft + (colWidth - logoW) / 2,
           boxTop + (boxHeight - logoH) / 2,
           logoW,
           logoH,
+          `${PDF_LOGO_ALIAS}-footer`,
+          'FAST',
         );
       } catch {
         // Text header already covers branding if logo fails.
