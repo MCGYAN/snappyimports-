@@ -424,27 +424,27 @@ export default function FinancialDocuments({
       ))}
 
       {viewing ? (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto bg-slate-950/50 p-0 sm:items-start sm:p-4">
-          <div className="my-0 w-full max-w-4xl rounded-t-2xl bg-white shadow-2xl sm:my-6 sm:rounded-2xl">
-            <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-slate-100 bg-white px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-t-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl">
+            <div className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-brand-accent">
                   {viewing.document_type === 'receipt' ? 'Receipt' : 'Invoice'}
                 </p>
-                <p className="font-bold text-brand-primary">{viewing.document_number}</p>
+                <p className="break-all font-bold text-brand-primary">{viewing.document_number}</p>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-                {viewingWaiting ? (
-                  <span className="col-span-2 rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-900 sm:col-span-1">
-                    Waiting for Snappy to confirm
-                  </span>
-                ) : null}
+              {viewingWaiting ? (
+                <p className="mt-2 rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-900">
+                  Waiting for Snappy to confirm
+                </p>
+              ) : null}
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {viewingCanPay ? (
                   <button
                     type="button"
                     onClick={() => void submitShippingPayment(viewing)}
                     disabled={payingId === viewing.id}
-                    className="min-h-11 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                    className="col-span-2 min-h-11 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
                   >
                     {payingId === viewing.id ? 'Sending…' : "I've paid"}
                   </button>
@@ -466,14 +466,21 @@ export default function FinancialDocuments({
                 </button>
               </div>
             </div>
-            <div
-              ref={viewPaperRef}
-              className="max-h-[70vh] overflow-x-auto overflow-y-auto bg-slate-50 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:max-h-none sm:p-6"
-            >
-              <div className="mx-auto w-[794px] max-w-none">
+
+            <div className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6">
+              <div className="account-doc-preview mx-auto w-full max-w-3xl">
                 <FinancialDocumentPaper document={viewing} />
               </div>
             </div>
+          </div>
+
+          {/* Fixed A4 capture for desktop PDF download from this view. Hidden off-screen. */}
+          <div
+            ref={viewPaperRef}
+            className="pointer-events-none fixed -left-[10000px] top-0 w-[794px]"
+            aria-hidden
+          >
+            <FinancialDocumentPaper document={viewing} />
           </div>
         </div>
       ) : null}
