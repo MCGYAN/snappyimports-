@@ -116,6 +116,23 @@ function AccountContent() {
     void loadPortalSection();
   }, [accessToken, activeTab, portalLoaded, portalLoading]);
 
+  const reloadDocuments = async () => {
+    if (!accessToken) return;
+    setPortalLoading((current) => ({ ...current, documents: true }));
+    try {
+      const response = await fetch('/api/account/portal?include=documents', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not load account records.');
+      setPortalData((current) => ({ ...current, documents: result.documents || [] }));
+    } catch (error) {
+      console.error('[account documents refresh]', error);
+    } finally {
+      setPortalLoading((current) => ({ ...current, documents: false }));
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileLoading(true);
@@ -432,6 +449,7 @@ function AccountContent() {
                     documents={portalData.documents}
                     loading={portalLoading.documents || !portalLoaded.documents}
                     accessToken={accessToken}
+                    onRefresh={reloadDocuments}
                   />
                 )}
 

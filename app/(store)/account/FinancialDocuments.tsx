@@ -83,19 +83,41 @@ function isExpired(row: FinancialDocumentRecord) {
   return row.due_at ? new Date(row.due_at).getTime() < Date.now() : false;
 }
 
+function shippingPaymentStatus(row: FinancialDocumentRecord) {
+  const nested = row.shipping_packages;
+  if (Array.isArray(nested)) return nested[0]?.shipping_payment_status || null;
+  return nested?.shipping_payment_status || null;
+}
+
 function DocumentRow({
   row,
   highlight,
   busy,
+  paying,
   onDownload,
+  onPaymentSent,
 }: {
   row: FinancialDocumentRecord;
   highlight: boolean;
   busy: boolean;
+  paying: boolean;
   onDownload: () => void;
+  onPaymentSent?: () => void;
 }) {
   const receipt = row.document_type === 'receipt';
   const expired = isExpired(row);
+  const paymentStatus = shippingPaymentStatus(row);
+  const showShippingPay =
+    row.flow === 'shipping' &&
+    row.document_type === 'invoice' &&
+    row.status === 'active' &&
+    !expired &&
+    paymentStatus !== 'paid' &&
+    paymentStatus !== 'awaiting_confirmation';
+  const waitingForConfirm =
+    row.flow === 'shipping' &&
+    row.document_type === 'invoice' &&
+    paymentStatus === 'awaiting_confirmation';
   const line = receipt
     ? `Paid ${longDate(row.paid_at || row.issued_at)}`
     : expired
@@ -119,12 +141,27 @@ function DocumentRow({
           {line}. Document {row.document_number}
         </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         <span className="font-bold text-brand-primary">{money(row.amount, row.currency)}</span>
+        {waitingForConfirm ? (
+          <span className="rounded-xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+            Waiting for Snappy to confirm
+          </span>
+        ) : null}
+        {showShippingPay && onPaymentSent ? (
+          <button
+            type="button"
+            onClick={onPaymentSent}
+            disabled={paying || busy}
+            className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {paying ? 'Sending…' : "I've paid"}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onDownload}
-          disabled={busy}
+          disabled={busy || paying}
           className="rounded-xl border border-brand-primary px-4 py-2 text-sm font-bold text-brand-primary hover:bg-brand-primary hover:text-white disabled:opacity-50"
         >
           {busy ? 'Saving…' : 'Download'}
@@ -138,16 +175,19 @@ type FinancialDocumentsProps = {
   documents: FinancialDocumentRecord[];
   loading: boolean;
   accessToken: string;
+  onRefresh?: () => Promise<void>;
 };
 
 export default function FinancialDocuments({
   documents,
   loading,
   accessToken,
+  onRefresh,
 }: FinancialDocumentsProps) {
   const searchParams = useSearchParams();
   const requestedId = searchParams.get('document');
   const [fetchingId, setFetchingId] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const [pending, setPending] = useState<FinancialDocumentRecord | null>(null);
   const paperRef = useRef<HTMLDivElement>(null);
 
@@ -180,6 +220,37 @@ export default function FinancialDocuments({
       alert('Could not load the document. Please try again.');
     } finally {
       setFetchingId(null);
+    }
+  };
+
+  const submitShippingPayment = async (row: FinancialDocumentRecord) => {
+    setPayingId(row.id);
+    try {
+      const response = await fetch('/api/account/portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          action: 'shipping_payment_sent',
+          documentId: row.id,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not tell Snappy about your payment.');
+      }
+      alert(
+        result.message ||
+          'Thank you. Snappy will confirm after checking the bank or MoMo account.',
+      );
+      if (onRefresh) await onRefresh();
+    } catch (error) {
+      console.error('[shipping payment notice]', error);
+      alert(error instanceof Error ? error.message : 'Could not submit payment notice.');
+    } finally {
+      setPayingId(null);
     }
   };
 
@@ -221,7 +292,7 @@ export default function FinancialDocuments({
     {
       key: 'invoices',
       title: 'Bills to pay',
-      hint: 'These ask you for money. Pay before the date shown.',
+      hint: 'These ask you for money. Pay before the date shown, then tap I\'ve paid on shipping bills.',
       empty: 'Nothing to pay right now.',
       rows: invoices,
     },
@@ -239,7 +310,8 @@ export default function FinancialDocuments({
       <div>
         <h2 className="text-2xl font-bold text-brand-primary">Invoices and receipts</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Every paper for your product orders, Buy RMB and shipping. Tap Download to save a copy.
+          Every paper for your product orders, Buy RMB and shipping. Download a copy or tap
+          I&apos;ve paid on a shipping bill after you transfer.
         </p>
       </div>
 
@@ -264,7 +336,13 @@ export default function FinancialDocuments({
                   row={row}
                   highlight={row.id === requestedId}
                   busy={fetchingId === row.id || pending?.id === row.id}
+                  paying={payingId === row.id}
                   onDownload={() => void prepareDownload(row)}
+                  onPaymentSent={
+                    row.flow === 'shipping' && row.document_type === 'invoice'
+                      ? () => void submitShippingPayment(row)
+                      : undefined
+                  }
                 />
               ))}
             </div>

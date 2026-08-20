@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
+import { markShippingPaymentSent } from '@/lib/mark-shipping-payment-sent';
 import { createAdminNotification } from '@/lib/admin-notifications';
-import { emailLayout, sendEmail } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   const clientId = getClientIdentifier(req);
@@ -52,47 +52,28 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (action === 'payment_sent') {
-    if (!invoice || invoice.status === 'expired' || (invoice.due_at && new Date(invoice.due_at) < new Date())) {
-      return NextResponse.json({ error: 'This shipping invoice expired. Request a fresh one.' }, { status: 400 });
-    }
-    if (pkg.shipping_payment_status === 'paid') {
-      return NextResponse.json({ success: true, message: 'Payment is already confirmed.' });
-    }
-    await supabaseAdmin
-      .from('shipping_packages')
-      .update({
-        shipping_payment_status: 'awaiting_confirmation',
-        shipping_payment_sent_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', pkg.id);
-    await createAdminNotification({
-      type: 'shipping_payment_sent',
-      title: 'Shipping payment to confirm',
-      message: `${order.order_number} says ${invoice.currency} ${Number(invoice.amount).toFixed(2)} was paid for ${pkg.package_name}.`,
-      href: '/admin/shipping',
-      entityId: pkg.id,
-      entityNumber: pkg.tracking_id,
-    });
-    const adminEmail = String(process.env.ADMIN_EMAIL || '').trim();
-    if (adminEmail.includes('@')) {
-      try {
-        await sendEmail({
-          to: adminEmail,
-          subject: `Shipping payment to confirm ${order.order_number}`,
-          html: emailLayout(`
-<h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Customer says shipping was paid</h2>
-<p style="color:#374151;font-size:14px;line-height:1.6;margin:0;">
-  Check the Snappy account for <strong>${order.order_number}</strong>. Confirm
-  <strong>GH¢${Number(invoice.amount).toFixed(2)}</strong> only after it appears in the bank or MoMo account.
-</p>
-`, `Shipping payment to confirm for ${order.order_number}`),
-        });
-      } catch (error) {
-        console.error('[shipping payment] admin email', error);
+    try {
+      const result = await markShippingPaymentSent({
+        pkg,
+        invoice,
+        orderNumber: order.order_number,
+      });
+      if (result.state === 'already_paid') {
+        return NextResponse.json({ success: true, message: 'Payment is already confirmed.' });
       }
+      if (result.state === 'already_submitted') {
+        return NextResponse.json({
+          success: true,
+          message: 'Payment is already marked as sent. Snappy will confirm soon.',
+        });
+      }
+      return NextResponse.json({ success: true });
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Could not submit payment notice.' },
+        { status: 400 },
+      );
     }
-    return NextResponse.json({ success: true });
   }
 
   if (action === 'request_invoice') {

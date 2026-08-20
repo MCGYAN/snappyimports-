@@ -39,6 +39,11 @@ export type FinancialDocumentRecord = {
   due_at?: string | null;
   paid_at?: string | null;
   customer_email?: string | null;
+  shipping_package_id?: string | null;
+  shipping_packages?:
+    | { shipping_payment_status?: string | null }
+    | { shipping_payment_status?: string | null }[]
+    | null;
   data?: Record<string, any> | null;
 };
 
