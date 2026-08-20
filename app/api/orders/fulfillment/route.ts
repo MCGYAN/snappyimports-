@@ -3,9 +3,12 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import {
   FULFILLMENT_STAGES,
+  fulfillmentIndex,
   orderStatusForStage,
+  rollupFulfillmentStageFromPackages,
   type FulfillmentStage,
 } from '@/lib/order-journey';
+import { fetchPackageStatusesForOrder, refreshOrderShippingStage } from '@/lib/shipping-sync';
 
 /** POST — admin updates China→Ghana fulfillment stage */
 export async function POST(req: Request) {
@@ -40,6 +43,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
     }
 
+    const packageStatuses = await fetchPackageStatusesForOrder(orderId);
+    if (packageStatuses.length) {
+      const packageStage = rollupFulfillmentStageFromPackages(packageStatuses);
+      if (packageStage && fulfillmentIndex(packageStage) > fulfillmentIndex('sourcing')) {
+        return NextResponse.json(
+          {
+            error:
+              'This order already has packages in transit or in Ghana. Update travel in the Shipping workspace.',
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const history = Array.isArray(order.metadata?.fulfillment_history)
       ? order.metadata.fulfillment_history
       : [];
@@ -72,7 +89,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to update journey.' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, order: updated });
+    await refreshOrderShippingStage(orderId, auth.user?.id || null);
+    const { data: synced } = await supabaseAdmin
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('id', orderId)
+      .single();
+
+    return NextResponse.json({ success: true, order: synced || updated });
   } catch (e) {
     console.error('[fulfillment]', e);
     return NextResponse.json({ error: 'Failed to update fulfillment.' }, { status: 500 });

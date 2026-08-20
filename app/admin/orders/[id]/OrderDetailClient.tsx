@@ -8,6 +8,8 @@ import OrderShippingDesk from '@/components/admin/OrderShippingDesk';
 import {
   deriveFulfillmentStage,
   FULFILLMENT_STAGES,
+  fulfillmentIndex,
+  storedFulfillmentStage,
 } from '@/lib/order-journey';
 import { SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 
@@ -24,6 +26,7 @@ interface FraudAnalysis {
 
 export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [order, setOrder] = useState<any>(null);
+  const [packageStatuses, setPackageStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -118,6 +121,28 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
       setOrder(data);
       setTrackingNumber(data.metadata?.tracking_number || '');
       setAdminNotes(data.notes || '');
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const shippingRes = await fetch(`/api/shipping/packages?orderId=${encodeURIComponent(data.id)}`, {
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        });
+        const shippingData = await shippingRes.json();
+        if (shippingRes.ok) {
+          setPackageStatuses(
+            (shippingData.packages || [])
+              .map((pkg: { status?: string }) => pkg.status)
+              .filter(Boolean),
+          );
+          if (shippingData.order) setOrder(shippingData.order);
+        } else {
+          setPackageStatuses([]);
+        }
+      } catch {
+        setPackageStatuses([]);
+      }
 
     } catch (err: any) {
       console.error('Error fetching order:', err);
@@ -457,7 +482,12 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     ? `${shippingAddress.firstName.trim()} ${shippingAddress.lastName.trim()}`
     : shippingAddress.full_name || shippingAddress.firstName || order.email?.split('@')[0] || 'Customer';
 
-  const currentJourney = deriveFulfillmentStage(order);
+  const storedJourney = storedFulfillmentStage(order);
+  const currentJourney = deriveFulfillmentStage(order, packageStatuses);
+  const journeyOutOfSync =
+    packageStatuses.length > 0 &&
+    order.payment_status === 'paid' &&
+    fulfillmentIndex(currentJourney) > fulfillmentIndex(storedJourney);
 
   // Mock fraud analysis for now (or implement real logic later)
   const fraudAnalysis: FraudAnalysis = {
@@ -759,6 +789,14 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     </p>
                   </div>
                 </div>
+                {journeyOutOfSync ? (
+                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+                    Stored journey was{' '}
+                    {FULFILLMENT_STAGES.find((s) => s.key === storedJourney)?.title || storedJourney}.
+                    Customer view now follows package status at{' '}
+                    {FULFILLMENT_STAGES.find((s) => s.key === currentJourney)?.title || currentJourney}.
+                  </p>
+                ) : null}
                 {order.payment_status === 'paid' && currentJourney === 'paid' ? (
                   <button
                     type="button"

@@ -33,6 +33,7 @@ export default function OrderHubPage() {
 
   const [email, setEmail] = useState(emailFromUrl);
   const [order, setOrder] = useState<any>(null);
+  const [packageStatuses, setPackageStatuses] = useState<string[]>([]);
   const [packageCount, setPackageCount] = useState(0);
   const [loading, setLoading] = useState(Boolean(emailFromUrl));
   const [error, setError] = useState('');
@@ -64,7 +65,9 @@ export default function OrderHubPage() {
         return;
       }
       setOrder(data.order);
-      setPackageCount(shippingRes.ok ? (shippingData.packages || []).length : 0);
+      const pkgs = shippingRes.ok ? shippingData.packages || [] : [];
+      setPackageCount(pkgs.length);
+      setPackageStatuses(pkgs.map((pkg: { status?: string }) => pkg.status).filter(Boolean));
     } catch {
       setError('Something went wrong. Try again.');
     } finally {
@@ -81,7 +84,7 @@ export default function OrderHubPage() {
     return () => clearInterval(t);
   }, []);
 
-  const stage = order ? deriveFulfillmentStage(order) : 'awaiting_payment';
+  const stage = order ? deriveFulfillmentStage(order, packageStatuses) : 'awaiting_payment';
   const dueAt = order?.metadata?.invoice_due_at as string | undefined;
   const expired = isInvoiceExpired(dueAt);
   const msLeft = dueAt ? new Date(dueAt).getTime() - now : 0;
@@ -439,8 +442,9 @@ export default function OrderHubPage() {
                 <h2 className="text-xl font-bold text-brand-primary">Import journey</h2>
               </div>
               <p className="mb-6 text-sm text-slate-500">
-                Payment and sourcing stay on this page. After packing, follow each physical package
-                for CBM, freight and days left to Ghana.
+                {packageCount > 0
+                  ? 'This timeline stays in sync with your shipping packages. Open each package below for CBM, freight, and arrival details.'
+                  : 'Payment and sourcing stay on this page. After packing, follow each physical package for CBM, freight and days left to Ghana.'}
               </p>
               <ol className="space-y-4">
                 {FULFILLMENT_STAGES.filter((s) => s.key !== 'cancelled').map((s) => {

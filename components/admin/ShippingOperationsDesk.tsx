@@ -21,6 +21,7 @@ type Queue =
   | 'load'
   | 'transit'
   | 'billing'
+  | 'awaiting_payment'
   | 'confirm'
   | 'release'
   | 'ready'
@@ -111,6 +112,8 @@ export default function ShippingOperationsDesk({
   const [undoPackageIds, setUndoPackageIds] = useState<string[]>([]);
   const [correctionPackage, setCorrectionPackage] = useState<any | null>(null);
   const [correctionReason, setCorrectionReason] = useState('');
+  const [repackPackage, setRepackPackage] = useState<any | null>(null);
+  const [repackReason, setRepackReason] = useState('');
 
   const headers = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -203,6 +206,13 @@ export default function ShippingOperationsDesk({
           !pkg.freight_included &&
           !pkg.final_usd_to_ghs,
       ),
+      awaiting_payment: packages.filter(
+        (pkg: any) =>
+          ['arrived', 'clearing'].includes(pkg.status) &&
+          !pkg.freight_included &&
+          Boolean(pkg.final_usd_to_ghs) &&
+          pkg.shipping_payment_status === 'unpaid',
+      ),
       confirm: packages.filter((pkg: any) => pkg.shipping_payment_status === 'awaiting_confirmation'),
       release: packages.filter(
         (pkg: any) =>
@@ -218,6 +228,7 @@ export default function ShippingOperationsDesk({
     load: packageQueues.load.length,
     transit: packageQueues.transit.length,
     billing: packageQueues.billing.length,
+    awaiting_payment: packageQueues.awaiting_payment.length,
     confirm: packageQueues.confirm.length,
     release: packageQueues.release.length,
     ready: packageQueues.ready.length,
@@ -371,6 +382,61 @@ export default function ShippingOperationsDesk({
     await load();
   };
 
+  const markAwaitingConfirmation = async () => {
+    if (!selected.length) return;
+    if (
+      !confirm(
+        `Move ${selected.length} package${selected.length === 1 ? '' : 's'} to Payment check? Use this when the customer paid by WhatsApp or MoMo and told you directly.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    const response = await fetch('/api/shipping/desk', {
+      method: 'POST',
+      headers: await headers(),
+      body: JSON.stringify({
+        action: 'mark_awaiting_confirmation',
+        packageIds: selected,
+      }),
+    });
+    const result = await response.json();
+    setBusy(false);
+    if (!response.ok) return alert(result.error || 'Could not update packages.');
+    setSelected([]);
+    await load();
+  };
+
+  const repackToPackages = async () => {
+    if (!repackPackage) return;
+    if (repackReason.trim().length < 5) {
+      return setError('Enter a short reason for sending this package back.');
+    }
+
+    setBusy(true);
+    setError('');
+    const response = await fetch('/api/shipping/desk', {
+      method: 'POST',
+      headers: await headers(),
+      body: JSON.stringify({
+        action: 'repack_to_packages',
+        packageIds: [repackPackage.id],
+        reason: repackReason.trim(),
+      }),
+    });
+    const result = await response.json();
+    setBusy(false);
+    if (!response.ok) return setError(result.error || 'Could not repack this package.');
+    setRepackPackage(null);
+    setRepackReason('');
+    setSelected([]);
+    alert(
+      `${repackPackage.package_name} went back to Needs packing. Edit CBM there, then create a fresh box.`,
+    );
+    await load();
+  };
+
   const correctPackageStatus = async () => {
     if (!correctionPackage) return;
     const previousStatus = previousPackageStatus(correctionPackage.status);
@@ -403,16 +469,32 @@ export default function ShippingOperationsDesk({
     setSelected(selected.length === ids.length ? [] : ids);
   };
 
+  const queueMeta: Record<Queue, { label: string; hint: string }> = {
+    pack: { label: 'Needs packing', hint: 'Paid items waiting for a physical box.' },
+    load: { label: 'Received at warehouse', hint: 'Packed boxes still in China. Repack here if CBM was wrong.' },
+    transit: { label: 'In transit', hint: 'On the vessel to Ghana.' },
+    billing: { label: 'Arrived in Ghana', hint: 'Goods landed. Lock the shipping bill.' },
+    awaiting_payment: {
+      label: 'Waiting for payment',
+      hint: 'Bill locked. Customer has not marked payment yet.',
+    },
+    confirm: { label: 'Payment check', hint: 'Customer says they paid. Confirm in bank or MoMo.' },
+    release: { label: 'Release goods', hint: 'Freight cleared. Mark ready for pickup or delivery.' },
+    ready: { label: 'Ready for customer', hint: 'Waiting for collection or delivery booking.' },
+    all: { label: 'All packages', hint: 'Every shipping package in the system.' },
+  };
+
   const queueLabels: { key: Queue; label: string }[] =
     mode === 'packages'
-      ? [{ key: 'pack', label: 'Needs packing' }]
+      ? [{ key: 'pack', label: queueMeta.pack.label }]
       : [
-          { key: 'load', label: 'Ready to ship' },
-          { key: 'transit', label: 'In transit' },
-          { key: 'billing', label: 'Ghana bills' },
-          { key: 'confirm', label: 'Payment check' },
-          { key: 'release', label: 'Release goods' },
-          { key: 'all', label: 'All packages' },
+          { key: 'load', label: queueMeta.load.label },
+          { key: 'transit', label: queueMeta.transit.label },
+          { key: 'billing', label: queueMeta.billing.label },
+          { key: 'awaiting_payment', label: queueMeta.awaiting_payment.label },
+          { key: 'confirm', label: queueMeta.confirm.label },
+          { key: 'release', label: queueMeta.release.label },
+          { key: 'all', label: queueMeta.all.label },
         ];
   const visibleJobCount = queueLabels
     .filter((tab) => tab.key !== 'all')
@@ -470,6 +552,9 @@ export default function ShippingOperationsDesk({
             {counts.pack} customer{counts.pack === 1 ? '' : 's'} with items waiting to be packed
           </p>
         )}
+        {mode === 'shipping' && queue !== 'pack' ? (
+          <p className="mt-2 text-xs leading-relaxed text-slate-500">{queueMeta[queue].hint}</p>
+        ) : null}
       </div>
 
       {undoPackageIds.length > 0 ? (
@@ -799,6 +884,14 @@ export default function ShippingOperationsDesk({
                 >
                   Confirm payments
                 </button>
+              ) : queue === 'awaiting_payment' ? (
+                <button
+                  onClick={() => void markAwaitingConfirmation()}
+                  disabled={busy}
+                  className="rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-white"
+                >
+                  Customer paid (move to Payment check)
+                </button>
               ) : queue === 'release' ? (
                 <button
                   onClick={() => void runBatch('mark_ready')}
@@ -908,6 +1001,19 @@ export default function ShippingOperationsDesk({
                             Fix status
                           </button>
                         ) : null}
+                        {data.canRepack && pkg.status === 'received' && queue === 'load' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRepackPackage(pkg);
+                              setRepackReason('');
+                              setError('');
+                            }}
+                            className="mt-2 block text-xs font-bold text-amber-800 underline decoration-amber-300 underline-offset-2"
+                          >
+                            Send back to Packages
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   ))
@@ -917,6 +1023,54 @@ export default function ShippingOperationsDesk({
           </div>
         </>
       )}
+
+      {repackPackage ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900">Send back to Packages</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {repackPackage.package_name} will be dissolved. Its items return to{' '}
+              <strong>Needs packing</strong> so you can fix CBM, class, or freight before creating a
+              new box.
+            </p>
+            <label className="mt-4 block text-sm font-semibold text-slate-700">
+              Why are you repacking it?
+              <textarea
+                value={repackReason}
+                onChange={(event) => setRepackReason(event.target.value)}
+                maxLength={300}
+                rows={3}
+                autoFocus
+                placeholder="Example: CBM was measured wrong. Need to remeasure before shipping."
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
+              />
+            </label>
+            {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRepackPackage(null);
+                  setRepackReason('');
+                  setError('');
+                }}
+                disabled={busy}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void repackToPackages()}
+                disabled={busy || repackReason.trim().length < 5}
+                className="rounded-xl bg-amber-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {busy ? 'Repacking…' : 'Confirm repack'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {correctionPackage ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">

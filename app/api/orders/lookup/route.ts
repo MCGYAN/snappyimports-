@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
+import { refreshOrderShippingStage } from '@/lib/shipping-sync';
 
 /** GET /api/orders/lookup?order=&email= — customer invoice / tracking access */
 export async function GET(req: Request) {
@@ -19,21 +20,29 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Order number and email are required.' }, { status: 400 });
     }
 
-    const { data: order, error } = await supabaseAdmin
+    const { data: initialOrder, error } = await supabaseAdmin
       .from('orders')
       .select('*, order_items(*)')
       .eq('order_number', orderNumber)
       .single();
 
-    if (error || !order) {
+    if (error || !initialOrder) {
       return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
     }
 
-    if ((order.email || '').toLowerCase() !== email) {
+    if ((initialOrder.email || '').toLowerCase() !== email) {
       return NextResponse.json({ error: 'Email does not match this order.' }, { status: 403 });
     }
 
-    return NextResponse.json({ success: true, order });
+    await refreshOrderShippingStage(initialOrder.id);
+
+    const { data: order } = await supabaseAdmin
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('id', initialOrder.id)
+      .single();
+
+    return NextResponse.json({ success: true, order: order || initialOrder });
   } catch (e) {
     console.error('[order lookup]', e);
     return NextResponse.json({ error: 'Failed to load order.' }, { status: 500 });

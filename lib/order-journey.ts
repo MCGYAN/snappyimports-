@@ -1,3 +1,5 @@
+import { shippingStatusIndex } from '@/lib/shipping';
+
 /**
  * China → Ghana fulfillment journey shown on order tracking / admin.
  * Kept to a few real milestones so customers stay informed without
@@ -114,7 +116,27 @@ export function normalizeFulfillmentStage(
   return LEGACY_STAGE_MAP[stage] || null;
 }
 
-export function deriveFulfillmentStage(order: {
+/** Roll linked package statuses up to one honest order milestone. */
+export function rollupFulfillmentStageFromPackages(
+  packageStatuses: string[],
+): FulfillmentStage | null {
+  if (!packageStatuses.length) return null;
+
+  const indexes = packageStatuses.map((status) => shippingStatusIndex(status));
+  const allAtLeast = (status: string) =>
+    indexes.every((index) => index >= shippingStatusIndex(status));
+  const anyAtLeast = (status: string) =>
+    indexes.some((index) => index >= shippingStatusIndex(status));
+
+  if (allAtLeast('delivered')) return 'delivered';
+  if (allAtLeast('ready')) return 'ready';
+  if (allAtLeast('arrived')) return 'in_ghana';
+  if (anyAtLeast('in_transit')) return 'en_route_ghana';
+  return 'sourcing';
+}
+
+/** Stored metadata stage before package rollup (for admin sync warnings). */
+export function storedFulfillmentStage(order: {
   status?: string;
   payment_status?: string;
   metadata?: Record<string, any> | null;
@@ -124,7 +146,6 @@ export function deriveFulfillmentStage(order: {
   if (normalized === 'cancelled' || order.status === 'cancelled') return 'cancelled';
   if (normalized === 'delivered' || order.status === 'delivered') return 'delivered';
 
-  // Prefer an explicit post-payment milestone stored by admin
   if (
     normalized &&
     !['awaiting_payment', 'payment_sent', 'paid'].includes(normalized)
@@ -137,8 +158,6 @@ export function deriveFulfillmentStage(order: {
   }
   if (order.payment_status !== 'paid') return 'awaiting_payment';
 
-  // Money is in. Ignore stale awaiting_payment / payment_sent left from checkout
-  // (Moolre mark_order_paid used to leave fulfillment_stage unchanged).
   if (
     !normalized ||
     normalized === 'awaiting_payment' ||
@@ -150,6 +169,26 @@ export function deriveFulfillmentStage(order: {
   }
 
   return normalized;
+}
+
+export function deriveFulfillmentStage(
+  order: {
+    status?: string;
+    payment_status?: string;
+    metadata?: Record<string, any> | null;
+  },
+  packageStatuses?: string[] | null,
+): FulfillmentStage {
+  const stored = storedFulfillmentStage(order);
+  if (stored === 'cancelled' || stored === 'delivered') return stored;
+  if (order.payment_status !== 'paid') return stored;
+
+  if (packageStatuses?.length) {
+    const fromPackages = rollupFulfillmentStageFromPackages(packageStatuses);
+    if (fromPackages) return fromPackages;
+  }
+
+  return stored;
 }
 
 export function fulfillmentIndex(stage: FulfillmentStage): number {

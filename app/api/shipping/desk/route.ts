@@ -94,6 +94,7 @@ export async function GET(req: Request) {
     packages: packages || [],
     board: rateRow ? boardFrom(rateRow) : null,
     canCorrectStatus: isOwnerRole(auth.role),
+    canRepack: isOwnerRole(auth.role),
   });
 }
 
@@ -301,6 +302,144 @@ export async function POST(req: Request) {
       ),
     ),
   ];
+
+  if (action === 'repack_to_packages') {
+    if (!isOwnerRole(auth.role)) {
+      return NextResponse.json(
+        { error: 'Only the account owner can send a package back to packaging.' },
+        { status: 403 },
+      );
+    }
+    if (packageIds.length !== 1 || !packages?.[0]) {
+      return NextResponse.json(
+        { error: 'Choose one package to send back to packaging.' },
+        { status: 400 },
+      );
+    }
+
+    const pkg: any = packages[0];
+    const reason = String(body.reason || '').trim().slice(0, 300);
+    if (pkg.status !== 'received') {
+      return NextResponse.json(
+        {
+          error:
+            'Only packages still at the warehouse can go back to packaging. Use Fix status for travel corrections.',
+        },
+        { status: 409 },
+      );
+    }
+    if (reason.length < 5) {
+      return NextResponse.json(
+        { error: 'Enter a short reason for sending this package back.' },
+        { status: 400 },
+      );
+    }
+    if (
+      pkg.loaded_at ||
+      pkg.vessel ||
+      pkg.final_usd_to_ghs ||
+      pkg.shipping_payment_status !== 'not_billed'
+    ) {
+      return NextResponse.json(
+        { error: 'This package already has shipping or billing activity and cannot be repacked.' },
+        { status: 409 },
+      );
+    }
+
+    const { data: documents } = await supabaseAdmin
+      .from('financial_documents')
+      .select('id')
+      .eq('flow', 'shipping')
+      .eq('entity_id', pkg.id)
+      .neq('status', 'void');
+    if (documents?.length) {
+      return NextResponse.json(
+        { error: 'Void shipping documents before repacking this package.' },
+        { status: 409 },
+      );
+    }
+
+    const itemSnapshot = (pkg.shipping_package_items || []).map((entry: any) => ({
+      order_item_id: entry.order_item_id,
+      quantity: entry.quantity,
+    }));
+    const now = new Date().toISOString();
+    const repackNote = `Package ${pkg.tracking_id} repacked: ${reason}`;
+
+    for (const orderId of orderIds) {
+      const { data: orderRow } = await supabaseAdmin
+        .from('orders')
+        .select('metadata')
+        .eq('id', orderId)
+        .single();
+      const history = Array.isArray(orderRow?.metadata?.fulfillment_history)
+        ? orderRow.metadata.fulfillment_history
+        : [];
+      await supabaseAdmin
+        .from('orders')
+        .update({
+          metadata: {
+            ...(orderRow?.metadata || {}),
+            fulfillment_history: [
+              ...history,
+              {
+                stage: 'sourcing',
+                at: now,
+                by: auth.user?.id || null,
+                source: 'repack',
+                note: repackNote,
+                items: itemSnapshot,
+              },
+            ],
+            fulfillment_updated_at: now,
+          },
+          updated_at: now,
+        })
+        .eq('id', orderId);
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from('shipping_packages')
+      .delete()
+      .eq('id', pkg.id)
+      .eq('status', 'received');
+    if (deleteError) {
+      console.error('[repack package]', deleteError);
+      return NextResponse.json({ error: 'Could not repack this package.' }, { status: 500 });
+    }
+
+    await Promise.all(orderIds.map((id) => refreshOrderShippingStage(id, auth.user?.id)));
+    return NextResponse.json({
+      success: true,
+      trackingId: pkg.tracking_id,
+      returnedItems: itemSnapshot.length,
+    });
+  }
+
+  if (action === 'mark_awaiting_confirmation') {
+    let moved = 0;
+    for (const pkg of packages || []) {
+      if (!['arrived', 'clearing'].includes(pkg.status)) continue;
+      if (pkg.freight_included || !pkg.final_usd_to_ghs) continue;
+      if (pkg.shipping_payment_status !== 'unpaid') continue;
+      await supabaseAdmin
+        .from('shipping_packages')
+        .update({
+          shipping_payment_status: 'awaiting_confirmation',
+          shipping_payment_sent_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', pkg.id);
+      moved++;
+    }
+    if (!moved) {
+      return NextResponse.json(
+        { error: 'Select packages with a locked bill that are still waiting for customer payment.' },
+        { status: 400 },
+      );
+    }
+    return NextResponse.json({ success: true, moved });
+  }
 
   if (action === 'correct_status') {
     if (!isOwnerRole(auth.role)) {

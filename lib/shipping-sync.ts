@@ -1,6 +1,33 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { deriveFulfillmentStage, orderStatusForStage } from '@/lib/order-journey';
-import { shippingStatusIndex } from '@/lib/shipping';
+import {
+  orderStatusForStage,
+  rollupFulfillmentStageFromPackages,
+  storedFulfillmentStage,
+  type FulfillmentStage,
+} from '@/lib/order-journey';
+
+/** Linked package statuses for an order (empty when nothing is packed yet). */
+export async function fetchPackageStatusesForOrder(orderId: string): Promise<string[]> {
+  const { data: orderItems } = await supabaseAdmin
+    .from('order_items')
+    .select('id')
+    .eq('order_id', orderId);
+  const itemIds = (orderItems || []).map((item) => item.id);
+  if (!itemIds.length) return [];
+
+  const { data: links } = await supabaseAdmin
+    .from('shipping_package_items')
+    .select('package_id')
+    .in('order_item_id', itemIds);
+  const packageIds = [...new Set((links || []).map((link) => link.package_id))];
+  if (!packageIds.length) return [];
+
+  const { data: packages } = await supabaseAdmin
+    .from('shipping_packages')
+    .select('status')
+    .in('id', packageIds);
+  return (packages || []).map((pkg) => pkg.status).filter(Boolean);
+}
 
 /**
  * Once physical packages exist, their statuses become the source of truth for
@@ -8,42 +35,27 @@ import { shippingStatusIndex } from '@/lib/shipping';
  * up to the clearest honest summary while customers see each package itself.
  */
 export async function refreshOrderShippingStage(orderId: string, actorId?: string | null) {
-  const [{ data: orderItems }, { data: order }] = await Promise.all([
-    supabaseAdmin.from('order_items').select('id').eq('order_id', orderId),
-    supabaseAdmin.from('orders').select('id, status, payment_status, metadata').eq('id', orderId).single(),
-  ]);
-  const itemIds = (orderItems || []).map((item) => item.id);
-  if (!order || !itemIds.length) return null;
+  const { data: order } = await supabaseAdmin
+    .from('orders')
+    .select('id, status, payment_status, metadata')
+    .eq('id', orderId)
+    .single();
+  if (!order) return null;
 
-  const { data: links } = await supabaseAdmin
-    .from('shipping_package_items')
-    .select('package_id')
-    .in('order_item_id', itemIds);
-  const packageIds = [...new Set((links || []).map((link) => link.package_id))];
-  if (!packageIds.length) return null;
+  const packageStatuses = await fetchPackageStatusesForOrder(orderId);
+  if (!packageStatuses.length) return null;
+  if (order.payment_status !== 'paid') return null;
 
-  const { data: packages } = await supabaseAdmin
-    .from('shipping_packages')
-    .select('status')
-    .in('id', packageIds);
-  if (!order || !packages?.length) return null;
+  const nextStage = rollupFulfillmentStageFromPackages(packageStatuses);
+  if (!nextStage) return null;
 
-  const indexes = packages.map((pkg) => shippingStatusIndex(pkg.status));
-  const allAtLeast = (status: string) =>
-    indexes.every((index) => index >= shippingStatusIndex(status));
-  const anyAtLeast = (status: string) =>
-    indexes.some((index) => index >= shippingStatusIndex(status));
+  const storedStage = storedFulfillmentStage(order);
+  if (storedStage === 'cancelled' || storedStage === 'delivered') return storedStage;
 
-  const nextStage = allAtLeast('delivered')
-    ? 'delivered'
-    : allAtLeast('ready')
-      ? 'ready'
-      : allAtLeast('arrived')
-        ? 'in_ghana'
-        : anyAtLeast('in_transit')
-          ? 'en_route_ghana'
-          : 'sourcing';
-  const currentStage = deriveFulfillmentStage(order);
+  const currentStage =
+    storedStage === 'paid' || storedStage === 'awaiting_payment' || storedStage === 'payment_sent'
+      ? ('sourcing' as FulfillmentStage)
+      : storedStage;
   if (currentStage === nextStage) return nextStage;
 
   const nowIso = new Date().toISOString();

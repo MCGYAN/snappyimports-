@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import { type ShippingRateBoard } from '@/lib/shipping';
 import { issueShippingInvoice } from '@/lib/financial-documents';
+import { refreshOrderShippingStage } from '@/lib/shipping-sync';
 
 function mapRateBoard(row: any): ShippingRateBoard {
   return {
@@ -46,7 +47,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Email does not match this order.' }, { status: 403 });
   }
 
-  const itemIds = (order.order_items || []).map((item: any) => item.id);
+  await refreshOrderShippingStage(order.id, auth.user?.id || null);
+
+  const { data: refreshedOrder } = await supabaseAdmin
+    .from('orders')
+    .select('id, order_number, email, payment_status, status, metadata, order_items(*, products(metadata))')
+    .eq('id', order.id)
+    .single();
+  const orderForResponse = refreshedOrder || order;
+
+  const itemIds = (orderForResponse.order_items || []).map((item: any) => item.id);
   const { data: links } = itemIds.length
     ? await supabaseAdmin
         .from('shipping_package_items')
@@ -84,13 +94,13 @@ export async function GET(req: Request) {
   return NextResponse.json({
     success: true,
     order: {
-      id: order.id,
-      order_number: order.order_number,
-      email: order.email,
-      payment_status: order.payment_status,
-      status: order.status,
-      metadata: order.metadata,
-      order_items: order.order_items,
+      id: orderForResponse.id,
+      order_number: orderForResponse.order_number,
+      email: orderForResponse.email,
+      payment_status: orderForResponse.payment_status,
+      status: orderForResponse.status,
+      metadata: orderForResponse.metadata,
+      order_items: orderForResponse.order_items,
     },
     packages: packages || [],
     documents: documents || [],
