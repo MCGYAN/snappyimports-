@@ -64,6 +64,43 @@ export function previousPackageStatus(
 }
 
 /**
+ * Desk queue label for Ghana freight payment. Separate from travel status
+ * (Arrived in Ghana can sit under Waiting for payment or Payment check).
+ */
+export function shippingPaymentDeskLabel(pkg: {
+  status?: string | null;
+  freight_included?: boolean | null;
+  final_usd_to_ghs?: number | null;
+  shipping_payment_status?: string | null;
+}): string | null {
+  const status = String(pkg.status || '');
+  const payment = String(pkg.shipping_payment_status || '');
+  if (payment === 'awaiting_confirmation') return 'Payment check';
+  if (
+    ['arrived', 'clearing'].includes(status) &&
+    !pkg.freight_included &&
+    Boolean(pkg.final_usd_to_ghs) &&
+    payment === 'unpaid'
+  ) {
+    return 'Waiting for payment';
+  }
+  if (
+    ['arrived', 'clearing'].includes(status) &&
+    !pkg.freight_included &&
+    !pkg.final_usd_to_ghs
+  ) {
+    return 'Arrived. Lock bill';
+  }
+  if (
+    ['arrived', 'clearing'].includes(status) &&
+    (payment === 'paid' || Boolean(pkg.freight_included))
+  ) {
+    return 'Release goods';
+  }
+  return null;
+}
+
+/**
  * The import journey is the single place staff move an order forward.
  * Packages follow it so nobody has to set the same milestone twice.
  */

@@ -441,6 +441,45 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, moved });
   }
 
+  if (action === 'revert_payment_check') {
+    let reverted = 0;
+    for (const pkg of packages || []) {
+      if (pkg.shipping_payment_status !== 'awaiting_confirmation') continue;
+      if (['ready', 'delivered'].includes(pkg.status)) continue;
+      const now = new Date().toISOString();
+      const { data: updated, error } = await supabaseAdmin
+        .from('shipping_packages')
+        .update({
+          shipping_payment_status: 'unpaid',
+          shipping_payment_sent_at: null,
+          updated_at: now,
+        })
+        .eq('id', pkg.id)
+        .eq('shipping_payment_status', 'awaiting_confirmation')
+        .select('id')
+        .maybeSingle();
+      if (error) {
+        console.error('[revert payment check]', error);
+        return NextResponse.json(
+          { error: 'Could not send package back to Waiting for payment.' },
+          { status: 500 },
+        );
+      }
+      if (updated) reverted++;
+    }
+    if (!reverted) {
+      return NextResponse.json(
+        {
+          error:
+            'Select packages on Payment check. Travel status stays Arrived in Ghana. Only the payment desk step moves back.',
+        },
+        { status: 400 },
+      );
+    }
+    await Promise.all(orderIds.map((id) => refreshOrderShippingStage(id, auth.user?.id)));
+    return NextResponse.json({ success: true, reverted });
+  }
+
   if (action === 'correct_status') {
     if (!isOwnerRole(auth.role)) {
       return NextResponse.json(

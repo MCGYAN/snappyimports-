@@ -9,6 +9,7 @@ import {
   formatUsd,
   previousPackageStatus,
   rateForClass,
+  shippingPaymentDeskLabel,
   SHIPPING_CLASS_LABELS,
   SHIPPING_GOODS_CLASSES,
   SHIPPING_STATUS_LABELS,
@@ -430,6 +431,33 @@ export default function ShippingOperationsDesk({
     await load();
   };
 
+  const revertPaymentCheck = async (packageIds?: string[]) => {
+    const ids = packageIds?.length ? packageIds : selected;
+    if (!ids.length) return;
+    if (
+      !confirm(
+        `Send ${ids.length} package${ids.length === 1 ? '' : 's'} back to Waiting for payment? Travel stays Arrived in Ghana. The locked shipping bill stays open so the customer can pay again.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    const response = await fetch('/api/shipping/desk', {
+      method: 'POST',
+      headers: await headers(),
+      body: JSON.stringify({
+        action: 'revert_payment_check',
+        packageIds: ids,
+      }),
+    });
+    const result = await response.json();
+    setBusy(false);
+    if (!response.ok) return alert(result.error || 'Could not reverse Payment check.');
+    setSelected([]);
+    await load();
+  };
+
   const repackToPackages = async () => {
     if (!repackPackage) return;
     if (repackReason.trim().length < 5) {
@@ -500,7 +528,10 @@ export default function ShippingOperationsDesk({
       label: 'Waiting for payment',
       hint: 'Bill locked. Customer has not marked payment yet.',
     },
-    confirm: { label: 'Payment check', hint: 'Customer says they paid. Confirm in bank or MoMo.' },
+    confirm: {
+      label: 'Payment check',
+      hint: 'Customer says they paid. Confirm in bank or MoMo. Use Undo on a row to send it back to Waiting for payment.',
+    },
     release: { label: 'Release goods', hint: 'Freight cleared. Mark ready for pickup or delivery.' },
     ready: { label: 'Ready for customer', hint: 'Waiting for collection or delivery booking.' },
     all: { label: 'All packages', hint: 'Every shipping package in the system.' },
@@ -1007,35 +1038,56 @@ export default function ShippingOperationsDesk({
                             : formatUsd(pkg.estimated_shipping_usd)}
                       </td>
                       <td className="p-3">
-                        <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-semibold text-orange-800">
-                          {SHIPPING_STATUS_LABELS[pkg.status as ShippingPackageStatus]}
-                        </span>
-                        {data.canCorrectStatus && previousPackageStatus(pkg.status) ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCorrectionPackage(pkg);
-                              setCorrectionReason('');
-                              setError('');
-                            }}
-                            className="mt-2 block text-xs font-bold text-brand-primary underline decoration-brand-primary/30 underline-offset-2"
-                          >
-                            Fix status
-                          </button>
-                        ) : null}
-                        {data.canRepack && pkg.status === 'received' && queue === 'load' ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRepackPackage(pkg);
-                              setRepackReason('');
-                              setError('');
-                            }}
-                            className="mt-2 block text-xs font-bold text-amber-800 underline decoration-amber-300 underline-offset-2"
-                          >
-                            Send back to Packages
-                          </button>
-                        ) : null}
+                        {(() => {
+                          const deskLabel = shippingPaymentDeskLabel(pkg);
+                          return (
+                            <div className="space-y-1">
+                              {deskLabel ? (
+                                <p className="text-xs font-bold text-sky-900">{deskLabel}</p>
+                              ) : null}
+                              <p className="text-xs text-slate-600">
+                                {SHIPPING_STATUS_LABELS[pkg.status as ShippingPackageStatus]}
+                              </p>
+                              {queue === 'confirm' &&
+                              pkg.shipping_payment_status === 'awaiting_confirmation' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void revertPaymentCheck([pkg.id])}
+                                  disabled={busy}
+                                  className="mt-1 block text-xs font-bold text-amber-800 underline decoration-amber-300 underline-offset-2 disabled:opacity-50"
+                                >
+                                  Undo
+                                </button>
+                              ) : null}
+                              {data.canCorrectStatus && previousPackageStatus(pkg.status) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCorrectionPackage(pkg);
+                                    setCorrectionReason('');
+                                    setError('');
+                                  }}
+                                  className="mt-1 block text-xs font-bold text-brand-primary underline decoration-brand-primary/30 underline-offset-2"
+                                >
+                                  Fix travel
+                                </button>
+                              ) : null}
+                              {data.canRepack && pkg.status === 'received' && queue === 'load' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRepackPackage(pkg);
+                                    setRepackReason('');
+                                    setError('');
+                                  }}
+                                  className="mt-1 block text-xs font-bold text-amber-800 underline decoration-amber-300 underline-offset-2"
+                                >
+                                  Send back to Packages
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))
@@ -1097,7 +1149,7 @@ export default function ShippingOperationsDesk({
       {correctionPackage ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900">Fix package status</h3>
+            <h3 className="text-lg font-bold text-slate-900">Fix travel status</h3>
             <p className="mt-1 text-sm text-slate-500">
               {correctionPackage.package_name} will move from{' '}
               <strong>
@@ -1113,7 +1165,8 @@ export default function ShippingOperationsDesk({
                   ) as ShippingPackageStatus
                 ]}
               </strong>
-              .
+              . This only corrects travel. It does not change Payment check or Waiting for
+              payment.
             </p>
             <label className="mt-4 block text-sm font-semibold text-slate-700">
               Why are you correcting it?
