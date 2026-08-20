@@ -6,6 +6,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { getFriendlyAuthError } from '@/lib/auth-copy';
+import {
+  getRememberMePreference,
+  getRememberedEmail,
+  getRememberedPassword,
+  setRememberMePreference,
+  setRememberedCredentials,
+  syncAuthCookies,
+} from '@/lib/auth-remember';
 
 function LoginForm() {
   const router = useRouter();
@@ -16,7 +24,7 @@ function LoginForm() {
   const [formData, setFormData] = useState({
     email: emailFromQuery,
     password: '',
-    rememberMe: false
+    rememberMe: true,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<any>({});
@@ -25,10 +33,30 @@ function LoginForm() {
   const { getToken, verifying } = useRecaptcha();
 
   useEffect(() => {
-    if (emailFromQuery) {
-      setFormData((prev) => ({ ...prev, email: emailFromQuery }));
-    }
+    const rememberedEmail = getRememberedEmail();
+    const rememberedPassword = getRememberedPassword();
+    const preferRemember = getRememberMePreference();
+    setFormData((prev) => ({
+      ...prev,
+      rememberMe: preferRemember,
+      email: emailFromQuery || rememberedEmail || prev.email,
+      password: rememberedPassword || prev.password,
+    }));
   }, [emailFromQuery]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session) return;
+      const safeNext =
+        nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
+      router.replace(safeNext);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [nextPath, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +90,9 @@ function LoginForm() {
     }
 
     try {
+      // Apply before sign-in so Supabase writes the session to the right store.
+      setRememberMePreference(formData.rememberMe);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email.trim(),
         password: formData.password,
@@ -72,6 +103,13 @@ function LoginForm() {
       }
 
       if (data.session?.access_token) {
+        if (formData.rememberMe) {
+          setRememberedCredentials(formData.email.trim(), formData.password);
+        } else {
+          setRememberedCredentials(null, null);
+        }
+        syncAuthCookies(data.session, formData.rememberMe);
+
         // Attach any guest orders placed with this email
         try {
           await fetch('/api/orders/claim', {

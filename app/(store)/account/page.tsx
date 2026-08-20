@@ -231,6 +231,8 @@ function AccountContent() {
   };
 
   const handleSignOut = async () => {
+    const { clearAuthCookies } = await import('@/lib/auth-remember');
+    clearAuthCookies();
     await supabase.auth.signOut();
     router.push('/auth/login');
     router.refresh();

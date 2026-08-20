@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createAuthStorage } from '@/lib/auth-remember';
 
 /**
  * Public anon client (browser + server). Never uses the service role key.
@@ -30,4 +31,14 @@ if (!isSupabaseConfigured) {
     }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+const browserAuthStorage =
+    typeof window !== 'undefined' ? createAuthStorage() : undefined;
+
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        ...(browserAuthStorage ? { storage: browserAuthStorage } : {}),
+    },
+});

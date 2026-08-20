@@ -7,6 +7,11 @@ import MiniCart from './MiniCart';
 import StoreLogo from './StoreLogo';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
+import {
+  clearAuthCookies,
+  getRememberMePreference,
+  syncAuthCookies,
+} from '@/lib/auth-remember';
 import AnnouncementBar from './AnnouncementBar';
 import { Search, User, ShoppingCart, Menu, X } from 'lucide-react';
 
@@ -23,12 +28,20 @@ export default function Header() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      if (session) {
+        syncAuthCookies(session, getRememberMePreference());
+      }
     };
 
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session) {
+        syncAuthCookies(session, getRememberMePreference());
+      } else {
+        clearAuthCookies();
+      }
     });
 
     return () => {
