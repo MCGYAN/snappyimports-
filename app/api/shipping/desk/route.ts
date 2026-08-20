@@ -461,7 +461,7 @@ export async function POST(req: Request) {
       if (error) {
         console.error('[revert payment check]', error);
         return NextResponse.json(
-          { error: 'Could not send package back to Waiting for payment.' },
+          { error: 'Could not send package back to Pay shipping.' },
           { status: 500 },
         );
       }

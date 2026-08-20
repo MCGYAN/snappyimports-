@@ -73,7 +73,7 @@ export const ACCOUNT_ORDER_STATUS_STEPS: AccountOrderStatusStep[] = [
   },
   {
     key: 'waiting_for_payment',
-    title: 'Waiting for payment',
+    title: 'Pay shipping',
     description: 'Shipping bill is locked. Pay freight, then tap I\'ve paid.',
   },
   {

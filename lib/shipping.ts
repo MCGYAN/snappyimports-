@@ -65,7 +65,7 @@ export function previousPackageStatus(
 
 /**
  * Desk queue label for Ghana freight payment. Separate from travel status
- * (Arrived in Ghana can sit under Waiting for payment or Payment check).
+ * (Arrived in Ghana can sit under Pay shipping or Payment check).
  */
 export function shippingPaymentDeskLabel(pkg: {
   status?: string | null;
@@ -82,7 +82,7 @@ export function shippingPaymentDeskLabel(pkg: {
     Boolean(pkg.final_usd_to_ghs) &&
     payment === 'unpaid'
   ) {
-    return 'Waiting for payment';
+    return 'Pay shipping';
   }
   if (
     ['arrived', 'clearing'].includes(status) &&

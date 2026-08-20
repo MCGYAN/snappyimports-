@@ -364,7 +364,7 @@ export default function ShippingOperationsDesk({
         if (locked > 0) {
           alert(
             locked === 1
-              ? 'Shipping bill locked. The package moved to Waiting for payment.'
+              ? 'Shipping bill locked. The package moved to Pay shipping.'
               : `${locked} shipping bills locked.`,
           );
         }
@@ -436,7 +436,7 @@ export default function ShippingOperationsDesk({
     if (!ids.length) return;
     if (
       !confirm(
-        `Send ${ids.length} package${ids.length === 1 ? '' : 's'} back to Waiting for payment? Travel stays Arrived in Ghana. The locked shipping bill stays open so the customer can pay again.`,
+        `Send ${ids.length} package${ids.length === 1 ? '' : 's'} back to Pay shipping? Travel stays Arrived in Ghana. The locked shipping bill stays open so the customer can pay again.`,
       )
     ) {
       return;
@@ -525,12 +525,12 @@ export default function ShippingOperationsDesk({
     transit: { label: 'In transit', hint: 'On the vessel to Ghana.' },
     billing: { label: 'Arrived in Ghana', hint: 'Goods landed. Lock the shipping bill.' },
     awaiting_payment: {
-      label: 'Waiting for payment',
-      hint: 'Bill locked. Customer has not marked payment yet.',
+      label: 'Pay shipping',
+      hint: 'Bill locked. Customer pays freight, then marks I\'ve paid.',
     },
     confirm: {
       label: 'Payment check',
-      hint: 'Customer says they paid. Confirm in bank or MoMo. Use Undo on a row to send it back to Waiting for payment.',
+      hint: 'Customer says they paid. Confirm in bank or MoMo. Use Undo on a row to send it back to Pay shipping.',
     },
     release: { label: 'Release goods', hint: 'Freight cleared. Mark ready for pickup or delivery.' },
     ready: { label: 'Ready for customer', hint: 'Waiting for collection or delivery booking.' },
@@ -1165,8 +1165,7 @@ export default function ShippingOperationsDesk({
                   ) as ShippingPackageStatus
                 ]}
               </strong>
-              . This only corrects travel. It does not change Payment check or Waiting for
-              payment.
+              . This only corrects travel. It does not change Pay shipping or Payment check.
             </p>
             <label className="mt-4 block text-sm font-semibold text-slate-700">
               Why are you correcting it?
