@@ -6,6 +6,21 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
 
+let cachedLogo: ArrayBuffer | null | undefined;
+
+async function loadInvoiceLogo(origin: string): Promise<ArrayBuffer | null> {
+  if (cachedLogo !== undefined) return cachedLogo;
+  try {
+    const logoResponse = await fetch(new URL(SITE_LOGO_LIGHT_BG_PATH, origin), {
+      cache: 'force-cache',
+    });
+    cachedLogo = logoResponse.ok ? await logoResponse.arrayBuffer() : null;
+  } catch {
+    cachedLogo = null;
+  }
+  return cachedLogo;
+}
+
 export async function GET(req: Request) {
   const auth = await verifyAuth(req);
   if (!auth.authenticated || !auth.user?.id) {
@@ -40,15 +55,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
   }
 
-  let logo: ArrayBuffer | null = null;
-  try {
-    const logoResponse = await fetch(new URL(SITE_LOGO_LIGHT_BG_PATH, url.origin), {
-      cache: 'force-cache',
-    });
-    if (logoResponse.ok) logo = await logoResponse.arrayBuffer();
-  } catch {
-    // The text header is a complete fallback if the logo cannot be fetched.
-  }
+  const logo = await loadInvoiceLogo(url.origin);
 
   try {
     const pdf = await generateFinancialDocumentPdf(document as any, logo);

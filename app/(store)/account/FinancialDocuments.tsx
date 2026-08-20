@@ -24,44 +24,103 @@ function isMobilePdfDevice() {
   );
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function fetchMobilePdfBlob(
+  row: FinancialDocumentRecord,
+  accessToken: string,
+): Promise<Blob> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(
+        `/api/account/document-pdf?id=${encodeURIComponent(row.id)}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
+        },
+      );
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        const message = result?.error || 'Could not create the PDF.';
+        // Retry transient server / cold-start failures.
+        if (response.status >= 500 && attempt < 2) {
+          await delay(350 * (attempt + 1));
+          continue;
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      if (!blob || blob.size < 64) {
+        throw new Error('The PDF came back empty. Please try again.');
+      }
+      return blob;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Could not download the PDF.');
+      if (attempt < 2) {
+        await delay(350 * (attempt + 1));
+        continue;
+      }
+    }
+  }
+
+  throw lastError || new Error('Could not download the PDF.');
+}
+
 async function downloadMobileServerPdf(
   row: FinancialDocumentRecord,
   accessToken: string,
 ): Promise<void> {
-  const response = await fetch(
-    `/api/account/document-pdf?id=${encodeURIComponent(row.id)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  );
-  if (!response.ok) {
-    const result = await response.json().catch(() => null);
-    throw new Error(result?.error || 'Could not create the PDF.');
-  }
-
-  const blob = await response.blob();
-  const filename = `${row.document_number}.pdf`;
+  const blob = await fetchMobilePdfBlob(row, accessToken);
+  const filename = `${row.document_number}.pdf`.replace(/[^\w.\-]+/g, '_');
   const file = new File([blob], filename, { type: 'application/pdf' });
-  const sharePayload = {
-    files: [file],
-    title: row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice',
+  const blobUrl = URL.createObjectURL(blob);
+  const revokeLater = (ms = 120_000) => {
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), ms);
   };
 
-  if (
+  const title = row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice';
+  const canShareFiles =
+    typeof navigator !== 'undefined' &&
     typeof navigator.share === 'function' &&
-    (typeof navigator.canShare !== 'function' || navigator.canShare(sharePayload))
-  ) {
-    await navigator.share(sharePayload);
-    return;
+    (typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] }));
+
+  // Large PDFs freeze iOS share sheets. After compression invoices are small;
+  // still fall back to the native PDF viewer if share fails or the file is heavy.
+  const shareSafe = canShareFiles && blob.size <= 1_500_000;
+
+  if (shareSafe) {
+    try {
+      await navigator.share({ files: [file], title });
+      revokeLater();
+      return;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        revokeLater();
+        return;
+      }
+      // Fall through to open / download.
+    }
   }
 
-  const blobUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = blobUrl;
-  link.download = filename;
-  link.rel = 'noopener';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  // Safari/iOS: open the PDF in a new tab. Share from Safari's viewer is stable.
+  const opened = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+  revokeLater();
 }
 
 function money(amount: number, currency: string) {
@@ -275,8 +334,13 @@ export default function FinancialDocuments({
       if (!paper) throw new Error('Invoice paper not ready.');
       await downloadElementAsPdf(paper, `${viewing.document_number}.pdf`);
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       console.error('[document pdf from view]', error);
-      alert('Could not download the document. Please try again.');
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Could not download the document. Please try again.',
+      );
     } finally {
       setFetchingId(null);
     }

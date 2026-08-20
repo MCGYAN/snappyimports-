@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import sharp from 'sharp';
 import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from './bank-details';
 
 type FinancialDocument = {
@@ -29,6 +30,8 @@ const SERVICE_LABELS: Record<FinancialDocument['flow'], string> = {
   shipping: 'Shipping to Ghana',
 };
 
+const PDF_LOGO_ALIAS = 'snappy-logo';
+
 function date(value?: string | null) {
   return value ? new Date(value).toLocaleDateString('en-GB') : '';
 }
@@ -38,6 +41,27 @@ function amount(value: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+/** Shrink logo so mobile share sheets do not choke on multi-MB invoice PDFs. */
+async function preparePdfLogo(
+  logo?: ArrayBuffer | null,
+): Promise<{ dataUrl: string; format: 'JPEG' } | null> {
+  if (!logo || logo.byteLength === 0) return null;
+  try {
+    const jpeg = await sharp(Buffer.from(logo))
+      .rotate()
+      .resize({ width: 360, withoutEnlargement: true })
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .jpeg({ quality: 70, mozjpeg: true })
+      .toBuffer();
+    return {
+      dataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
+      format: 'JPEG',
+    };
+  } catch {
+    return null;
+  }
 }
 
 function linesFor(document: FinancialDocument): PdfLine[] {
@@ -116,18 +140,32 @@ export async function generateFinancialDocumentPdf(
   document: FinancialDocument,
   logo?: ArrayBuffer | null,
 ): Promise<ArrayBuffer> {
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+    compress: true,
+  });
   const data = document.data || {};
   const receipt = document.document_type === 'receipt';
   const currency = document.currency || 'GHS';
   const pageWidth = pdf.internal.pageSize.getWidth();
   const left = 15;
   const right = pageWidth - 15;
+  const preparedLogo = await preparePdfLogo(logo);
 
-  if (logo) {
+  if (preparedLogo) {
     try {
-      const base64 = Buffer.from(logo).toString('base64');
-      pdf.addImage(`data:image/png;base64,${base64}`, 'PNG', left, 10, 28, 19);
+      pdf.addImage(
+        preparedLogo.dataUrl,
+        preparedLogo.format,
+        left,
+        10,
+        28,
+        19,
+        PDF_LOGO_ALIAS,
+        'FAST',
+      );
     } catch {
       // The branded text header below remains if the image cannot be decoded.
     }
@@ -318,15 +356,15 @@ export async function generateFinancialDocumentPdf(
       pdf.setFontSize(7.5);
     });
 
-    if (logo) {
+    if (preparedLogo) {
       try {
-        const base64 = Buffer.from(logo).toString('base64');
         const logoColLeft = left + colWidth * SNAPPY_BANK_ACCOUNTS.length;
         const logoW = Math.min(18, colWidth - 4);
         const logoH = logoW * (19 / 28);
+        // Reuse the same embedded image alias so the logo is not packed twice.
         pdf.addImage(
-          `data:image/png;base64,${base64}`,
-          'PNG',
+          PDF_LOGO_ALIAS,
+          preparedLogo.format,
           logoColLeft + (colWidth - logoW) / 2,
           boxTop + (boxHeight - logoH) / 2,
           logoW,
