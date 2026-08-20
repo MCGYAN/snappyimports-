@@ -135,42 +135,42 @@ export async function generateFinancialDocumentPdf(
 
   pdf.setTextColor(11, 31, 58);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
+  pdf.setFontSize(13);
   text(pdf, SNAPPY_INVOICE_ISSUER.brand, 49, 16);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7);
-  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', '), 49, 20);
-  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', '), 49, 23.5);
+  pdf.setFontSize(8);
+  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', '), 49, 20.5);
+  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', '), 49, 24);
   text(
     pdf,
     `${SNAPPY_INVOICE_ISSUER.contactName}, ${SNAPPY_INVOICE_ISSUER.phones.join(' / ')}`,
     49,
-    27,
+    27.5,
   );
-  text(pdf, SNAPPY_INVOICE_ISSUER.email, 49, 30.5);
+  text(pdf, SNAPPY_INVOICE_ISSUER.email, 49, 31);
 
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(19);
+  pdf.setFontSize(20);
   text(pdf, receipt ? 'RECEIPT' : 'INVOICE', right, 18, { align: 'right' });
-  pdf.setFontSize(7);
+  pdf.setFontSize(8);
   text(
     pdf,
     receipt ? 'PAID IN FULL' : 'PAYMENT REQUESTED',
     right,
-    23,
+    23.5,
     { align: 'right' },
   );
   pdf.setDrawColor(11, 31, 58);
   pdf.setLineWidth(0.5);
-  pdf.line(left, 35, right, 35);
+  pdf.line(left, 36, right, 36);
 
   pdf.setTextColor(0, 0, 0);
-  pdf.setFontSize(8);
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
-  text(pdf, 'BILL TO', left, 43);
-  text(pdf, data.customer_name || 'Customer', left, 48);
+  text(pdf, 'BILL TO', left, 44);
+  text(pdf, data.customer_name || 'Customer', left, 49);
   pdf.setFont('helvetica', 'normal');
-  text(pdf, document.customer_email || '', left, 52);
+  text(pdf, document.customer_email || '', left, 53.5);
 
   const metaX = 125;
   const valueX = right;
@@ -187,14 +187,14 @@ export async function generateFinancialDocumentPdf(
     ['Service:', SERVICE_LABELS[document.flow]],
   ];
   meta.forEach(([label, value], index) => {
-    const y = 43 + index * 4.2;
+    const rowY = 44 + index * 4.6;
     pdf.setFont('helvetica', 'bold');
-    text(pdf, label, metaX, y);
+    text(pdf, label, metaX, rowY);
     pdf.setFont('helvetica', 'normal');
-    text(pdf, value, valueX, y, { align: 'right' });
+    text(pdf, value, valueX, rowY, { align: 'right' });
   });
 
-  let y = Math.max(70, 47 + meta.length * 4.2);
+  let y = Math.max(72, 48 + meta.length * 4.6);
   const descriptionX = left;
   const quantityX = 118;
   const unitX = 151;
@@ -202,21 +202,21 @@ export async function generateFinancialDocumentPdf(
 
   const tableHeader = () => {
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7);
+    pdf.setFontSize(8);
     text(pdf, 'DESCRIPTION', descriptionX, y);
     text(pdf, 'QTY', quantityX, y, { align: 'center' });
     text(pdf, `UNIT PRICE (${currency})`, unitX, y, { align: 'right' });
     text(pdf, `AMOUNT (${currency})`, totalX, y, { align: 'right' });
     pdf.line(left, y + 2, right, y + 2);
-    y += 7;
+    y += 7.5;
   };
   tableHeader();
 
-  pdf.setFontSize(8);
+  pdf.setFontSize(9);
   for (const line of linesFor(document)) {
     const detailLines = line.detail ? pdf.splitTextToSize(line.detail, 88) : [];
-    const rowHeight = Math.max(8, 6 + detailLines.length * 3.5);
-    if (y + rowHeight > 260) {
+    const rowHeight = Math.max(9, 7 + detailLines.length * 3.8);
+    if (y + rowHeight > 245) {
       pdf.addPage();
       y = 20;
       tableHeader();
@@ -224,9 +224,9 @@ export async function generateFinancialDocumentPdf(
     pdf.setFont('helvetica', 'bold');
     text(pdf, line.description, descriptionX, y);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    if (detailLines.length) pdf.text(detailLines, descriptionX, y + 4);
     pdf.setFontSize(8);
+    if (detailLines.length) pdf.text(detailLines, descriptionX, y + 4.2);
+    pdf.setFontSize(9);
     text(pdf, line.quantity, quantityX, y, { align: 'center' });
     text(pdf, amount(line.unitPrice), unitX, y, { align: 'right' });
     pdf.setFont('helvetica', 'bold');
@@ -234,19 +234,20 @@ export async function generateFinancialDocumentPdf(
     y += rowHeight;
   }
 
-  y += 6;
+  y += 7;
   const summaryLabel = receipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`;
   pdf.setDrawColor(0);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9);
+  pdf.setFontSize(10);
   text(pdf, summaryLabel, 125, y);
   text(pdf, amount(document.amount), right, y, { align: 'right' });
 
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const paymentStartY = pageHeight - 38;
+  const paymentStartY = pageHeight - 52;
 
-  pdf.setFontSize(8);
   if (receipt) {
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
     text(pdf, 'PAYMENT RECEIVED', left, paymentStartY);
     pdf.setFont('helvetica', 'normal');
     const confirmation = `Snappy Imports Global confirms full payment of ${currency} ${amount(
@@ -254,25 +255,86 @@ export async function generateFinancialDocumentPdf(
     )} for ${SERVICE_LABELS[document.flow].toLowerCase()}${
       data.reference ? ` ${data.reference}` : ''
     }. Thank you for your business.`;
-    pdf.text(pdf.splitTextToSize(confirmation, right - left), left, paymentStartY + 5);
-    pdf.setFontSize(7);
+    pdf.text(pdf.splitTextToSize(confirmation, right - left), left, paymentStartY + 5.5);
+    pdf.setFontSize(8);
     text(
       pdf,
       'Keep this receipt. It is your proof of payment and no further amount is owed on this item.',
       left,
-      paymentStartY + 14,
+      paymentStartY + 16,
     );
   } else {
-    text(pdf, 'PAYMENT DETAILS', left, paymentStartY);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    text(pdf, 'PAYMENT DETAILS:', left, paymentStartY);
     pdf.setFont('helvetica', 'normal');
-    let paymentY = paymentStartY + 5;
-    for (const account of SNAPPY_BANK_ACCOUNTS) {
-      const label = account.channel === 'momo' ? 'Mobile Money' : 'Bank';
-      const details = `${label}: ${account.bank}${
-        account.branch ? ` (${account.branch})` : ''
-      }, Account No. ${account.accountNumber}`;
-      text(pdf, details, left, paymentY);
-      paymentY += 4.5;
+    text(
+      pdf,
+      `Account holder: ${SNAPPY_BANK_ACCOUNTS[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName}`,
+      left,
+      paymentStartY + 5,
+    );
+    if (document.flow === 'shipping') {
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(80, 80, 80);
+      const note =
+        'This cedi amount is held until the due date because the dollar rate changes. After the due date, request a fresh bill from your account page.';
+      pdf.text(pdf.splitTextToSize(note, right - left), left, paymentStartY + 9.5);
+      pdf.setTextColor(0, 0, 0);
+    }
+
+    const boxTop = paymentStartY + (document.flow === 'shipping' ? 16 : 10);
+    const boxHeight = 22;
+    const boxWidth = right - left;
+    const columns = SNAPPY_BANK_ACCOUNTS.length + 1;
+    const colWidth = boxWidth / columns;
+
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.35);
+    pdf.rect(left, boxTop, boxWidth, boxHeight);
+
+    for (let i = 1; i < columns; i++) {
+      const x = left + colWidth * i;
+      pdf.line(x, boxTop, x, boxTop + boxHeight);
+    }
+
+    pdf.setFontSize(7.5);
+    SNAPPY_BANK_ACCOUNTS.forEach((account, index) => {
+      const x = left + colWidth * index + 2;
+      const title =
+        account.channel === 'momo'
+          ? account.bank
+            ? `Mobile Money (${account.bank})`
+            : 'Mobile Money'
+          : account.branch
+            ? `${account.bank} (${account.branch})`
+            : account.bank;
+      pdf.setFont('helvetica', 'bold');
+      const titleLines = pdf.splitTextToSize(title, colWidth - 4);
+      pdf.text(titleLines, x, boxTop + 5);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      text(pdf, account.accountNumber, x, boxTop + 5 + titleLines.length * 3.4);
+      pdf.setFontSize(7.5);
+    });
+
+    if (logo) {
+      try {
+        const base64 = Buffer.from(logo).toString('base64');
+        const logoColLeft = left + colWidth * SNAPPY_BANK_ACCOUNTS.length;
+        const logoW = Math.min(18, colWidth - 4);
+        const logoH = logoW * (19 / 28);
+        pdf.addImage(
+          `data:image/png;base64,${base64}`,
+          'PNG',
+          logoColLeft + (colWidth - logoW) / 2,
+          boxTop + (boxHeight - logoH) / 2,
+          logoW,
+          logoH,
+        );
+      } catch {
+        // Text header already covers branding if logo fails.
+      }
     }
   }
 

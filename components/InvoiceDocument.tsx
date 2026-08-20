@@ -161,18 +161,18 @@ export default function InvoiceDocument({ order }: Props) {
   return (
     <div id="invoice-print" className="bg-white text-slate-900">
       {/* ─── On-screen invoice: same official structure, plus copy buttons ─── */}
-      <div className={`invoice-screen ${invoiceTypographyClass}`}>
+      <div className={`invoice-screen text-[13px] leading-snug text-black sm:text-[11px]`}>
         {/* Header band */}
         <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className={invoiceLogoClass}
+              className="h-16 w-auto object-contain sm:h-24"
             />
             <div>
-              <p className={invoiceCompanyNameClass}>{SNAPPY_INVOICE_ISSUER.brand}</p>
-              <div className={`mt-0.5 ${invoiceAddressClass}`}>
+              <p className="text-base font-bold sm:text-sm">{SNAPPY_INVOICE_ISSUER.brand}</p>
+              <div className="mt-0.5 text-[12px] leading-snug text-slate-700 sm:text-[10px] sm:leading-[1.45]">
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ')}</p>
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', ')}</p>
                 <p>
@@ -182,7 +182,7 @@ export default function InvoiceDocument({ order }: Props) {
               </div>
             </div>
           </div>
-          <p className={invoiceTitleClass}>INVOICE</p>
+          <p className="text-[1.65rem] font-bold tracking-wide sm:text-2xl">INVOICE</p>
         </div>
 
         {/* Bill to + invoice meta with totals */}

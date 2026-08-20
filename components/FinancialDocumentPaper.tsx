@@ -183,10 +183,25 @@ function Paper({
       document.status === 'void' ||
       (document.due_at ? new Date(document.due_at).getTime() < Date.now() : false));
 
-  const base = invoiceTypographyClass;
   const isOfficial = variant === 'official';
-  const logoSize = invoiceLogoClass;
-  const titleSize = invoiceTitleClass;
+  const base = isOfficial
+    ? invoiceTypographyClass
+    : 'text-[13px] leading-snug text-black sm:text-[11px]';
+  const logoSize = isOfficial
+    ? invoiceLogoClass
+    : 'h-16 w-auto object-contain sm:h-24';
+  const titleSize = isOfficial
+    ? invoiceTitleClass
+    : 'text-[1.65rem] font-bold tracking-wide sm:text-2xl';
+  const addressClass = isOfficial
+    ? invoiceAddressClass
+    : 'text-[12px] leading-snug text-slate-700 sm:text-[10px] sm:leading-[1.45]';
+  const tableHeadClass = isOfficial
+    ? invoiceTableHeaderClass
+    : 'text-[11px] sm:text-[10px]';
+  const detailClass = isOfficial
+    ? invoiceVariantClass
+    : 'text-[12px] text-slate-600 sm:text-[10px]';
   const pdfMode = isOfficial ? resolveInvoicePdfMode(lines.length) : 'single';
   const isSinglePage = pdfMode === 'single';
 
@@ -257,7 +272,7 @@ function Paper({
           />
           <div>
             <p className={invoiceCompanyNameClass}>{SNAPPY_INVOICE_ISSUER.brand}</p>
-            <div className={`mt-0.5 ${invoiceAddressClass}`}>
+            <div className={`mt-0.5 ${addressClass}`}>
               <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ')}</p>
               <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', ')}</p>
               <p>
@@ -321,7 +336,7 @@ function Paper({
 
       <table className="mt-4 w-full border-collapse">
         <thead>
-          <tr className={`border-b-2 border-black text-left ${invoiceTableHeaderClass}`}>
+          <tr className={`border-b-2 border-black text-left ${tableHeadClass}`}>
             <th className="py-1.5 pr-2 font-bold uppercase">Description</th>
             <th className="py-1.5 text-center font-bold uppercase">Qty</th>
             <th className="py-1.5 text-right font-bold uppercase">Unit price ({currency})</th>
@@ -334,7 +349,7 @@ function Paper({
               <td className="py-1.5 pr-2">
                 <span className="font-medium">{line.description}</span>
                 {line.detail ? (
-                  <span className={`block ${invoiceVariantClass}`}>
+                  <span className={`block ${detailClass}`}>
                     {line.detail}
                   </span>
                 ) : null}
