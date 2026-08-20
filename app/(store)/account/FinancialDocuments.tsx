@@ -311,7 +311,6 @@ export default function FinancialDocuments({
   const [payingId, setPayingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState<FinancialDocumentRecord | null>(null);
   const [pendingDownload, setPendingDownload] = useState<FinancialDocumentRecord | null>(null);
-  const [iosShareHint, setIosShareHint] = useState(false);
   const [mounted, setMounted] = useState(false);
   const paperRef = useRef<HTMLDivElement>(null);
   const viewPaperRef = useRef<HTMLDivElement>(null);
@@ -349,13 +348,9 @@ export default function FinancialDocuments({
 
   const prepareDownload = async (row: FinancialDocumentRecord) => {
     setFetchingId(row.id);
-    setIosShareHint(false);
     try {
       if (isMobilePdfDevice()) {
-        const result = await downloadMobileServerPdf(row, accessToken);
-        if (result === 'opened' && isIOSSafari()) {
-          setIosShareHint(true);
-        }
+        await downloadMobileServerPdf(row, accessToken);
         return;
       }
       const document = await loadDocument(row);
@@ -372,13 +367,9 @@ export default function FinancialDocuments({
   const downloadFromView = async () => {
     if (!viewing) return;
     setFetchingId(viewing.id);
-    setIosShareHint(false);
     try {
       if (isMobilePdfDevice()) {
-        const result = await downloadMobileServerPdf(viewing, accessToken);
-        if (result === 'opened' && isIOSSafari()) {
-          setIosShareHint(true);
-        }
+        await downloadMobileServerPdf(viewing, accessToken);
         return;
       }
       const paper = viewPaperRef.current?.querySelector<HTMLElement>('.document-official');
@@ -555,12 +546,6 @@ export default function FinancialDocuments({
                   </p>
                 ) : null}
 
-                {iosShareHint ? (
-                  <p className="mt-2 rounded-xl bg-sky-50 px-3 py-2 text-center text-sm font-semibold text-sky-950">
-                    PDF opened in Safari. Tap Share there, then choose Telegram. That avoids the freeze.
-                  </p>
-                ) : null}
-
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {viewingCanPay ? (
                     <button
@@ -618,12 +603,6 @@ export default function FinancialDocuments({
           I&apos;ve paid after you transfer shipping money.
         </p>
       </div>
-
-      {iosShareHint ? (
-        <p className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950">
-          PDF opened in Safari. Tap Share there, then choose Telegram. That avoids the freeze.
-        </p>
-      ) : null}
 
       {sections.map((section) => (
         <section key={section.key} className="overflow-hidden rounded-2xl border border-slate-200">
