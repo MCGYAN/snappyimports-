@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { formatStoreMoney } from '@/lib/currency';
 import { downloadElementAsPdf, preloadPdfLibraries } from '@/lib/download-pdf';
@@ -208,6 +209,7 @@ export default function FinancialDocuments({
   const [payingId, setPayingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState<FinancialDocumentRecord | null>(null);
   const [pendingDownload, setPendingDownload] = useState<FinancialDocumentRecord | null>(null);
+  const [mounted, setMounted] = useState(false);
   const paperRef = useRef<HTMLDivElement>(null);
   const viewPaperRef = useRef<HTMLDivElement>(null);
 
@@ -377,6 +379,114 @@ export default function FinancialDocuments({
     shippingPaymentStatus(viewing) === 'awaiting_confirmation';
   const viewingCanPay = viewing ? canMarkShippingPaid(viewing) : false;
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!viewing) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [viewing]);
+
+  const previewModal =
+    viewing && mounted
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              viewing.document_type === 'receipt' ? 'Receipt preview' : 'Invoice preview'
+            }
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-950/60"
+              aria-label="Close preview"
+              onClick={() => setViewing(null)}
+            />
+
+            <div className="relative z-10 flex max-h-[min(92vh,920px)] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-slate-100 shadow-2xl sm:rounded-3xl">
+              <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-slate-300 sm:hidden" />
+
+              <div className="shrink-0 border-b border-slate-200 bg-white px-4 pb-3 pt-2 sm:px-5 sm:pt-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wide text-brand-accent">
+                      {viewing.document_type === 'receipt' ? 'Receipt' : 'Invoice'} preview
+                    </p>
+                    <p className="mt-0.5 break-all text-sm font-bold text-brand-primary">
+                      {viewing.document_number}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewing(null)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
+                    aria-label="Close"
+                  >
+                    <i className="ri-close-line text-xl" />
+                  </button>
+                </div>
+
+                {viewingWaiting ? (
+                  <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-900">
+                    Waiting for Snappy to confirm
+                  </p>
+                ) : null}
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {viewingCanPay ? (
+                    <button
+                      type="button"
+                      onClick={() => void submitShippingPayment(viewing)}
+                      disabled={payingId === viewing.id}
+                      className="col-span-2 min-h-11 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                    >
+                      {payingId === viewing.id ? 'Sending…' : "I've paid"}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void downloadFromView()}
+                    disabled={fetchingId === viewing.id}
+                    className="min-h-11 rounded-xl border border-brand-primary bg-white px-4 py-2.5 text-sm font-bold text-brand-primary disabled:opacity-50"
+                  >
+                    {fetchingId === viewing.id ? 'Saving…' : 'Download PDF'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewing(null)}
+                    className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-5">
+                <div className="mx-auto overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
+                  <FinancialDocumentPaper document={viewing} />
+                </div>
+              </div>
+            </div>
+
+            <div
+              ref={viewPaperRef}
+              className="pointer-events-none fixed -left-[10000px] top-0 w-[794px]"
+              aria-hidden
+            >
+              <FinancialDocumentPaper document={viewing} />
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className="space-y-6">
       <div>
@@ -423,67 +533,7 @@ export default function FinancialDocuments({
         </section>
       ))}
 
-      {viewing ? (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4">
-          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-t-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl">
-            <div className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-5">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-brand-accent">
-                  {viewing.document_type === 'receipt' ? 'Receipt' : 'Invoice'}
-                </p>
-                <p className="break-all font-bold text-brand-primary">{viewing.document_number}</p>
-              </div>
-              {viewingWaiting ? (
-                <p className="mt-2 rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-900">
-                  Waiting for Snappy to confirm
-                </p>
-              ) : null}
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {viewingCanPay ? (
-                  <button
-                    type="button"
-                    onClick={() => void submitShippingPayment(viewing)}
-                    disabled={payingId === viewing.id}
-                    className="col-span-2 min-h-11 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-                  >
-                    {payingId === viewing.id ? 'Sending…' : "I've paid"}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => void downloadFromView()}
-                  disabled={fetchingId === viewing.id}
-                  className="min-h-11 rounded-xl border border-brand-primary px-4 py-2.5 text-sm font-bold text-brand-primary disabled:opacity-50"
-                >
-                  {fetchingId === viewing.id ? 'Saving…' : 'Download PDF'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewing(null)}
-                  className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6">
-              <div className="account-doc-preview mx-auto w-full max-w-3xl">
-                <FinancialDocumentPaper document={viewing} />
-              </div>
-            </div>
-          </div>
-
-          {/* Fixed A4 capture for desktop PDF download from this view. Hidden off-screen. */}
-          <div
-            ref={viewPaperRef}
-            className="pointer-events-none fixed -left-[10000px] top-0 w-[794px]"
-            aria-hidden
-          >
-            <FinancialDocumentPaper document={viewing} />
-          </div>
-        </div>
-      ) : null}
+      {previewModal}
 
       {pendingDownload ? (
         <div ref={paperRef} className="pointer-events-none fixed -left-[10000px] top-0 w-[794px]">
