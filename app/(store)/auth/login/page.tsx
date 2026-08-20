@@ -9,9 +9,7 @@ import { getFriendlyAuthError } from '@/lib/auth-copy';
 import {
   applySafariSafePassword,
   getAuthCookies,
-  getRememberMePreference,
-  getRememberedEmail,
-  getRememberedPassword,
+  loadRememberedLogin,
   setRememberMePreference,
   setRememberedCredentials,
   syncAuthCookies,
@@ -36,26 +34,32 @@ function LoginForm() {
   const { getToken, verifying } = useRecaptcha();
 
   useEffect(() => {
-    const rememberedEmail = getRememberedEmail();
-    const rememberedPassword = getRememberedPassword();
-    const preferRemember = getRememberMePreference();
-    const nextEmail = emailFromQuery || rememberedEmail || '';
+    let cancelled = false;
+    (async () => {
+      const remembered = await loadRememberedLogin();
+      if (cancelled) return;
+      const nextEmail = emailFromQuery || remembered.email || '';
+      const nextPassword = remembered.password || '';
 
-    setFormData((prev) => ({
-      ...prev,
-      rememberMe: preferRemember,
-      email: nextEmail || prev.email,
-      password: rememberedPassword || prev.password,
-    }));
+      setFormData((prev) => ({
+        ...prev,
+        rememberMe: remembered.rememberMe,
+        email: nextEmail || prev.email,
+        password: nextPassword || prev.password,
+      }));
 
-    // Safari strips JS-filled password inputs unless we write the DOM value this way.
-    const frame = window.requestAnimationFrame(() => {
-      applySafariSafePassword(passwordInputRef.current, rememberedPassword);
-      if (rememberedPassword) {
-        setFormData((prev) => ({ ...prev, password: rememberedPassword }));
-      }
-    });
-    return () => window.cancelAnimationFrame(frame);
+      // Safari strips JS-filled password inputs unless we write the DOM value this way.
+      window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        applySafariSafePassword(passwordInputRef.current, nextPassword);
+        if (nextPassword) {
+          setFormData((prev) => ({ ...prev, password: nextPassword }));
+        }
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [emailFromQuery]);
 
   useEffect(() => {

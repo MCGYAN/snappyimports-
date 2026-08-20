@@ -3,15 +3,17 @@
  * Checked: keep session across browser restarts, and autofill email + password on the login form.
  * Unchecked: session ends with the browser tab, and saved login fields are cleared.
  *
- * Credentials are stored on-device only (localStorage + first-party cookies).
- * Cookies are required for Safari / iOS, where localStorage is unreliable and
- * password fields often reject values set only through React state.
+ * Credentials stay on-device only (localStorage + cookies with Expires + IndexedDB).
+ * Safari often drops max-age-only JS cookies when the browser is fully closed, so we
+ * always set an absolute Expires date and keep an IndexedDB backup.
  */
 
 const REMEMBER_FLAG_KEY = 'snappy_remember_me';
 const REMEMBERED_EMAIL_KEY = 'snappy_remembered_email';
 const REMEMBERED_PASSWORD_KEY = 'snappy_remembered_password';
 const CREDENTIAL_MAX_AGE_SEC = 60 * 60 * 24 * 180; // 180 days
+const IDB_NAME = 'snappy-remember-login';
+const IDB_STORE = 'kv';
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined';
@@ -19,6 +21,11 @@ function isBrowser(): boolean {
 
 function cookieSecureSuffix(): string {
   return isBrowser() && window.isSecureContext ? '; Secure' : '';
+}
+
+function cookieExpiresSuffix(maxAgeSec: number): string {
+  const expires = new Date(Date.now() + Math.max(0, maxAgeSec) * 1000).toUTCString();
+  return `; expires=${expires}`;
 }
 
 function encodeSecret(value: string): string {
@@ -39,7 +46,9 @@ function decodeSecret(value: string): string {
 
 function readCookie(name: string): string | null {
   if (!isBrowser()) return null;
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]*)`));
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]*)`),
+  );
   if (!match?.[1]) return null;
   try {
     return decodeURIComponent(match[1]);
@@ -50,12 +59,108 @@ function readCookie(name: string): string | null {
 
 function writeCookie(name: string, value: string, maxAgeSec: number): void {
   if (!isBrowser()) return;
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSec}; SameSite=Lax${cookieSecureSuffix()}`;
+  // Safari: include both max-age and expires so values survive a full browser quit.
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSec}${cookieExpiresSuffix(maxAgeSec)}; SameSite=Lax${cookieSecureSuffix()}`;
 }
 
 function clearCookie(name: string): void {
   if (!isBrowser()) return;
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax${cookieSecureSuffix()}`;
+  document.cookie = `${name}=; path=/; max-age=0${cookieExpiresSuffix(0)}; SameSite=Lax${cookieSecureSuffix()}`;
+}
+
+function openRememberDb(): Promise<IDBDatabase | null> {
+  if (!isBrowser() || typeof indexedDB === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open(IDB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbGet(key: string): Promise<string | null> {
+  const db = await openRememberDb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => {
+        const value = req.result;
+        resolve(typeof value === 'string' && value ? value : null);
+      };
+      req.onerror = () => resolve(null);
+      tx.oncomplete = () => db.close();
+    } catch {
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
+      resolve(null);
+    }
+  });
+}
+
+async function idbSet(key: string, value: string): Promise<void> {
+  const db = await openRememberDb();
+  if (!db) return;
+  await new Promise<void>((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        resolve();
+      };
+    } catch {
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }
+  });
+}
+
+async function idbDel(key: string): Promise<void> {
+  const db = await openRememberDb();
+  if (!db) return;
+  await new Promise<void>((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        resolve();
+      };
+    } catch {
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }
+  });
 }
 
 /** Prefer localStorage; fall back to cookie (Safari / private mode). */
@@ -78,6 +183,7 @@ function writePersisted(key: string, value: string, maxAgeSec = CREDENTIAL_MAX_A
     /* private mode / blocked */
   }
   writeCookie(key, value, maxAgeSec);
+  void idbSet(key, value);
 }
 
 function removePersisted(key: string): void {
@@ -88,6 +194,7 @@ function removePersisted(key: string): void {
     /* ignore */
   }
   clearCookie(key);
+  void idbDel(key);
 }
 
 export function getRememberMePreference(): boolean {
@@ -104,7 +211,6 @@ export function setRememberMePreference(remember: boolean): void {
 
   if (!remember) {
     clearRememberedCredentials();
-    // Drop any previously persisted auth so the next write goes to sessionStorage only.
     try {
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith('sb-') && key.includes('auth')) {
@@ -125,6 +231,44 @@ export function getRememberedPassword(): string {
   const raw = readPersisted(REMEMBERED_PASSWORD_KEY);
   if (!raw) return '';
   return decodeSecret(raw);
+}
+
+/**
+ * Load remembered login after a full Safari restart.
+ * Rehydrates localStorage/cookies from IndexedDB when the browser wiped JS storage.
+ */
+export async function loadRememberedLogin(): Promise<{
+  rememberMe: boolean;
+  email: string;
+  password: string;
+}> {
+  if (!isBrowser()) {
+    return { rememberMe: true, email: '', password: '' };
+  }
+
+  let rememberRaw = readPersisted(REMEMBER_FLAG_KEY);
+  let email = readPersisted(REMEMBERED_EMAIL_KEY)?.trim() || '';
+  let passwordEnc = readPersisted(REMEMBERED_PASSWORD_KEY) || '';
+
+  if (rememberRaw === null) {
+    rememberRaw = (await idbGet(REMEMBER_FLAG_KEY)) || null;
+    if (rememberRaw != null) writePersisted(REMEMBER_FLAG_KEY, rememberRaw);
+  }
+  if (!email) {
+    email = ((await idbGet(REMEMBERED_EMAIL_KEY)) || '').trim();
+    if (email) writePersisted(REMEMBERED_EMAIL_KEY, email);
+  }
+  if (!passwordEnc) {
+    passwordEnc = (await idbGet(REMEMBERED_PASSWORD_KEY)) || '';
+    if (passwordEnc) writePersisted(REMEMBERED_PASSWORD_KEY, passwordEnc);
+  }
+
+  const rememberMe = rememberRaw === null ? true : rememberRaw === '1';
+  return {
+    rememberMe,
+    email: rememberMe ? email : '',
+    password: rememberMe && passwordEnc ? decodeSecret(passwordEnc) : '',
+  };
 }
 
 export function setRememberedCredentials(email: string | null, password: string | null): void {
@@ -184,16 +328,18 @@ export function syncAuthCookies(
   const secure = cookieSecureSuffix();
 
   if (!session) {
-    document.cookie = `sb-access-token=; path=/; max-age=0; SameSite=Lax${secure}`;
-    document.cookie = `sb-refresh-token=; path=/; max-age=0; SameSite=Lax${secure}`;
+    document.cookie = `sb-access-token=; path=/; max-age=0${cookieExpiresSuffix(0)}; SameSite=Lax${secure}`;
+    document.cookie = `sb-refresh-token=; path=/; max-age=0${cookieExpiresSuffix(0)}; SameSite=Lax${secure}`;
     return;
   }
 
-  // Prefer refresh token for longevity; access token may exceed Safari's ~4KB cookie cap.
   if (remember) {
-    document.cookie = `sb-access-token=${encodeURIComponent(session.access_token)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`;
-    document.cookie = `sb-refresh-token=${encodeURIComponent(session.refresh_token)}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax${secure}`;
+    const accessAge = 60 * 60 * 24 * 7;
+    const refreshAge = 60 * 60 * 24 * 30;
+    document.cookie = `sb-access-token=${encodeURIComponent(session.access_token)}; path=/; max-age=${accessAge}${cookieExpiresSuffix(accessAge)}; SameSite=Lax${secure}`;
+    document.cookie = `sb-refresh-token=${encodeURIComponent(session.refresh_token)}; path=/; max-age=${refreshAge}${cookieExpiresSuffix(refreshAge)}; SameSite=Lax${secure}`;
   } else {
+    // Session cookies: expire when the browser session ends.
     document.cookie = `sb-access-token=${encodeURIComponent(session.access_token)}; path=/; SameSite=Lax${secure}`;
     document.cookie = `sb-refresh-token=${encodeURIComponent(session.refresh_token)}; path=/; SameSite=Lax${secure}`;
   }
@@ -213,7 +359,6 @@ export function getAuthCookies(): { access_token: string; refresh_token: string 
 /**
  * Supabase auth storage that respects Remember me.
  * Dual-writes to cookies when possible so Safari can restore after localStorage wipe.
- * Full session JSON may exceed cookie size; localStorage remains primary for that blob.
  */
 export function createAuthStorage(): {
   getItem: (key: string) => string | null;
@@ -250,7 +395,6 @@ export function createAuthStorage(): {
         } catch {
           /* ignore */
         }
-        // Only cookie-mirror if it fits Safari's limit (~4096 incl. name/attrs).
         if (key.length + value.length < 3500) {
           writeCookie(key, value, 60 * 60 * 24 * 30);
         }
