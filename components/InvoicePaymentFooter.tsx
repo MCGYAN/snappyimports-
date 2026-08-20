@@ -35,7 +35,7 @@ function InlineCopy({ value }: { value: string }) {
       type="button"
       onClick={copy}
       data-html2canvas-ignore="true"
-      className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] font-medium text-white/70 underline-offset-2 hover:text-white hover:underline print:hidden"
+      className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] font-medium text-slate-500 underline-offset-2 hover:text-black hover:underline print:hidden"
       aria-label={`Copy ${value}`}
     >
       {copied ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
@@ -86,24 +86,24 @@ export default function InvoicePaymentFooter({
       {note ? <p className="mt-0.5 text-[10px] text-slate-600">{note}</p> : null}
 
       <div
-        className="mt-2 grid overflow-hidden rounded-sm border border-slate-800 bg-[#2b2b2b] text-[9px] leading-tight text-white"
+        className="mt-2 grid overflow-hidden rounded-sm border border-black bg-transparent text-[9px] leading-tight text-black"
         style={{ gridTemplateColumns: `repeat(${accounts.length + 1}, minmax(0, 1fr))` }}
       >
         {accounts.map((account) => (
           <div
             key={`${account.bank}-${account.accountNumber}`}
-            className="flex min-h-[52px] flex-col justify-center border-r border-white/20 px-2.5 py-2"
+            className="flex min-h-[52px] flex-col justify-center border-r border-black/20 px-2.5 py-2"
           >
             <p className="font-semibold">{accountColumnTitle(account)}</p>
             <p className="mt-1 font-bold tabular-nums tracking-wide">{account.accountNumber}</p>
             {withCopy ? <InlineCopy value={account.accountNumber} /> : null}
           </div>
         ))}
-        <div className="flex min-h-[52px] items-center justify-center bg-[#353535] px-2 py-1.5">
+        <div className="flex min-h-[52px] items-center justify-center bg-transparent px-2 py-1.5">
           <img
             src={SITE_LOGO_LIGHT_BG_PATH}
             alt={SNAPPY_INVOICE_ISSUER.brand}
-            className="h-9 w-auto max-w-full object-contain"
+            className="h-10 w-auto max-w-full object-contain"
           />
         </div>
       </div>
