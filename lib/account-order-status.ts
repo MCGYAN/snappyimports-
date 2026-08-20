@@ -409,6 +409,161 @@ export function accountRmbStatusIndex(key: AccountRmbStatusKey): number {
   return ACCOUNT_RMB_STATUS_STEPS.findIndex((step) => step.key === key);
 }
 
+/** Distinct badge / timeline colors so each status reads differently at a glance. */
+export type AccountStatusTone = {
+  badge: string;
+  dot: string;
+  title: string;
+  label: string;
+  panel: string;
+};
+
+const TONE = {
+  slate: {
+    badge: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+    dot: 'bg-slate-500 ring-4 ring-slate-500/20',
+    title: 'text-slate-800',
+    label: 'text-slate-600',
+    panel: 'bg-slate-50 ring-1 ring-slate-200',
+  },
+  amber: {
+    badge: 'bg-amber-50 text-amber-900 ring-1 ring-amber-200',
+    dot: 'bg-amber-500 ring-4 ring-amber-500/20',
+    title: 'text-amber-950',
+    label: 'text-amber-800',
+    panel: 'bg-amber-50/80 ring-1 ring-amber-200',
+  },
+  sky: {
+    badge: 'bg-sky-50 text-sky-900 ring-1 ring-sky-200',
+    dot: 'bg-sky-500 ring-4 ring-sky-500/20',
+    title: 'text-sky-950',
+    label: 'text-sky-800',
+    panel: 'bg-sky-50/80 ring-1 ring-sky-200',
+  },
+  blue: {
+    badge: 'bg-blue-50 text-blue-900 ring-1 ring-blue-200',
+    dot: 'bg-blue-600 ring-4 ring-blue-600/20',
+    title: 'text-blue-950',
+    label: 'text-blue-800',
+    panel: 'bg-blue-50/80 ring-1 ring-blue-200',
+  },
+  teal: {
+    badge: 'bg-teal-50 text-teal-900 ring-1 ring-teal-200',
+    dot: 'bg-teal-600 ring-4 ring-teal-600/20',
+    title: 'text-teal-950',
+    label: 'text-teal-800',
+    panel: 'bg-teal-50/80 ring-1 ring-teal-200',
+  },
+  cyan: {
+    badge: 'bg-cyan-50 text-cyan-900 ring-1 ring-cyan-200',
+    dot: 'bg-cyan-600 ring-4 ring-cyan-600/20',
+    title: 'text-cyan-950',
+    label: 'text-cyan-800',
+    panel: 'bg-cyan-50/80 ring-1 ring-cyan-200',
+  },
+  indigo: {
+    badge: 'bg-indigo-50 text-indigo-900 ring-1 ring-indigo-200',
+    dot: 'bg-indigo-600 ring-4 ring-indigo-600/20',
+    title: 'text-indigo-950',
+    label: 'text-indigo-800',
+    panel: 'bg-indigo-50/80 ring-1 ring-indigo-200',
+  },
+  orange: {
+    badge: 'bg-orange-50 text-orange-900 ring-1 ring-orange-200',
+    dot: 'bg-orange-500 ring-4 ring-orange-500/20',
+    title: 'text-orange-950',
+    label: 'text-orange-800',
+    panel: 'bg-orange-50/80 ring-1 ring-orange-200',
+  },
+  yellow: {
+    badge: 'bg-yellow-50 text-yellow-950 ring-1 ring-yellow-300',
+    dot: 'bg-yellow-500 ring-4 ring-yellow-500/25',
+    title: 'text-yellow-950',
+    label: 'text-yellow-900',
+    panel: 'bg-yellow-50/90 ring-1 ring-yellow-200',
+  },
+  lime: {
+    badge: 'bg-lime-50 text-lime-900 ring-1 ring-lime-200',
+    dot: 'bg-lime-600 ring-4 ring-lime-600/20',
+    title: 'text-lime-950',
+    label: 'text-lime-800',
+    panel: 'bg-lime-50/80 ring-1 ring-lime-200',
+  },
+  emerald: {
+    badge: 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200',
+    dot: 'bg-emerald-600 ring-4 ring-emerald-600/20',
+    title: 'text-emerald-950',
+    label: 'text-emerald-800',
+    panel: 'bg-emerald-50/80 ring-1 ring-emerald-200',
+  },
+  green: {
+    badge: 'bg-green-50 text-green-900 ring-1 ring-green-200',
+    dot: 'bg-green-600 ring-4 ring-green-600/20',
+    title: 'text-green-950',
+    label: 'text-green-800',
+    panel: 'bg-green-50/80 ring-1 ring-green-200',
+  },
+  red: {
+    badge: 'bg-red-50 text-red-800 ring-1 ring-red-200',
+    dot: 'bg-red-500 ring-4 ring-red-500/20',
+    title: 'text-red-900',
+    label: 'text-red-700',
+    panel: 'bg-red-50/80 ring-1 ring-red-200',
+  },
+} as const satisfies Record<string, AccountStatusTone>;
+
+export function accountOrderStatusTone(key: AccountOrderStatusKey): AccountStatusTone {
+  switch (key) {
+    case 'awaiting_payment':
+      return TONE.amber;
+    case 'payment_sent':
+      return TONE.yellow;
+    case 'payment_confirmed':
+      return TONE.sky;
+    case 'sourcing':
+      return TONE.indigo;
+    case 'needs_packing':
+      return TONE.blue;
+    case 'received_at_warehouse':
+      return TONE.teal;
+    case 'in_transit':
+      return TONE.cyan;
+    case 'arrived_in_ghana':
+      return TONE.emerald;
+    case 'waiting_for_payment':
+      return TONE.orange;
+    case 'payment_check':
+      return TONE.yellow;
+    case 'release_goods':
+      return TONE.lime;
+    case 'ready_for_you':
+      return TONE.green;
+    case 'delivered':
+      return TONE.emerald;
+    case 'cancelled':
+      return TONE.red;
+    default:
+      return TONE.slate;
+  }
+}
+
+export function accountRmbStatusTone(key: AccountRmbStatusKey): AccountStatusTone {
+  switch (key) {
+    case 'awaiting_payment':
+      return TONE.amber;
+    case 'payment_sent':
+      return TONE.yellow;
+    case 'confirmed':
+      return TONE.indigo;
+    case 'completed':
+      return TONE.emerald;
+    case 'expired':
+      return TONE.red;
+    default:
+      return TONE.slate;
+  }
+}
+
 export function isPastShopOrder(order: {
   status?: string;
 }): boolean {

@@ -7,6 +7,7 @@ import InvoiceDocument from '@/components/InvoiceDocument';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import {
   accountOrderStatusIndex,
+  accountOrderStatusTone,
   deriveAccountOrderStatus,
   visibleAccountOrderStatusSteps,
   type AccountOrderPackageSummary,
@@ -120,6 +121,7 @@ export default function OrderHubPage() {
   }, [orderStatus, packages]);
 
   const packageCount = packages.length;
+  const statusTone = accountOrderStatusTone(orderStatus?.key || 'awaiting_payment');
   const dueAt = order?.metadata?.invoice_due_at as string | undefined;
   const expired = isInvoiceExpired(dueAt);
   const msLeft = dueAt ? new Date(dueAt).getTime() - now : 0;
@@ -355,9 +357,11 @@ export default function OrderHubPage() {
                 <Package className="mt-0.5 h-5 w-5 text-brand-accent" />
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">Order status</p>
-                  <p className="font-bold text-brand-primary">
+                  <span
+                    className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-sm font-bold ${statusTone.badge}`}
+                  >
                     {orderStatus?.title || 'Awaiting payment'}
-                  </p>
+                  </span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -481,7 +485,7 @@ export default function OrderHubPage() {
                 details stay under shipping packages.
               </p>
               {orderStatus?.nextHint ? (
-                <p className="mb-6 rounded-xl bg-brand-light/50 px-4 py-3 text-sm font-semibold text-brand-primary">
+                <p className={`mb-6 rounded-xl px-4 py-3 text-sm font-semibold ${statusTone.panel} ${statusTone.title}`}>
                   Now at {orderStatus.title}. {orderStatus.nextHint}
                 </p>
               ) : (
@@ -493,19 +497,20 @@ export default function OrderHubPage() {
                   const current = orderStatus ? accountOrderStatusIndex(orderStatus.key) : 0;
                   const done = idx >= 0 && current >= 0 && idx < current;
                   const active = orderStatus?.key === s.key;
+                  const stepTone = accountOrderStatusTone(s.key);
                   return (
                     <li key={s.key} className="flex gap-3">
                       <div
                         className={`mt-1 h-3 w-3 shrink-0 rounded-full ${
                           active
-                            ? 'bg-brand-accent ring-4 ring-brand-accent/20'
+                            ? stepTone.dot
                             : done
-                              ? 'bg-brand-primary'
+                              ? 'bg-slate-500'
                               : 'bg-slate-200'
                         }`}
                       />
                       <div>
-                        <p className={`font-semibold ${active ? 'text-brand-accent' : 'text-slate-800'}`}>
+                        <p className={`font-semibold ${active ? stepTone.title : 'text-slate-800'}`}>
                           {s.title}
                         </p>
                         <p className="text-sm text-slate-500">{s.description}</p>

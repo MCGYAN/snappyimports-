@@ -7,7 +7,9 @@ import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 import {
   ACCOUNT_RMB_STATUS_STEPS,
   accountOrderStatusIndex,
+  accountOrderStatusTone,
   accountRmbStatusIndex,
+  accountRmbStatusTone,
   deriveAccountOrderStatus,
   deriveAccountRmbStatus,
   visibleAccountOrderStatusSteps,
@@ -154,6 +156,7 @@ export default function OrderStatus({
           if (row.kind === 'rmb') {
             const { exchange, status } = row;
             const currentIndex = accountRmbStatusIndex(status.key);
+            const tone = accountRmbStatusTone(status.key);
             const steps =
               status.key === 'expired'
                 ? [
@@ -188,7 +191,7 @@ export default function OrderStatus({
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="inline-flex rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-800">
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone.badge}`}>
                       Now at {status.title}
                     </span>
                     <p className="mt-1 text-[11px] font-semibold text-slate-400">
@@ -199,11 +202,11 @@ export default function OrderStatus({
 
                 {isOpen ? (
                   <div className="border-t border-slate-100 px-5 py-5">
-                    <div className="rounded-xl bg-brand-light/50 px-4 py-3">
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-brand-accent">
+                    <div className={`rounded-xl px-4 py-3 ${tone.panel}`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-wide ${tone.label}`}>
                         Now at
                       </p>
-                      <p className="font-bold text-brand-primary">{status.title}</p>
+                      <p className={`font-bold ${tone.title}`}>{status.title}</p>
                       <p className="mt-1 text-sm text-slate-600">{status.description}</p>
                       <p className="mt-2 text-sm font-semibold text-slate-800">{status.nextHint}</p>
                     </div>
@@ -213,21 +216,22 @@ export default function OrderStatus({
                         const idx = accountRmbStatusIndex(step.key as any);
                         const done = currentIndex >= 0 && idx >= 0 && idx < currentIndex;
                         const active = step.key === status.key;
+                        const stepTone = accountRmbStatusTone(step.key as any);
                         return (
                           <li key={step.key} className="flex gap-3">
                             <div
                               className={`mt-1 h-3 w-3 shrink-0 rounded-full ${
                                 active
-                                  ? 'bg-brand-accent ring-4 ring-brand-accent/20'
+                                  ? stepTone.dot
                                   : done
-                                    ? 'bg-brand-primary'
+                                    ? 'bg-slate-500'
                                     : 'bg-slate-200'
                               }`}
                             />
                             <div>
                               <p
                                 className={`text-sm font-semibold ${
-                                  active ? 'text-brand-accent' : 'text-slate-800'
+                                  active ? stepTone.title : 'text-slate-800'
                                 }`}
                               >
                                 {step.title}
@@ -272,6 +276,7 @@ export default function OrderStatus({
             needsShippingBill,
           );
           const currentIndex = accountOrderStatusIndex(status.key);
+          const tone = accountOrderStatusTone(status.key);
           const email = order.email || '';
           const packages = order.packages || [];
 
@@ -310,7 +315,7 @@ export default function OrderStatus({
                   <p className="text-sm font-bold text-brand-primary">
                     {formatStoreMoney(order.total)}
                   </p>
-                  <span className="mt-1 inline-flex rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-800">
+                  <span className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone.badge}`}>
                     Now at {status.title}
                   </span>
                   <p className="mt-1 text-[11px] font-semibold text-slate-400">
@@ -321,11 +326,11 @@ export default function OrderStatus({
 
               {isOpen ? (
                 <div className="border-t border-slate-100 px-5 py-5">
-                  <div className="rounded-xl bg-brand-light/50 px-4 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-brand-accent">
+                  <div className={`rounded-xl px-4 py-3 ${tone.panel}`}>
+                    <p className={`text-[10px] font-bold uppercase tracking-wide ${tone.label}`}>
                       Now at
                     </p>
-                    <p className="font-bold text-brand-primary">{status.title}</p>
+                    <p className={`font-bold ${tone.title}`}>{status.title}</p>
                     <p className="mt-1 text-sm text-slate-600">{status.description}</p>
                     {status.nextHint ? (
                       <p className="mt-2 text-sm font-semibold text-slate-800">{status.nextHint}</p>
@@ -337,21 +342,22 @@ export default function OrderStatus({
                       const idx = accountOrderStatusIndex(step.key);
                       const done = currentIndex >= 0 && idx >= 0 && idx < currentIndex;
                       const active = step.key === status.key;
+                      const stepTone = accountOrderStatusTone(step.key);
                       return (
                         <li key={step.key} className="flex gap-3">
                           <div
                             className={`mt-1 h-3 w-3 shrink-0 rounded-full ${
                               active
-                                ? 'bg-brand-accent ring-4 ring-brand-accent/20'
+                                ? stepTone.dot
                                 : done
-                                  ? 'bg-brand-primary'
+                                  ? 'bg-slate-500'
                                   : 'bg-slate-200'
                             }`}
                           />
                           <div>
                             <p
                               className={`text-sm font-semibold ${
-                                active ? 'text-brand-accent' : 'text-slate-800'
+                                active ? stepTone.title : 'text-slate-800'
                               }`}
                             >
                               {step.title}
