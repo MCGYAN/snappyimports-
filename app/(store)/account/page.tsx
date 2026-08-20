@@ -10,6 +10,7 @@ import FinancialDocuments from './FinancialDocuments';
 import DeliveryRequests from './DeliveryRequests';
 import OrderStatus from './OrderStatus';
 import { supabase } from '@/lib/supabase';
+import { getAuthCookies } from '@/lib/auth-remember';
 
 const ACCOUNT_TABS = [
   'profile',
@@ -95,7 +96,16 @@ function AccountContent() {
 
   useEffect(() => {
     async function checkUser() {
-      const { data: { session } } = await supabase.auth.getSession();
+      let {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        const cookies = getAuthCookies();
+        if (cookies) {
+          const restored = await supabase.auth.setSession(cookies);
+          session = restored.data.session;
+        }
+      }
       if (!session) {
         router.push('/auth/login');
         return;

@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { getFriendlyAuthError } from '@/lib/auth-copy';
 import {
+  applySafariSafePassword,
+  getAuthCookies,
   getRememberMePreference,
   getRememberedEmail,
   getRememberedPassword,
@@ -20,6 +22,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/account';
   const emailFromQuery = searchParams.get('email') || '';
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     email: emailFromQuery,
@@ -36,18 +39,38 @@ function LoginForm() {
     const rememberedEmail = getRememberedEmail();
     const rememberedPassword = getRememberedPassword();
     const preferRemember = getRememberMePreference();
+    const nextEmail = emailFromQuery || rememberedEmail || '';
+
     setFormData((prev) => ({
       ...prev,
       rememberMe: preferRemember,
-      email: emailFromQuery || rememberedEmail || prev.email,
+      email: nextEmail || prev.email,
       password: rememberedPassword || prev.password,
     }));
+
+    // Safari strips JS-filled password inputs unless we write the DOM value this way.
+    const frame = window.requestAnimationFrame(() => {
+      applySafariSafePassword(passwordInputRef.current, rememberedPassword);
+      if (rememberedPassword) {
+        setFormData((prev) => ({ ...prev, password: rememberedPassword }));
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [emailFromQuery]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      let {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        const cookies = getAuthCookies();
+        if (cookies) {
+          const restored = await supabase.auth.setSession(cookies);
+          session = restored.data.session;
+        }
+      }
       if (cancelled || !session) return;
       const safeNext =
         nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
@@ -64,14 +87,16 @@ function LoginForm() {
     setAuthError('');
     setIsLoading(true);
 
-    // Validation
+    // Prefer live DOM password (Safari may keep value there even if React state lagged).
+    const passwordFromDom = passwordInputRef.current?.value || formData.password;
+
     const newErrors: any = {};
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
     }
-    if (!formData.password) {
+    if (!passwordFromDom) {
       newErrors.password = 'Password is required';
     }
 
@@ -81,7 +106,6 @@ function LoginForm() {
       return;
     }
 
-    // reCAPTCHA verification
     const isHuman = await getToken('login');
     if (!isHuman) {
       setAuthError('Security check failed. Please try again.');
@@ -90,12 +114,11 @@ function LoginForm() {
     }
 
     try {
-      // Apply before sign-in so Supabase writes the session to the right store.
       setRememberMePreference(formData.rememberMe);
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email.trim(),
-        password: formData.password,
+        password: passwordFromDom,
       });
 
       if (error) {
@@ -104,13 +127,12 @@ function LoginForm() {
 
       if (data.session?.access_token) {
         if (formData.rememberMe) {
-          setRememberedCredentials(formData.email.trim(), formData.password);
+          setRememberedCredentials(formData.email.trim(), passwordFromDom);
         } else {
           setRememberedCredentials(null, null);
         }
         syncAuthCookies(data.session, formData.rememberMe);
 
-        // Attach any guest orders placed with this email
         try {
           await fetch('/api/orders/claim', {
             method: 'POST',
@@ -167,8 +189,9 @@ function LoginForm() {
               </label>
               <input
                 type="email"
-                name="email"
-                autoComplete="username email"
+                name="username"
+                autoComplete="username"
+                inputMode="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'
@@ -186,8 +209,9 @@ function LoginForm() {
               </label>
               <div className="relative">
                 <input
+                  ref={passwordInputRef}
                   type={showPassword ? 'text' : 'password'}
-                  name="current-password"
+                  name="password"
                   autoComplete="current-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}

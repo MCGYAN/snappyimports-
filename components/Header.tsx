@@ -9,6 +9,7 @@ import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import {
   clearAuthCookies,
+  getAuthCookies,
   getRememberMePreference,
   syncAuthCookies,
 } from '@/lib/auth-remember';
@@ -26,7 +27,16 @@ export default function Header() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      let {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        const cookies = getAuthCookies();
+        if (cookies) {
+          const restored = await supabase.auth.setSession(cookies);
+          session = restored.data.session;
+        }
+      }
       setUser(session?.user ?? null);
       if (session) {
         syncAuthCookies(session, getRememberMePreference());
@@ -35,11 +45,14 @@ export default function Header() {
 
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (session) {
         syncAuthCookies(session, getRememberMePreference());
-      } else {
+      } else if (event === 'SIGNED_OUT') {
+        // Do not clear on a brief null INITIAL_SESSION (common on Safari).
         clearAuthCookies();
       }
     });
