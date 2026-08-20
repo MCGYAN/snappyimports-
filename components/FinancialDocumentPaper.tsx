@@ -8,11 +8,19 @@ import {
 } from '@/lib/exchange-corridors';
 import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import {
+  invoiceAddressClass,
   invoiceBodyClass,
+  invoiceCompanyNameClass,
+  invoiceLogoClass,
   invoiceOfficialMultiPageClass,
   invoiceOfficialPageClass,
   invoicePaymentFooterClass,
   invoicePaymentFooterMultiClass,
+  invoiceTableHeaderClass,
+  invoiceTitleClass,
+  invoiceTotalAmountClass,
+  invoiceTypographyClass,
+  invoiceVariantClass,
   resolveInvoicePdfMode,
 } from '@/lib/invoice-layout';
 import { formatMoney } from '@/lib/payment-routing';
@@ -169,9 +177,9 @@ function Paper({
       document.status === 'void' ||
       (document.due_at ? new Date(document.due_at).getTime() < Date.now() : false));
 
-  const base = variant === 'official' ? 'text-[11px]' : 'text-xs sm:text-[13px]';
-  const logoSize = variant === 'official' ? 'h-24' : 'h-20 sm:h-24';
-  const titleSize = variant === 'official' ? 'text-2xl' : 'text-xl sm:text-2xl';
+  const base = invoiceTypographyClass;
+  const logoSize = invoiceLogoClass;
+  const titleSize = invoiceTitleClass;
   const isOfficial = variant === 'official';
   const pdfMode = isOfficial ? resolveInvoicePdfMode(lines.length) : 'single';
   const isSinglePage = pdfMode === 'single';
@@ -242,11 +250,11 @@ function Paper({
           <img
             src={SITE_LOGO_LIGHT_BG_PATH}
             alt={SNAPPY_INVOICE_ISSUER.brand}
-            className={`${logoSize} w-auto object-contain`}
+            className={logoSize}
           />
           <div>
-            <p className="text-sm font-bold sm:text-base">{SNAPPY_INVOICE_ISSUER.brand}</p>
-            <div className="mt-0.5 text-[10px] leading-[1.5] text-slate-700">
+            <p className={invoiceCompanyNameClass}>{SNAPPY_INVOICE_ISSUER.brand}</p>
+            <div className={`mt-0.5 ${invoiceAddressClass}`}>
               <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ')}</p>
               <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', ')}</p>
               <p>
@@ -310,7 +318,7 @@ function Paper({
 
       <table className="mt-4 w-full border-collapse">
         <thead>
-          <tr className="border-b-2 border-black text-left text-[10px] sm:text-[11px]">
+          <tr className={`border-b-2 border-black text-left ${invoiceTableHeaderClass}`}>
             <th className="py-1.5 pr-2 font-bold uppercase">Description</th>
             <th className="py-1.5 text-center font-bold uppercase">Qty</th>
             <th className="py-1.5 text-right font-bold uppercase">Unit price ({currency})</th>
@@ -323,7 +331,7 @@ function Paper({
               <td className="py-1.5 pr-2">
                 <span className="font-medium">{line.description}</span>
                 {line.detail ? (
-                  <span className="block text-[10px] text-slate-600 sm:text-[11px]">
+                  <span className={`block ${invoiceVariantClass}`}>
                     {line.detail}
                   </span>
                 ) : null}
@@ -358,7 +366,7 @@ function Paper({
             <span className="whitespace-nowrap font-bold">
               {isReceipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`}
             </span>
-            <span className="text-sm font-bold sm:text-base">
+            <span className={invoiceTotalAmountClass}>
               {formatMoney(Number(document.amount) || 0, currency)}
             </span>
           </div>

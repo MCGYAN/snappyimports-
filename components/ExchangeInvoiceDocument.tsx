@@ -13,10 +13,18 @@ import {
   resolvePayAccounts,
 } from '@/lib/exchange-corridors';
 import {
+  invoiceAddressClass,
   invoiceBodyClass,
+  invoiceCompanyNameClass,
+  invoiceLogoClass,
   invoiceOfficialMultiPageClass,
   invoiceOfficialPageClass,
   invoicePaymentFooterClass,
+  invoiceTableHeaderClass,
+  invoiceTitleClass,
+  invoiceTotalAmountClass,
+  invoiceTypographyClass,
+  invoiceVariantClass,
   resolveInvoicePdfMode,
 } from '@/lib/invoice-layout';
 
@@ -142,17 +150,17 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
 
   return (
     <div id="exchange-invoice-print" className="bg-white text-slate-900">
-      <div className="invoice-screen text-xs leading-snug text-black sm:text-[13px]">
+      <div className={`invoice-screen ${invoiceTypographyClass}`}>
         <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3 sm:gap-4">
+          <div className="flex items-start gap-4">
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-20 w-auto object-contain sm:h-24"
+              className={invoiceLogoClass}
             />
             <div>
-              <p className="text-sm font-bold sm:text-base">{SNAPPY_INVOICE_ISSUER.brand}</p>
-              <div className="mt-0.5 text-[10px] leading-[1.5] text-slate-700 sm:text-[11px]">
+              <p className={invoiceCompanyNameClass}>{SNAPPY_INVOICE_ISSUER.brand}</p>
+              <div className={`mt-0.5 ${invoiceAddressClass}`}>
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ')}</p>
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', ')}</p>
                 <p>
@@ -162,7 +170,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
               </div>
             </div>
           </div>
-          <p className="text-xl font-bold tracking-wide sm:text-2xl">INVOICE</p>
+          <p className={invoiceTitleClass}>INVOICE</p>
         </div>
 
         <div className="mt-3 grid gap-4 sm:grid-cols-2 sm:gap-8">
@@ -180,7 +188,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
               </p>
             ) : null}
           </div>
-          <table className="w-full border-collapse text-[11px] sm:text-xs">
+          <table className="w-full border-collapse text-[11px]">
             <tbody>
               <tr>
                 <td className="whitespace-nowrap py-px pr-3 font-semibold">Invoice No.:</td>
@@ -214,7 +222,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
 
         <table className="mt-4 w-full border-collapse">
           <thead>
-            <tr className="border-b-2 border-black text-left text-[10px] sm:text-[11px]">
+            <tr className={`border-b-2 border-black text-left ${invoiceTableHeaderClass}`}>
               <th className="py-1.5 pr-2 font-bold uppercase">Description</th>
               <th className="py-1.5 text-center font-bold uppercase">Qty</th>
               <th className="py-1.5 text-right font-bold uppercase">Unit ({meta.unitLabel})</th>
@@ -225,7 +233,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             <tr className="align-top">
               <td className="py-1.5 pr-2">
                 <span className="font-medium">{description}</span>
-                <span className="block text-[10px] text-slate-600 sm:text-[11px]">
+                <span className={`block ${invoiceVariantClass}`}>
                   You receive {formatAmount(amountTo)} RMB
                   {exchange.has_alipay_qr
                     ? ` via Alipay${exchange.alipay_account_name ? ` (${exchange.alipay_account_name})` : ''}`
@@ -252,7 +260,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
               </tr>
               <tr>
                 <td className="whitespace-nowrap pt-2 pr-3 font-bold">TOTAL DUE ({currency})</td>
-                <td className="pt-2 text-right text-sm font-bold sm:text-base">
+                <td className={`pt-2 text-right ${invoiceTotalAmountClass}`}>
                   {formatMoney(amountFrom, currency)}
                 </td>
               </tr>
@@ -264,7 +272,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
       </div>
 
       <div
-        className={`invoice-official hidden text-[11px] leading-snug text-black ${
+        className={`invoice-official hidden ${invoiceTypographyClass} ${
           isSinglePage ? invoiceOfficialPageClass : invoiceOfficialMultiPageClass
         }`}
         data-invoice-mode={pdfMode}
@@ -276,11 +284,11 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-24 w-auto object-contain"
+              className={invoiceLogoClass}
             />
             <div>
-              <p className="text-sm font-bold">{SNAPPY_INVOICE_ISSUER.brand}</p>
-              <div className="mt-0.5 text-[10px] leading-[1.45]">
+              <p className={invoiceCompanyNameClass}>{SNAPPY_INVOICE_ISSUER.brand}</p>
+              <div className={`mt-0.5 ${invoiceAddressClass}`}>
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ')}</p>
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', ')}</p>
                 <p>
@@ -290,7 +298,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
               </div>
             </div>
           </div>
-          <p className="text-2xl font-bold tracking-wide">INVOICE</p>
+          <p className={invoiceTitleClass}>INVOICE</p>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-8">
@@ -378,7 +386,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             </div>
             <div className="flex items-start justify-between gap-6 pt-2">
               <span className="whitespace-nowrap font-bold">TOTAL DUE ({currency})</span>
-              <span className="text-right text-sm font-bold">{formatMoney(amountFrom, currency)}</span>
+              <span className={`text-right ${invoiceTotalAmountClass}`}>{formatMoney(amountFrom, currency)}</span>
             </div>
           </div>
         </div>
@@ -405,7 +413,8 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             position: absolute !important;
             left: 0 !important;
             right: 0 !important;
-            bottom: 0 !important;
+            bottom: 12px !important;
+            padding-bottom: 12px !important;
           }
         }
       `}</style>

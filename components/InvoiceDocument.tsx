@@ -7,11 +7,19 @@ import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
 import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import {
+  invoiceAddressClass,
   invoiceBodyClass,
+  invoiceCompanyNameClass,
+  invoiceLogoClass,
   invoiceOfficialMultiPageClass,
   invoiceOfficialPageClass,
   invoicePaymentFooterClass,
   invoicePaymentFooterMultiClass,
+  invoiceTableHeaderClass,
+  invoiceTitleClass,
+  invoiceTotalAmountClass,
+  invoiceTypographyClass,
+  invoiceVariantClass,
   resolveInvoicePdfMode,
   type InvoicePdfMode,
 } from '@/lib/invoice-layout';
@@ -142,7 +150,7 @@ function InvoiceTotalsTable({
 }) {
   return (
     <div className="mt-3 flex justify-end">
-      <div className={`space-y-0.5 ${compact ? 'w-64 text-[11px]' : 'w-full max-w-[18rem]'}`}>
+      <div className={`space-y-0.5 text-[11px] ${compact ? 'w-64' : 'w-full max-w-[18rem]'}`}>
         <div className="flex items-start justify-between gap-6">
           <span className="whitespace-nowrap font-semibold">Payment method:</span>
           <span className="text-right capitalize">{paymentLabel}</span>
@@ -161,7 +169,7 @@ function InvoiceTotalsTable({
         </div>
         <div className="flex items-start justify-between gap-6 pt-2">
           <span className="whitespace-nowrap font-bold">TOTAL DUE ({currency})</span>
-          <span className={`text-right font-bold ${compact ? 'text-sm' : 'text-sm sm:text-base'}`}>
+          <span className={`text-right ${invoiceTotalAmountClass}`}>
             {formatMoney(order.total || 0, currency)}
           </span>
         </div>
@@ -192,18 +200,18 @@ export default function InvoiceDocument({ order }: Props) {
   return (
     <div id="invoice-print" className="bg-white text-slate-900">
       {/* ─── On-screen invoice: same official structure, plus copy buttons ─── */}
-      <div className="invoice-screen text-xs leading-snug text-black sm:text-[13px]">
+      <div className={`invoice-screen ${invoiceTypographyClass}`}>
         {/* Header band */}
         <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3 sm:gap-4">
+          <div className="flex items-start gap-4">
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-20 w-auto object-contain sm:h-24"
+              className={invoiceLogoClass}
             />
             <div>
-              <p className="text-sm font-bold sm:text-base">{SNAPPY_INVOICE_ISSUER.brand}</p>
-              <div className="mt-0.5 text-[10px] leading-[1.5] text-slate-700 sm:text-[11px]">
+              <p className={invoiceCompanyNameClass}>{SNAPPY_INVOICE_ISSUER.brand}</p>
+              <div className={`mt-0.5 ${invoiceAddressClass}`}>
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ')}</p>
                 <p>{SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', ')}</p>
                 <p>
@@ -213,7 +221,7 @@ export default function InvoiceDocument({ order }: Props) {
               </div>
             </div>
           </div>
-          <p className="text-xl font-bold tracking-wide sm:text-2xl">INVOICE</p>
+          <p className={invoiceTitleClass}>INVOICE</p>
         </div>
 
         {/* Bill to + invoice meta with totals */}
@@ -259,7 +267,7 @@ export default function InvoiceDocument({ order }: Props) {
         {/* Items */}
         <table className="mt-4 w-full border-collapse">
           <thead>
-            <tr className="border-b-2 border-black text-left text-[10px] sm:text-[11px]">
+            <tr className={`border-b-2 border-black text-left ${invoiceTableHeaderClass}`}>
               <th className="py-1.5 pr-2 font-bold uppercase">Description</th>
               <th className="py-1.5 text-center font-bold uppercase">Qty</th>
               <th className="py-1.5 text-right font-bold uppercase">Unit price (GH¢)</th>
@@ -274,7 +282,7 @@ export default function InvoiceDocument({ order }: Props) {
                   <td className="py-1.5 pr-2">
                     <span className="font-medium">{item.product_name}</span>
                     {variantLabel ? (
-                      <span className="text-[10px] text-slate-600 sm:text-[11px]">
+                      <span className={invoiceVariantClass}>
                         {' '}
                         ({variantLabel})
                       </span>
@@ -297,7 +305,7 @@ export default function InvoiceDocument({ order }: Props) {
 
       {/* ─── Official PDF / print layout (fixed A4 structure, no buttons) ─── */}
       <div
-        className={`invoice-official hidden text-[11px] leading-snug text-black ${
+        className={`invoice-official hidden ${invoiceTypographyClass} ${
           isSinglePage ? invoiceOfficialPageClass : invoiceOfficialMultiPageClass
         }`}
         data-invoice-mode={pdfMode}
@@ -310,11 +318,11 @@ export default function InvoiceDocument({ order }: Props) {
             <img
               src={SITE_LOGO_LIGHT_BG_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-24 w-auto object-contain"
+              className={invoiceLogoClass}
             />
             <div>
-              <p className="text-sm font-bold">{SNAPPY_INVOICE_ISSUER.brand}</p>
-              <div className="mt-0.5 text-[10px] leading-[1.45]">
+              <p className={invoiceCompanyNameClass}>{SNAPPY_INVOICE_ISSUER.brand}</p>
+              <div className={`mt-0.5 ${invoiceAddressClass}`}>
                 <p>
                   {SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', ')}
                 </p>
@@ -326,7 +334,7 @@ export default function InvoiceDocument({ order }: Props) {
               </div>
             </div>
           </div>
-          <p className="text-2xl font-bold tracking-wide">INVOICE</p>
+          <p className={invoiceTitleClass}>INVOICE</p>
         </div>
 
         {/* Bill to + meta with totals folded in (saves the bottom totals block) */}
@@ -426,7 +434,8 @@ export default function InvoiceDocument({ order }: Props) {
             position: absolute !important;
             left: 0 !important;
             right: 0 !important;
-            bottom: 0 !important;
+            bottom: 12px !important;
+            padding-bottom: 12px !important;
           }
         }
       `}</style>

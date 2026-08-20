@@ -3,6 +3,7 @@
 import {
   INVOICE_A4_ATTR,
   INVOICE_FOOTER_ATTR,
+  INVOICE_FOOTER_BOTTOM_PX,
   INVOICE_MODE_ATTR,
   INVOICE_PAGE_HEIGHT_PX,
   type InvoicePdfMode,
@@ -118,8 +119,9 @@ function prepareSinglePageInvoiceForCapture(clone: HTMLElement): boolean {
     footer.style.position = 'absolute';
     footer.style.left = '0';
     footer.style.right = '0';
-    footer.style.bottom = '0';
+    footer.style.bottom = `${INVOICE_FOOTER_BOTTOM_PX}px`;
     footer.style.marginTop = '0';
+    footer.style.paddingBottom = `${INVOICE_FOOTER_BOTTOM_PX}px`;
     footer.style.background = '#ffffff';
     footer.style.zIndex = '10';
   }
