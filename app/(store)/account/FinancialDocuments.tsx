@@ -24,38 +24,47 @@ function isMobilePdfDevice() {
   );
 }
 
+function isAppleMobileDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  return navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.platform || '');
+}
+
+/**
+ * Real Safari on iPhone/iPad only.
+ * Chrome/Firefox/Edge on iOS include "Safari" in the UA but also CriOS/FxiOS/EdgiOS.
+ */
+function isIOSSafari() {
+  if (typeof navigator === 'undefined' || !isAppleMobileDevice()) return false;
+  const ua = navigator.userAgent || '';
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|Chrome|Chromium|Android/i.test(ua)) return false;
+  return /Safari/i.test(ua);
+}
+
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-type MobilePdfLink = {
-  url: string;
-  filename: string;
-  documentNumber?: string;
-  documentType?: string;
-};
-
-async function fetchMobilePdfLink(
+async function fetchMobilePdfBlob(
   row: FinancialDocumentRecord,
   accessToken: string,
-): Promise<MobilePdfLink> {
+): Promise<Blob> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      const response = await fetch('/api/account/document-pdf', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `/api/account/document-pdf?id=${encodeURIComponent(row.id)}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
         },
-        body: JSON.stringify({ id: row.id }),
-        cache: 'no-store',
-      });
+      );
 
-      const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.url) {
-        const message = result?.error || 'Could not create the PDF link.';
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        const message = result?.error || 'Could not create the PDF.';
         if (response.status >= 500 && attempt < 2) {
           await delay(350 * (attempt + 1));
           continue;
@@ -63,14 +72,13 @@ async function fetchMobilePdfLink(
         throw new Error(message);
       }
 
-      return {
-        url: String(result.url),
-        filename: String(result.filename || `${row.document_number}.pdf`),
-        documentNumber: result.documentNumber,
-        documentType: result.documentType,
-      };
+      const blob = await response.blob();
+      if (!blob || blob.size < 64) {
+        throw new Error('The PDF came back empty. Please try again.');
+      }
+      return blob;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Could not create the PDF link.');
+      lastError = error instanceof Error ? error : new Error('Could not download the PDF.');
       if (attempt < 2) {
         await delay(350 * (attempt + 1));
         continue;
@@ -78,35 +86,75 @@ async function fetchMobilePdfLink(
     }
   }
 
-  throw lastError || new Error('Could not create the PDF link.');
+  throw lastError || new Error('Could not download the PDF.');
 }
 
-type MobilePdfDelivery = {
-  status: 'opened';
-  link: MobilePdfLink;
-};
+type MobilePdfDelivery = 'opened' | 'shared' | 'downloaded';
+
+function triggerPdfFileDownload(blobUrl: string, filename: string) {
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
 
 /**
- * Mobile PDF delivery via a real HTTPS link (not a blob).
- * Blob tabs go blank in Chrome, and file-share to Telegram freezes iPhones.
+ * Deliver the invoice PDF on phones.
+ * Safari iOS: open in Safari viewer (Telegram share from Web Share freezes).
+ * Chrome / Android: save via share sheet or download attribute (blob tabs show blank / no Save).
  */
 async function downloadMobileServerPdf(
   row: FinancialDocumentRecord,
   accessToken: string,
 ): Promise<MobilePdfDelivery> {
-  // Keep the tap gesture: open the tab before any await.
-  const previewWindow = window.open('about:blank', '_blank');
+  const safariIOS = isIOSSafari();
+  // Must open synchronously from the tap. After await, Safari blocks window.open.
+  const previewWindow = safariIOS ? window.open('about:blank', '_blank') : null;
 
   try {
-    const link = await fetchMobilePdfLink(row, accessToken);
+    const blob = await fetchMobilePdfBlob(row, accessToken);
+    const filename = `${row.document_number}.pdf`.replace(/[^\w.\-]+/g, '_');
+    const blobUrl = URL.createObjectURL(blob);
+    const revokeLater = (ms = 180_000) => {
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), ms);
+    };
 
-    if (previewWindow && !previewWindow.closed) {
-      previewWindow.location.href = link.url;
-    } else {
-      window.location.assign(link.url);
+    if (safariIOS) {
+      if (previewWindow && !previewWindow.closed) {
+        previewWindow.location.href = blobUrl;
+      } else {
+        window.location.assign(blobUrl);
+      }
+      revokeLater();
+      return 'opened';
     }
 
-    return { status: 'opened', link };
+    // Chrome (phone) and Android: let the customer save the file.
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    const title = row.document_type === 'receipt' ? 'Payment receipt' : 'Invoice';
+    const canShareFiles =
+      typeof navigator.share === 'function' &&
+      (typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] }));
+
+    if (canShareFiles && blob.size <= 1_500_000) {
+      try {
+        await navigator.share({ files: [file], title });
+        revokeLater();
+        return 'shared';
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          revokeLater();
+          return 'shared';
+        }
+      }
+    }
+
+    triggerPdfFileDownload(blobUrl, filename);
+    revokeLater();
+    return 'downloaded';
   } catch (error) {
     try {
       previewWindow?.close();
@@ -115,32 +163,6 @@ async function downloadMobileServerPdf(
     }
     throw error;
   }
-}
-
-async function shareMobilePdfLink(
-  link: MobilePdfLink,
-  row: FinancialDocumentRecord,
-): Promise<'shared' | 'copied'> {
-  const title =
-    (link.documentType || row.document_type) === 'receipt' ? 'Payment receipt' : 'Invoice';
-  const text = `${title} ${link.documentNumber || row.document_number} from Snappy Imports Global`;
-
-  if (typeof navigator.share === 'function') {
-    try {
-      const payload: ShareData = { title, text, url: link.url };
-      if (typeof navigator.canShare !== 'function' || navigator.canShare(payload)) {
-        await navigator.share(payload);
-        return 'shared';
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return 'shared';
-      }
-    }
-  }
-
-  await navigator.clipboard.writeText(link.url);
-  return 'copied';
 }
 
 function money(amount: number, currency: string) {
@@ -289,9 +311,7 @@ export default function FinancialDocuments({
   const [payingId, setPayingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState<FinancialDocumentRecord | null>(null);
   const [pendingDownload, setPendingDownload] = useState<FinancialDocumentRecord | null>(null);
-  const [mobilePdfLink, setMobilePdfLink] = useState<MobilePdfLink | null>(null);
-  const [mobilePdfRow, setMobilePdfRow] = useState<FinancialDocumentRecord | null>(null);
-  const [shareBusy, setShareBusy] = useState(false);
+  const [iosShareHint, setIosShareHint] = useState(false);
   const [mounted, setMounted] = useState(false);
   const paperRef = useRef<HTMLDivElement>(null);
   const viewPaperRef = useRef<HTMLDivElement>(null);
@@ -329,13 +349,13 @@ export default function FinancialDocuments({
 
   const prepareDownload = async (row: FinancialDocumentRecord) => {
     setFetchingId(row.id);
-    setMobilePdfLink(null);
-    setMobilePdfRow(null);
+    setIosShareHint(false);
     try {
       if (isMobilePdfDevice()) {
         const result = await downloadMobileServerPdf(row, accessToken);
-        setMobilePdfLink(result.link);
-        setMobilePdfRow(row);
+        if (result === 'opened' && isIOSSafari()) {
+          setIosShareHint(true);
+        }
         return;
       }
       const document = await loadDocument(row);
@@ -352,13 +372,13 @@ export default function FinancialDocuments({
   const downloadFromView = async () => {
     if (!viewing) return;
     setFetchingId(viewing.id);
-    setMobilePdfLink(null);
-    setMobilePdfRow(null);
+    setIosShareHint(false);
     try {
       if (isMobilePdfDevice()) {
         const result = await downloadMobileServerPdf(viewing, accessToken);
-        setMobilePdfLink(result.link);
-        setMobilePdfRow(viewing);
+        if (result === 'opened' && isIOSSafari()) {
+          setIosShareHint(true);
+        }
         return;
       }
       const paper = viewPaperRef.current?.querySelector<HTMLElement>('.document-official');
@@ -374,23 +394,6 @@ export default function FinancialDocuments({
       );
     } finally {
       setFetchingId(null);
-    }
-  };
-
-  const sendPdfLink = async () => {
-    if (!mobilePdfLink || !mobilePdfRow) return;
-    setShareBusy(true);
-    try {
-      const result = await shareMobilePdfLink(mobilePdfLink, mobilePdfRow);
-      if (result === 'copied') {
-        alert('Link copied. Paste it in Telegram.');
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-      console.error('[document pdf share link]', error);
-      alert('Could not share the link. Please try again.');
-    } finally {
-      setShareBusy(false);
     }
   };
 
@@ -552,20 +555,10 @@ export default function FinancialDocuments({
                   </p>
                 ) : null}
 
-                {mobilePdfLink ? (
-                  <div className="mt-2 space-y-2 rounded-xl bg-sky-50 px-3 py-2 text-center">
-                    <p className="text-sm font-semibold text-sky-950">
-                      PDF opened. To send on Telegram without freezing, tap Send link (not the PDF file).
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => void sendPdfLink()}
-                      disabled={shareBusy}
-                      className="min-h-10 w-full rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-                    >
-                      {shareBusy ? 'Opening…' : 'Send link'}
-                    </button>
-                  </div>
+                {iosShareHint ? (
+                  <p className="mt-2 rounded-xl bg-sky-50 px-3 py-2 text-center text-sm font-semibold text-sky-950">
+                    PDF opened in Safari. Tap Share there, then choose Telegram. That avoids the freeze.
+                  </p>
                 ) : null}
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -626,20 +619,10 @@ export default function FinancialDocuments({
         </p>
       </div>
 
-      {mobilePdfLink ? (
-        <div className="space-y-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
-          <p className="text-sm font-semibold text-sky-950">
-            PDF opened. To send on Telegram without freezing, tap Send link (not the PDF file).
-          </p>
-          <button
-            type="button"
-            onClick={() => void sendPdfLink()}
-            disabled={shareBusy}
-            className="min-h-11 w-full rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 sm:w-auto"
-          >
-            {shareBusy ? 'Opening…' : 'Send link'}
-          </button>
-        </div>
+      {iosShareHint ? (
+        <p className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950">
+          PDF opened in Safari. Tap Share there, then choose Telegram. That avoids the freeze.
+        </p>
       ) : null}
 
       {sections.map((section) => (
