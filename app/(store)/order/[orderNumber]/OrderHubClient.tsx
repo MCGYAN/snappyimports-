@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import InvoiceDocument from '@/components/InvoiceDocument';
+import ScaledDocumentPreview from '@/components/ScaledDocumentPreview';
 import { downloadElementAsPdf } from '@/lib/download-pdf';
 import {
   accountOrderStatusIndex,
@@ -412,9 +413,9 @@ export default function OrderHubPage() {
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+              <ScaledDocumentPreview>
                 <InvoiceDocument order={order} />
-              </div>
+              </ScaledDocumentPreview>
             </section>
 
             {order.payment_status !== 'paid' && (

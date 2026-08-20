@@ -185,8 +185,8 @@ function Paper({
 
   const base = invoiceTypographyClass;
   const isOfficial = variant === 'official';
-  const logoSize = isOfficial ? invoiceLogoClass : 'h-16 w-auto object-contain sm:h-24';
-  const titleSize = isOfficial ? invoiceTitleClass : 'text-xl font-bold tracking-wide sm:text-2xl';
+  const logoSize = invoiceLogoClass;
+  const titleSize = invoiceTitleClass;
   const pdfMode = isOfficial ? resolveInvoicePdfMode(lines.length) : 'single';
   const isSinglePage = pdfMode === 'single';
 
@@ -319,7 +319,6 @@ function Paper({
         </table>
       </div>
 
-      <div className={isOfficial ? undefined : '-mx-1 overflow-x-auto'}>
       <table className="mt-4 w-full border-collapse">
         <thead>
           <tr className={`border-b-2 border-black text-left ${invoiceTableHeaderClass}`}>
@@ -347,7 +346,6 @@ function Paper({
           ))}
         </tbody>
       </table>
-      </div>
 
       <div className="mt-3 flex justify-end">
         <div className="w-full max-w-[18rem] space-y-0.5 text-right">

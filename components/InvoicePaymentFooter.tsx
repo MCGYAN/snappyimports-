@@ -86,21 +86,13 @@ export default function InvoicePaymentFooter({
       {note ? <p className="mt-0.5 text-[10px] text-slate-600">{note}</p> : null}
 
       <div
-        className={
-          withCopy
-            ? 'mt-2 grid grid-cols-1 overflow-hidden rounded-sm border border-black bg-transparent text-[9px] leading-tight text-black sm:grid-cols-4'
-            : 'mt-2 grid overflow-hidden rounded-sm border border-black bg-transparent text-[9px] leading-tight text-black'
-        }
-        style={
-          withCopy
-            ? undefined
-            : { gridTemplateColumns: `repeat(${accounts.length + 1}, minmax(0, 1fr))` }
-        }
+        className="mt-2 grid overflow-hidden rounded-sm border border-black bg-transparent text-[9px] leading-tight text-black"
+        style={{ gridTemplateColumns: `repeat(${accounts.length + 1}, minmax(0, 1fr))` }}
       >
         {accounts.map((account) => (
           <div
             key={`${account.bank}-${account.accountNumber}`}
-            className="flex min-h-[52px] flex-col justify-center border-b border-black/20 px-2.5 py-2 last:border-b-0 sm:border-b-0 sm:border-r"
+            className="flex min-h-[52px] flex-col justify-center border-r border-black/20 px-2.5 py-2"
           >
             <p className="font-semibold">{accountColumnTitle(account)}</p>
             <p className="mt-1 font-bold tabular-nums tracking-wide">{account.accountNumber}</p>

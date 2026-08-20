@@ -8,6 +8,7 @@ import { downloadElementAsPdf, preloadPdfLibraries } from '@/lib/download-pdf';
 import FinancialDocumentPaper, {
   type FinancialDocumentRecord,
 } from '@/components/FinancialDocumentPaper';
+import ScaledDocumentPreview from '@/components/ScaledDocumentPreview';
 
 const FLOW_LABELS: Record<string, string> = {
   shop: 'Product order',
@@ -469,9 +470,9 @@ export default function FinancialDocuments({
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-5">
-                <div className="mx-auto overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
+                <ScaledDocumentPreview>
                   <FinancialDocumentPaper document={viewing} />
-                </div>
+                </ScaledDocumentPreview>
               </div>
             </div>
 
