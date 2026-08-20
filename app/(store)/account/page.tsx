@@ -8,7 +8,19 @@ import AddressBook from './AddressBook';
 import MyShipments from './MyShipments';
 import FinancialDocuments from './FinancialDocuments';
 import DeliveryRequests from './DeliveryRequests';
+import OrderStatus from './OrderStatus';
 import { supabase } from '@/lib/supabase';
+
+const ACCOUNT_TABS = [
+  'profile',
+  'status',
+  'orders',
+  'shipments',
+  'documents',
+  'deliveries',
+  'addresses',
+  'security',
+] as const;
 
 function AccountContent() {
   const router = useRouter();
@@ -23,22 +35,35 @@ function AccountContent() {
     packages: any[];
     board: any | null;
     documents: any[];
-  }>({ packages: [], board: null, documents: [] });
-  const [portalLoading, setPortalLoading] = useState({ shipments: false, documents: false });
-  const [portalLoaded, setPortalLoaded] = useState({ shipments: false, documents: false });
+    orderStatus: any[];
+  }>({ packages: [], board: null, documents: [], orderStatus: [] });
+  const [portalLoading, setPortalLoading] = useState({
+    shipments: false,
+    documents: false,
+    status: false,
+  });
+  const [portalLoaded, setPortalLoaded] = useState({
+    shipments: false,
+    documents: false,
+    status: false,
+  });
 
   // Update active tab when URL param changes
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (
-      tab &&
-      ['profile', 'orders', 'shipments', 'documents', 'deliveries', 'addresses', 'security'].includes(
-        tab,
-      )
-    ) {
+    if (tab && (ACCOUNT_TABS as readonly string[]).includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
+
+  const goToTab = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    if (tab !== 'status') params.delete('order');
+    if (tab !== 'documents') params.delete('document');
+    router.replace(`/account?${params.toString()}`, { scroll: false });
+  };
 
   // Profile Form States
   const [profileData, setProfileData] = useState({
@@ -92,13 +117,24 @@ function AccountContent() {
 
   useEffect(() => {
     const section =
-      activeTab === 'shipments' ? 'shipments' : activeTab === 'documents' ? 'documents' : null;
+      activeTab === 'shipments'
+        ? 'shipments'
+        : activeTab === 'documents'
+          ? 'documents'
+          : activeTab === 'status'
+            ? 'status'
+            : null;
     if (!section || !accessToken || portalLoaded[section] || portalLoading[section]) return;
 
     const loadPortalSection = async () => {
       setPortalLoading((current) => ({ ...current, [section]: true }));
       try {
-        const include = section === 'shipments' ? 'packages,board' : 'documents';
+        const include =
+          section === 'shipments'
+            ? 'packages,board'
+            : section === 'documents'
+              ? 'documents'
+              : 'order-status';
         const response = await fetch(`/api/account/portal?include=${include}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -261,6 +297,7 @@ function AccountContent() {
                 <nav className="p-2 space-y-1">
                   {[
                     { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile Settings' },
+                    { id: 'status', icon: 'ri-map-pin-line', label: 'Order status' },
                     { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Order History' },
                     { id: 'shipments', icon: 'ri-ship-2-line', label: 'My Shipments' },
                     { id: 'documents', icon: 'ri-file-list-3-line', label: 'Invoices & Receipts' },
@@ -270,7 +307,7 @@ function AccountContent() {
                   ].map(tab => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => goToTab(tab.id)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-left group ${activeTab === tab.id
                         ? 'bg-brand-primary text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-brand-primary'
@@ -288,6 +325,7 @@ function AccountContent() {
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {[
                   { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile' },
+                  { id: 'status', icon: 'ri-map-pin-line', label: 'Status' },
                   { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Orders' },
                   { id: 'shipments', icon: 'ri-ship-2-line', label: 'Shipments' },
                   { id: 'documents', icon: 'ri-file-list-3-line', label: 'Receipts' },
@@ -297,7 +335,7 @@ function AccountContent() {
                 ].map(tab => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => goToTab(tab.id)}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold whitespace-nowrap transition-all border shadow-sm ${activeTab === tab.id
                       ? 'bg-brand-primary text-white border-brand-primary'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
@@ -433,6 +471,14 @@ function AccountContent() {
                       </form>
                     </div>
                   </div>
+                )}
+
+                {activeTab === 'status' && (
+                  <OrderStatus
+                    orders={portalData.orderStatus || []}
+                    loading={portalLoading.status || !portalLoaded.status}
+                    focusOrderNumber={searchParams.get('order')}
+                  />
                 )}
 
                 {activeTab === 'orders' && <OrderHistory />}

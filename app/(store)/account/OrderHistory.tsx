@@ -213,7 +213,11 @@ export default function OrderHistory() {
         </div>
       </div>
       <p className="mb-6 text-sm text-gray-500">
-        What you ordered and how far it has come. Bills and receipts live in{' '}
+        What you ordered. For live progress open{' '}
+        <Link href="/account?tab=status" className="font-semibold text-brand-primary underline">
+          Order status
+        </Link>
+        . Bills and receipts live in{' '}
         <Link href="/account?tab=documents" className="font-semibold text-brand-primary underline">
           Invoices and receipts
         </Link>
@@ -287,11 +291,18 @@ export default function OrderHistory() {
                   {item.paymentStatus === 'paid' ? (
                     <>
                       <Link
-                        href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
+                        href={`/account?tab=status&order=${encodeURIComponent(item.orderNumber)}`}
                         className="flex-1 sm:flex-none text-center px-4 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:bg-[#0d2747] transition-colors whitespace-nowrap"
                       >
                         <i className="ri-map-pin-line mr-2"></i>
-                        Track Order
+                        Order status
+                      </Link>
+                      <Link
+                        href={`/order/${encodeURIComponent(item.orderNumber)}?email=${encodeURIComponent(item.email)}`}
+                        className="flex-1 sm:flex-none text-center px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
+                      >
+                        <i className="ri-file-list-3-line mr-2"></i>
+                        Order page
                       </Link>
                       <button
                         type="button"

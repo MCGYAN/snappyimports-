@@ -43,22 +43,27 @@ export async function GET(req: Request) {
   const includePackages = requested.has('packages');
   const includeDocuments = requested.has('documents');
   const includeBoard = requested.has('board');
+  const includeOrderStatus = requested.has('order-status');
 
-  const [packagesResult, documentsResult, rateResult] = await Promise.all([
-    includePackages
+  const orderOwnerFilter = email
+    ? `user_id.eq.${auth.user.id},email.ilike.${email}`
+    : `user_id.eq.${auth.user.id}`;
+
+  const [packagesResult, documentsResult, rateResult, ordersResult] = await Promise.all([
+    includePackages || includeOrderStatus
       ? supabaseAdmin
           .from('shipping_packages')
           .select(
-            'id, package_name, tracking_id, status, cbm, freight_included, final_shipping_ghs, estimated_shipping_usd, final_usd_to_ghs, estimated_arrival_at, customer_email, shipping_package_items(quantity, order_items(product_name, orders(order_number, email)))',
+            'id, package_name, tracking_id, status, cbm, freight_included, final_shipping_ghs, estimated_shipping_usd, final_usd_to_ghs, estimated_arrival_at, customer_email, shipping_payment_status, shipping_package_items(quantity, order_item_id, order_items(id, order_id, product_name, orders(id, order_number, email)))',
           )
           .or(customerOwnerFilter)
           .order('created_at', { ascending: false })
       : Promise.resolve({ data: [], error: null }),
-    includeDocuments
+    includeDocuments || includeOrderStatus
       ? supabaseAdmin
           .from('financial_documents')
           .select(
-            'id, document_number, document_type, flow, currency, amount, status, issued_at, due_at, paid_at, customer_email, shipping_package_id, data, shipping_packages(shipping_payment_status)',
+            'id, document_number, document_type, flow, currency, amount, status, issued_at, due_at, paid_at, customer_email, shipping_package_id, order_id, data, shipping_packages(shipping_payment_status)',
           )
           .or(customerOwnerFilter)
           .neq('status', 'void')
@@ -73,14 +78,92 @@ export async function GET(req: Request) {
           .eq('id', 1)
           .single()
       : Promise.resolve({ data: null, error: null }),
+    includeOrderStatus
+      ? supabaseAdmin
+          .from('orders')
+          .select(
+            'id, order_number, email, status, payment_status, total, currency, created_at, metadata, order_items(id, product_name, variant_name, quantity, unit_price, metadata)',
+          )
+          .or(orderOwnerFilter)
+          .order('created_at', { ascending: false })
+          .limit(50)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (packagesResult.error || documentsResult.error || rateResult.error) {
+  if (
+    packagesResult.error ||
+    documentsResult.error ||
+    rateResult.error ||
+    ordersResult.error
+  ) {
     console.error(
       '[account portal]',
-      packagesResult.error || documentsResult.error || rateResult.error,
+      packagesResult.error ||
+        documentsResult.error ||
+        rateResult.error ||
+        ordersResult.error,
     );
     return NextResponse.json({ error: 'Could not load your account records.' }, { status: 500 });
+  }
+
+  let orderRows = ordersResult.data || [];
+  if (includeOrderStatus && orderRows.length) {
+    const { refreshOrderShippingStage } = await import('@/lib/shipping-sync');
+    await Promise.all(
+      orderRows.map((order: any) => refreshOrderShippingStage(order.id, auth.user?.id)),
+    );
+    const { data: refreshedOrders } = await supabaseAdmin
+      .from('orders')
+      .select(
+        'id, order_number, email, status, payment_status, total, currency, created_at, metadata, order_items(id, product_name, variant_name, quantity, unit_price, metadata)',
+      )
+      .in(
+        'id',
+        orderRows.map((order: any) => order.id),
+      )
+      .order('created_at', { ascending: false });
+    if (refreshedOrders) orderRows = refreshedOrders;
+  }
+
+  let orderStatusPayload: any[] | undefined;
+  if (includeOrderStatus) {
+    const packages = packagesResult.data || [];
+    const documents = documentsResult.data || [];
+    orderStatusPayload = orderRows.map((order: any) => {
+      const itemIds = new Set((order.order_items || []).map((item: any) => item.id));
+      const linkedPackages = packages.filter((pkg: any) =>
+        (pkg.shipping_package_items || []).some(
+          (entry: any) =>
+            itemIds.has(entry.order_item_id) ||
+            itemIds.has(entry.order_items?.id) ||
+            entry.order_items?.order_id === order.id,
+        ),
+      );
+      const openShippingInvoice =
+        documents.find(
+          (doc: any) =>
+            doc.flow === 'shipping' &&
+            doc.document_type === 'invoice' &&
+            doc.status === 'active' &&
+            linkedPackages.some((pkg: any) => pkg.id === doc.shipping_package_id),
+        ) || null;
+
+      return {
+        ...order,
+        packages: linkedPackages.map((pkg: any) => ({
+          id: pkg.id,
+          package_name: pkg.package_name,
+          tracking_id: pkg.tracking_id,
+          status: pkg.status,
+          freight_included: Boolean(pkg.freight_included),
+          final_usd_to_ghs: pkg.final_usd_to_ghs,
+          shipping_payment_status: pkg.shipping_payment_status,
+          final_shipping_ghs: pkg.final_shipping_ghs,
+          estimated_shipping_usd: pkg.estimated_shipping_usd,
+        })),
+        openShippingInvoiceId: openShippingInvoice?.id || null,
+      };
+    });
   }
 
   return NextResponse.json({
@@ -88,6 +171,7 @@ export async function GET(req: Request) {
     ...(includePackages ? { packages: packagesResult.data || [] } : {}),
     ...(includeDocuments ? { documents: documentsResult.data || [] } : {}),
     ...(includeBoard ? { board: rateResult.data || null } : {}),
+    ...(includeOrderStatus ? { orderStatus: orderStatusPayload || [] } : {}),
   });
 }
 
