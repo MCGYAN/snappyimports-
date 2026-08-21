@@ -20,56 +20,15 @@ function isSafariBrowser() {
   return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Android|FxiOS|EdgiOS|OPiOS/i.test(ua);
 }
 
-/**
- * Full navigation with credential fields so Safari/Chrome can offer Save Password.
- * SPA router.push() does not trigger the browser password manager.
- */
-function submitBrowserPasswordSave(opts: {
-  email: string;
-  password: string;
-  nextPath: string;
-}) {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = '/auth/logged-in';
-  form.style.display = 'none';
-  form.setAttribute('autocomplete', 'on');
-
-  const fields: Array<{ name: string; value: string; type?: string; autocomplete?: string }> = [
-    {
-      name: 'username',
-      value: opts.email,
-      type: 'email',
-      autocomplete: 'username',
-    },
-    {
-      name: 'password',
-      value: opts.password,
-      type: 'password',
-      autocomplete: 'current-password',
-    },
-    { name: 'next', value: opts.nextPath },
-  ];
-
-  for (const field of fields) {
-    const input = document.createElement('input');
-    input.type = field.type || 'text';
-    input.name = field.name;
-    input.value = field.value;
-    if (field.autocomplete) input.autocomplete = field.autocomplete as AutoFill;
-    form.appendChild(input);
-  }
-
-  document.body.appendChild(form);
-  form.submit();
-}
-
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/account';
   const emailFromQuery = searchParams.get('email') || '';
+  const formRef = useRef<HTMLFormElement>(null);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+  const nextInputRef = useRef<HTMLInputElement>(null);
   const safari = isSafariBrowser();
 
   const [formData, setFormData] = useState({
@@ -83,6 +42,9 @@ function LoginForm() {
   const [authError, setAuthError] = useState('');
   const { getToken, verifying } = useRecaptcha();
 
+  const safeNext =
+    nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -90,8 +52,7 @@ function LoginForm() {
       if (cancelled) return;
       const nextEmail = emailFromQuery || remembered.email || '';
 
-      // On Safari, leave password empty so the system Passwords autofill can run.
-      // Filling it from our storage blocks Safari's keychain prompt.
+      // Safari: leave password empty so system Passwords can attach to the field.
       setFormData((prev) => ({
         ...prev,
         rememberMe: remembered.rememberMe,
@@ -118,14 +79,41 @@ function LoginForm() {
         }
       }
       if (cancelled || !session) return;
-      const safeNext =
-        nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
       router.replace(safeNext);
     })();
     return () => {
       cancelled = true;
     };
-  }, [nextPath, router]);
+  }, [safeNext, router]);
+
+  /**
+   * Safari only offers "Save Password" after a real submit of a visible login form
+   * (not a hidden clone, not router.push). We auth with Supabase first, then natively
+   * submit this same form to /auth/logged-in for the redirect.
+   */
+  const finishWithBrowserPasswordSave = (email: string, password: string) => {
+    const form = formRef.current;
+    const usernameInput = usernameInputRef.current;
+    const passwordInput = passwordInputRef.current;
+    const nextInput = nextInputRef.current;
+    if (!form || !usernameInput || !passwordInput || !nextInput) {
+      window.location.assign(safeNext);
+      return;
+    }
+
+    // Safari ignores password save if the field is type=text (show-password mode).
+    setShowPassword(false);
+    passwordInput.type = 'password';
+    usernameInput.value = email;
+    passwordInput.value = password;
+    nextInput.value = safeNext;
+
+    form.setAttribute('action', '/auth/logged-in');
+    form.setAttribute('method', 'post');
+
+    // Native submit bypasses React onSubmit / preventDefault.
+    HTMLFormElement.prototype.submit.call(form);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,13 +121,13 @@ function LoginForm() {
     setAuthError('');
     setIsLoading(true);
 
-    // Prefer live DOM password (Safari Passwords may fill the field without React state).
+    const email = (usernameInputRef.current?.value || formData.email).trim();
     const passwordFromDom = passwordInputRef.current?.value || formData.password;
 
     const newErrors: any = {};
-    if (!formData.email) {
+    if (!email) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Please enter a valid email';
     }
     if (!passwordFromDom) {
@@ -163,7 +151,7 @@ function LoginForm() {
       setRememberMePreference(formData.rememberMe);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email.trim(),
+        email,
         password: passwordFromDom,
       });
 
@@ -173,7 +161,7 @@ function LoginForm() {
 
       if (data.session?.access_token) {
         if (formData.rememberMe) {
-          setRememberedCredentials(formData.email.trim(), passwordFromDom);
+          setRememberedCredentials(email, passwordFromDom);
         } else {
           setRememberedCredentials(null, null);
         }
@@ -192,15 +180,7 @@ function LoginForm() {
           /* non-blocking */
         }
 
-        const safeNext =
-          nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
-
-        // Real form POST + navigation triggers Safari/Chrome "Save Password?"
-        submitBrowserPasswordSave({
-          email: formData.email.trim(),
-          password: passwordFromDom,
-          nextPath: safeNext,
-        });
+        finishWithBrowserPasswordSave(email, passwordFromDom);
         return;
       }
     } catch (error: any) {
@@ -234,22 +214,30 @@ function LoginForm() {
           ) : null}
 
           <form
+            ref={formRef}
             onSubmit={handleSubmit}
             className="space-y-6"
             autoComplete="on"
             method="post"
             action="/auth/logged-in"
           >
+            <input ref={nextInputRef} type="hidden" name="next" value={safeNext} readOnly />
+
             <div>
-              <label htmlFor="login-username" className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="username" className="mb-2 block text-sm font-semibold text-gray-900">
                 Email Address
               </label>
+              {/* type=text helps Safari Password Manager associate the username */}
               <input
-                id="login-username"
-                type="email"
+                ref={usernameInputRef}
+                id="username"
+                type="text"
                 name="username"
                 autoComplete="username"
                 inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'
@@ -263,13 +251,13 @@ function LoginForm() {
             </div>
 
             <div>
-              <label htmlFor="current-password" className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="password" className="mb-2 block text-sm font-semibold text-gray-900">
                 Password
               </label>
               <div className="relative">
                 <input
                   ref={passwordInputRef}
-                  id="current-password"
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   autoComplete="current-password"
