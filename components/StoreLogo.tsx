@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useCMS } from '@/context/CMSContext';
 import { SITE_LOGO_PATH, SITE_LOGO_SIZE } from '@/lib/brand';
 
+/** Compact header asset (~400px WebP). Falls back to full PNG for CMS overrides. */
+const HEADER_LOGO_PATH = '/images/snappy-imports-global-logo-header.webp';
+
 interface StoreLogoProps {
   className?: string;
   priority?: boolean;
@@ -15,7 +18,9 @@ interface StoreLogoProps {
 export default function StoreLogo({ className = '', priority = false, size = 'default' }: StoreLogoProps) {
   const { getSetting } = useCMS();
   const siteName = getSetting('site_name') || 'Snappy Import Ghana';
-  const src = getSetting('site_logo') || SITE_LOGO_PATH;
+  const cmsLogo = getSetting('site_logo');
+  const usingDefault = !cmsLogo || cmsLogo === SITE_LOGO_PATH;
+  const src = usingDefault ? HEADER_LOGO_PATH : cmsLogo;
 
   const imageSizeClass =
     size === 'sm'
@@ -27,10 +32,11 @@ export default function StoreLogo({ className = '', priority = false, size = 'de
       <Image
         src={src}
         alt={siteName}
-        width={SITE_LOGO_SIZE.width}
-        height={SITE_LOGO_SIZE.height}
+        width={usingDefault ? 400 : SITE_LOGO_SIZE.width}
+        height={usingDefault ? 193 : SITE_LOGO_SIZE.height}
         priority={priority}
-        unoptimized
+        sizes={size === 'sm' ? '160px' : '(max-width: 640px) 180px, 220px'}
+        quality={85}
         className={imageSizeClass}
       />
     </Link>

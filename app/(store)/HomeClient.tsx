@@ -142,13 +142,12 @@ export default function HomeClient({
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/55 via-transparent to-transparent" />
         </div>
 
-        {/* Desktop landscape */}
+        {/* Desktop landscape — no priority so phones do not preload this file */}
         <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden>
           <Image
             src="/hero-desktop.png"
             alt=""
             fill
-            priority
             quality={78}
             sizes="100vw"
             className="object-cover object-center"

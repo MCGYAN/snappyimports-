@@ -19,6 +19,36 @@ export async function GET(request: Request) {
     const featured = searchParams.get('featured') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50');
     const category = searchParams.get('category');
+    const idsParam = searchParams.get('ids')?.trim() || '';
+    const fields = searchParams.get('fields')?.trim() || '';
+    const idList = idsParam
+        ? [...new Set(idsParam.split(',').map((id) => id.trim()).filter(Boolean))].slice(0, 40)
+        : [];
+
+    // Lightweight cart validation: only resolve whether these product ids are still active.
+    if (idList.length > 0 && fields === 'id') {
+        try {
+            const { data, error } = await supabase
+                .from('products')
+                .select('id')
+                .eq('status', 'active')
+                .in('id', idList);
+
+            if (error) {
+                console.error('[Storefront API] Product id check error:', error);
+                return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+            }
+
+            return NextResponse.json(data || [], {
+                headers: {
+                    'Cache-Control': 'private, max-age=30',
+                },
+            });
+        } catch (err: any) {
+            console.error('[Storefront API] Error:', err);
+            return NextResponse.json({ error: err.message }, { status: 500 });
+        }
+    }
 
     // Build a cache key from params
     const cacheKey = `${featured}-${limit}-${category || 'all'}`;

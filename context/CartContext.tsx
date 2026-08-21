@@ -65,8 +65,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
+            // Defer so homepage images/JS win the first network race on mobile.
+            await new Promise<void>((resolve) => {
+                const win = window as Window & {
+                    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+                };
+                if (typeof win.requestIdleCallback === 'function') {
+                    win.requestIdleCallback(() => resolve(), { timeout: 2500 });
+                } else {
+                    window.setTimeout(() => resolve(), 1200);
+                }
+            });
+
             try {
-                const res = await fetch('/api/storefront/products?limit=200');
+                const ids = [...new Set(initialCart.map((item) => item.id))].slice(0, 40);
+                const res = await fetch(
+                    `/api/storefront/products?ids=${encodeURIComponent(ids.join(','))}&fields=id`,
+                );
                 if (!res.ok) {
                     setCart(initialCart);
                     setIsInitialized(true);

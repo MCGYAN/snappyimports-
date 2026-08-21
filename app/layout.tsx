@@ -19,7 +19,8 @@ const poppins = Poppins({
   weight: ["400", "600", "700"],
   variable: "--font-poppins",
   display: "swap",
-  preload: true,
+  // Headings only — do not compete with LCP images for first-byte bandwidth.
+  preload: false,
 });
 
 export const viewport: Viewport = {
@@ -103,7 +104,6 @@ export const metadata: Metadata = {
 };
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
 export default function RootLayout({
   children,
@@ -127,8 +127,8 @@ export default function RootLayout({
         <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
 
         <link rel="icon" href="/icon" type="image/png" sizes="any" />
+        {/* Single deferred Remixicon load (icons are non-critical for first paint). */}
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link
           id="remixicon-css"
           rel="stylesheet"
@@ -137,7 +137,7 @@ export default function RootLayout({
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var l=document.getElementById('remixicon-css');if(!l)return;l.onload=function(){l.media='all'};if(l.sheet)l.media='all';setTimeout(function(){l.media='all'},3000);})();`,
+            __html: `(function(){var l=document.getElementById('remixicon-css');if(!l)return;l.onload=function(){l.media='all'};if(l.sheet)l.media='all';setTimeout(function(){l.media='all'},2500);})();`,
           }}
         />
         <noscript>
@@ -171,13 +171,6 @@ export default function RootLayout({
             `}
           </Script>
         </>
-      )}
-
-      {RECAPTCHA_SITE_KEY && (
-        <Script
-          src={`https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`}
-          strategy="lazyOnload"
-        />
       )}
 
       <body className="antialiased font-sans overflow-x-hidden pwa-body bg-brand-surface text-brand-foreground [scrollbar-gutter:stable]" suppressHydrationWarning>
