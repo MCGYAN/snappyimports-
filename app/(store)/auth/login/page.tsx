@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { getFriendlyAuthError } from '@/lib/auth-copy';
 import {
-  applySafariSafePassword,
   getAuthCookies,
   loadRememberedLogin,
   setRememberMePreference,
@@ -15,19 +14,26 @@ import {
   syncAuthCookies,
 } from '@/lib/auth-remember';
 
+function isAppleSafari(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // Desktop Chrome also includes the word "Safari" in its UA.
+  if (/Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPiOS|Edg\//i.test(ua)) return false;
+  return /Safari/i.test(ua);
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/account';
   const emailFromQuery = searchParams.get('email') || '';
+  const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
-    email: emailFromQuery,
-    password: '',
-    rememberMe: true,
-  });
+  const [email, setEmail] = useState(emailFromQuery);
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordReadOnly, setPasswordReadOnly] = useState(true);
   const [errors, setErrors] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -38,24 +44,15 @@ function LoginForm() {
     (async () => {
       const remembered = await loadRememberedLogin();
       if (cancelled) return;
+      setRememberMe(remembered.rememberMe);
       const nextEmail = emailFromQuery || remembered.email || '';
-      const nextPassword = remembered.password || '';
+      if (nextEmail) setEmail(nextEmail);
 
-      setFormData((prev) => ({
-        ...prev,
-        rememberMe: remembered.rememberMe,
-        email: nextEmail || prev.email,
-        password: nextPassword || prev.password,
-      }));
-
-      // Safari strips JS-filled password inputs unless we write the DOM value this way.
-      window.requestAnimationFrame(() => {
-        if (cancelled) return;
-        applySafariSafePassword(passwordInputRef.current, nextPassword);
-        if (nextPassword) {
-          setFormData((prev) => ({ ...prev, password: nextPassword }));
-        }
-      });
+      // Password stays uncontrolled so Safari Keychain autofill is not wiped by React.
+      // Only prefill from our store on non-Safari browsers (Chrome keeps JS fills).
+      if (!isAppleSafari() && remembered.password && passwordInputRef.current) {
+        passwordInputRef.current.value = remembered.password;
+      }
     })();
     return () => {
       cancelled = true;
@@ -91,13 +88,13 @@ function LoginForm() {
     setAuthError('');
     setIsLoading(true);
 
-    // Prefer live DOM password (Safari may keep value there even if React state lagged).
-    const passwordFromDom = passwordInputRef.current?.value || formData.password;
+    const emailValue = (emailInputRef.current?.value || email).trim();
+    const passwordFromDom = passwordInputRef.current?.value || '';
 
     const newErrors: any = {};
-    if (!formData.email) {
+    if (!emailValue) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(emailValue)) {
       newErrors.email = 'Please enter a valid email';
     }
     if (!passwordFromDom) {
@@ -118,10 +115,10 @@ function LoginForm() {
     }
 
     try {
-      setRememberMePreference(formData.rememberMe);
+      setRememberMePreference(rememberMe);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email.trim(),
+        email: emailValue,
         password: passwordFromDom,
       });
 
@@ -130,12 +127,15 @@ function LoginForm() {
       }
 
       if (data.session?.access_token) {
-        if (formData.rememberMe) {
-          setRememberedCredentials(formData.email.trim(), passwordFromDom);
+        if (rememberMe) {
+          setRememberedCredentials(emailValue, passwordFromDom);
         } else {
           setRememberedCredentials(null, null);
         }
-        syncAuthCookies(data.session, formData.rememberMe);
+        syncAuthCookies(data.session, rememberMe);
+
+        // Let Safari/Chrome show "Save Password" before we leave the page.
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
 
         try {
           await fetch('/api/orders/claim', {
@@ -178,7 +178,7 @@ function LoginForm() {
             <div className="mb-4 space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               <p>{authError}</p>
               <Link
-                href={`/auth/signup${formData.email ? `?email=${encodeURIComponent(formData.email.trim())}` : ''}`}
+                href={`/auth/signup${email ? `?email=${encodeURIComponent(email.trim())}` : ''}`}
                 className="inline-block font-semibold text-brand-primary underline"
               >
                 Create a new account
@@ -186,20 +186,27 @@ function LoginForm() {
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on">
+          <form
+            method="post"
+            action="/auth/login"
+            onSubmit={handleSubmit}
+            className="space-y-6"
+            autoComplete="on"
+          >
             <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-gray-900">
                 Email Address
               </label>
               <input
+                ref={emailInputRef}
+                id="login-email"
                 type="email"
                 name="username"
                 autoComplete="username"
                 inputMode="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'
-                  }`}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
                 placeholder="you@example.com"
               />
               {errors.email && (
@@ -208,19 +215,21 @@ function LoginForm() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-gray-900">
                 Password
               </label>
               <div className="relative">
                 <input
                   ref={passwordInputRef}
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   autoComplete="current-password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`w-full rounded-xl border border-gray-200 px-4 py-3.5 pr-12 transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-900/10 ${errors.password ? 'border-red-400' : ''
-                    }`}
+                  // Uncontrolled: Safari Keychain can fill this without React clearing it.
+                  defaultValue=""
+                  readOnly={passwordReadOnly}
+                  onFocus={() => setPasswordReadOnly(false)}
+                  className={`w-full rounded-xl border border-gray-200 px-4 py-3.5 pr-12 transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-900/10 ${errors.password ? 'border-red-400' : ''}`}
                   placeholder="Enter your password"
                 />
                 <button
@@ -240,8 +249,8 @@ function LoginForm() {
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 text-brand-accent rounded focus:ring-brand-accent"
                 />
                 <span className="text-sm text-gray-700">Remember me</span>
