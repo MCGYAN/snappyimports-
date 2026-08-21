@@ -14,12 +14,54 @@ import {
   syncAuthCookies,
 } from '@/lib/auth-remember';
 
-function isAppleSafari(): boolean {
+function isSafariBrowser() {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
-  // Desktop Chrome also includes the word "Safari" in its UA.
-  if (/Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPiOS|Edg\//i.test(ua)) return false;
-  return /Safari/i.test(ua);
+  return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Android|FxiOS|EdgiOS|OPiOS/i.test(ua);
+}
+
+/**
+ * Full navigation with credential fields so Safari/Chrome can offer Save Password.
+ * SPA router.push() does not trigger the browser password manager.
+ */
+function submitBrowserPasswordSave(opts: {
+  email: string;
+  password: string;
+  nextPath: string;
+}) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/auth/logged-in';
+  form.style.display = 'none';
+  form.setAttribute('autocomplete', 'on');
+
+  const fields: Array<{ name: string; value: string; type?: string; autocomplete?: string }> = [
+    {
+      name: 'username',
+      value: opts.email,
+      type: 'email',
+      autocomplete: 'username',
+    },
+    {
+      name: 'password',
+      value: opts.password,
+      type: 'password',
+      autocomplete: 'current-password',
+    },
+    { name: 'next', value: opts.nextPath },
+  ];
+
+  for (const field of fields) {
+    const input = document.createElement('input');
+    input.type = field.type || 'text';
+    input.name = field.name;
+    input.value = field.value;
+    if (field.autocomplete) input.autocomplete = field.autocomplete as AutoFill;
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
 }
 
 function LoginForm() {
@@ -27,13 +69,15 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/account';
   const emailFromQuery = searchParams.get('email') || '';
-  const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+  const safari = isSafariBrowser();
 
-  const [email, setEmail] = useState(emailFromQuery);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [formData, setFormData] = useState({
+    email: emailFromQuery,
+    password: '',
+    rememberMe: true,
+  });
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordReadOnly, setPasswordReadOnly] = useState(true);
   const [errors, setErrors] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -44,20 +88,21 @@ function LoginForm() {
     (async () => {
       const remembered = await loadRememberedLogin();
       if (cancelled) return;
-      setRememberMe(remembered.rememberMe);
       const nextEmail = emailFromQuery || remembered.email || '';
-      if (nextEmail) setEmail(nextEmail);
 
-      // Password stays uncontrolled so Safari Keychain autofill is not wiped by React.
-      // Only prefill from our store on non-Safari browsers (Chrome keeps JS fills).
-      if (!isAppleSafari() && remembered.password && passwordInputRef.current) {
-        passwordInputRef.current.value = remembered.password;
-      }
+      // On Safari, leave password empty so the system Passwords autofill can run.
+      // Filling it from our storage blocks Safari's keychain prompt.
+      setFormData((prev) => ({
+        ...prev,
+        rememberMe: remembered.rememberMe,
+        email: nextEmail || prev.email,
+        password: safari ? '' : remembered.password || prev.password,
+      }));
     })();
     return () => {
       cancelled = true;
     };
-  }, [emailFromQuery]);
+  }, [emailFromQuery, safari]);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,13 +133,13 @@ function LoginForm() {
     setAuthError('');
     setIsLoading(true);
 
-    const emailValue = (emailInputRef.current?.value || email).trim();
-    const passwordFromDom = passwordInputRef.current?.value || '';
+    // Prefer live DOM password (Safari Passwords may fill the field without React state).
+    const passwordFromDom = passwordInputRef.current?.value || formData.password;
 
     const newErrors: any = {};
-    if (!emailValue) {
+    if (!formData.email) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(emailValue)) {
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
     }
     if (!passwordFromDom) {
@@ -115,10 +160,10 @@ function LoginForm() {
     }
 
     try {
-      setRememberMePreference(rememberMe);
+      setRememberMePreference(formData.rememberMe);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailValue,
+        email: formData.email.trim(),
         password: passwordFromDom,
       });
 
@@ -127,15 +172,12 @@ function LoginForm() {
       }
 
       if (data.session?.access_token) {
-        if (rememberMe) {
-          setRememberedCredentials(emailValue, passwordFromDom);
+        if (formData.rememberMe) {
+          setRememberedCredentials(formData.email.trim(), passwordFromDom);
         } else {
           setRememberedCredentials(null, null);
         }
-        syncAuthCookies(data.session, rememberMe);
-
-        // Let Safari/Chrome show "Save Password" before we leave the page.
-        await new Promise((resolve) => window.setTimeout(resolve, 350));
+        syncAuthCookies(data.session, formData.rememberMe);
 
         try {
           await fetch('/api/orders/claim', {
@@ -152,13 +194,18 @@ function LoginForm() {
 
         const safeNext =
           nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
-        router.push(safeNext);
-        router.refresh();
+
+        // Real form POST + navigation triggers Safari/Chrome "Save Password?"
+        submitBrowserPasswordSave({
+          email: formData.email.trim(),
+          password: passwordFromDom,
+          nextPath: safeNext,
+        });
+        return;
       }
     } catch (error: any) {
       console.error('Login error:', error);
       setAuthError(getFriendlyAuthError(error?.message || '', 'login'));
-    } finally {
       setIsLoading(false);
     }
   };
@@ -178,7 +225,7 @@ function LoginForm() {
             <div className="mb-4 space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               <p>{authError}</p>
               <Link
-                href={`/auth/signup${email ? `?email=${encodeURIComponent(email.trim())}` : ''}`}
+                href={`/auth/signup${formData.email ? `?email=${encodeURIComponent(formData.email.trim())}` : ''}`}
                 className="inline-block font-semibold text-brand-primary underline"
               >
                 Create a new account
@@ -187,27 +234,28 @@ function LoginForm() {
           ) : null}
 
           <form
-            method="post"
-            action="/auth/login"
             onSubmit={handleSubmit}
             className="space-y-6"
             autoComplete="on"
+            method="post"
+            action="/auth/logged-in"
           >
             <div>
-              <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="login-username" className="mb-2 block text-sm font-semibold text-gray-900">
                 Email Address
               </label>
               <input
-                ref={emailInputRef}
-                id="login-email"
+                id="login-username"
                 type="email"
                 name="username"
                 autoComplete="username"
                 inputMode="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className={`store-input border-2 ${errors.email ? 'border-red-500' : 'border-slate-200'
+                  }`}
                 placeholder="you@example.com"
+                required
               />
               {errors.email && (
                 <p className="mt-2 text-sm text-red-600">{errors.email}</p>
@@ -215,27 +263,28 @@ function LoginForm() {
             </div>
 
             <div>
-              <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="current-password" className="mb-2 block text-sm font-semibold text-gray-900">
                 Password
               </label>
               <div className="relative">
                 <input
                   ref={passwordInputRef}
-                  id="login-password"
+                  id="current-password"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   autoComplete="current-password"
-                  // Uncontrolled: Safari Keychain can fill this without React clearing it.
-                  defaultValue=""
-                  readOnly={passwordReadOnly}
-                  onFocus={() => setPasswordReadOnly(false)}
-                  className={`w-full rounded-xl border border-gray-200 px-4 py-3.5 pr-12 transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-900/10 ${errors.password ? 'border-red-400' : ''}`}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className={`w-full rounded-xl border border-gray-200 px-4 py-3.5 pr-12 transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-900/10 ${errors.password ? 'border-red-400' : ''
+                    }`}
                   placeholder="Enter your password"
+                  required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   <i className={`${showPassword ? 'ri-eye-off-line' : 'ri-eye-line'} text-xl`}></i>
                 </button>
@@ -249,8 +298,8 @@ function LoginForm() {
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  checked={formData.rememberMe}
+                  onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
                   className="w-4 h-4 text-brand-accent rounded focus:ring-brand-accent"
                 />
                 <span className="text-sm text-gray-700">Remember me</span>
