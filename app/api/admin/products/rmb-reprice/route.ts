@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
+  buildAppliedProductReprice,
   buildProductRepriceRow,
-  filterChangedRepriceRows,
+  productHasRepriceChanges,
+  type ProductRepriceInput,
   type ProductRepriceRow,
 } from '@/lib/product-pricing';
 
@@ -13,19 +15,23 @@ function parseBuyRate(raw: string | null): number | null {
   return Number.isFinite(rate) && rate > 0 ? rate : null;
 }
 
-async function loadRepricePreview(buyRmbRate: number): Promise<ProductRepriceRow[]> {
+async function loadProductsForReprice(): Promise<ProductRepriceInput[]> {
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, price, metadata')
+    .select('id, name, slug, price, compare_at_price, metadata, product_variants(id, price, metadata)')
     .order('name', { ascending: true });
 
   if (error) throw new Error(error.message);
+  return (data || []) as ProductRepriceInput[];
+}
 
-  const rows = (data || [])
+async function loadRepricePreview(buyRmbRate: number): Promise<ProductRepriceRow[]> {
+  const products = await loadProductsForReprice();
+
+  return products
+    .filter((product) => productHasRepriceChanges(product, buyRmbRate))
     .map((product) => buildProductRepriceRow(product, buyRmbRate))
     .filter((row): row is ProductRepriceRow => row != null);
-
-  return filterChangedRepriceRows(rows);
 }
 
 /** GET ?buy_rmb_rate=0.558 — preview product price changes at a new Ghana buy rate */
@@ -78,61 +84,77 @@ export async function POST(req: Request) {
     : null;
 
   try {
+    const products = await loadProductsForReprice();
     const preview = await loadRepricePreview(buyRmbRate);
-    const toApply =
+    const previewIds = new Set(preview.map((row) => row.id));
+    const toApplyIds =
       selectedIds && selectedIds.length > 0
-        ? preview.filter((row) => selectedIds.includes(row.id))
-        : preview;
+        ? selectedIds.filter((id) => previewIds.has(id))
+        : Array.from(previewIds);
 
-    if (toApply.length === 0) {
+    if (toApplyIds.length === 0) {
       return NextResponse.json({ success: true, applied: 0, changes: [] });
     }
 
-    const { data: products, error: loadError } = await supabaseAdmin
-      .from('products')
-      .select('id, metadata')
-      .in(
-        'id',
-        toApply.map((row) => row.id),
-      );
+    const appliedChanges: ProductRepriceRow[] = [];
 
-    if (loadError) {
-      return NextResponse.json({ error: loadError.message }, { status: 500 });
-    }
+    for (const productId of toApplyIds) {
+      const product = products.find((row) => row.id === productId);
+      if (!product) continue;
 
-    const metadataById = new Map((products || []).map((p) => [p.id, p.metadata]));
+      const applied = buildAppliedProductReprice(product, buyRmbRate);
+      const previewRow = buildProductRepriceRow(product, buyRmbRate);
+      if (!applied || !previewRow) continue;
 
-    for (const row of toApply) {
       const existingMetadata =
-        metadataById.get(row.id) && typeof metadataById.get(row.id) === 'object'
-          ? (metadataById.get(row.id) as Record<string, unknown>)
+        product.metadata && typeof product.metadata === 'object'
+          ? (product.metadata as Record<string, unknown>)
           : {};
 
       const { error: productError } = await supabaseAdmin
         .from('products')
         .update({
-          price: row.new_price,
+          price: applied.price,
+          compare_at_price: applied.compare_at_price,
           metadata: {
             ...existingMetadata,
-            base_price_rmb: row.base_price_rmb,
             last_buy_rmb_rate: buyRmbRate,
           },
           updated_at: new Date().toISOString(),
         })
-        .eq('id', row.id);
+        .eq('id', productId);
 
       if (productError) {
         return NextResponse.json({ error: productError.message }, { status: 500 });
       }
 
-      await supabaseAdmin.from('product_variants').update({ price: row.new_price }).eq('product_id', row.id);
+      for (const variantUpdate of applied.variant_updates) {
+        const variant = product.product_variants?.find((row) => row.id === variantUpdate.id);
+        const variantMetadata =
+          variant?.metadata && typeof variant.metadata === 'object'
+            ? (variant.metadata as Record<string, unknown>)
+            : {};
+
+        await supabaseAdmin
+          .from('product_variants')
+          .update({
+            price: variantUpdate.price,
+            metadata: {
+              ...variantMetadata,
+              base_price_rmb: variantUpdate.base_price_rmb,
+            },
+          })
+          .eq('id', variantUpdate.id);
+      }
+
+      appliedChanges.push(previewRow);
     }
 
     return NextResponse.json({
       success: true,
-      applied: toApply.length,
+      applied: appliedChanges.length,
       buy_rmb_rate: buyRmbRate,
-      changes: toApply,
+      changes: appliedChanges,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Apply failed';

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { IMPORT_TYPE_OPTIONS, IMPORT_TYPE_DESCRIPTIONS, parseProductCommerce, resolveDirectPayment } from '@/lib/product-commerce';
@@ -11,7 +11,9 @@ import { uploadAdminImage } from '@/lib/admin-image-upload';
 import {
     formatGhsAmount,
     formatRmbAmount,
+    parseComparePriceRmb,
     parseProductBasePriceRmb,
+    parseVariantBasePriceRmb,
     rmbToGhsPrice,
 } from '@/lib/product-pricing';
 import { formatCorridorBuyRate } from '@/lib/exchange-corridors';
@@ -29,11 +31,14 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [productName, setProductName] = useState(initialData?.name || '');
     const [categoryId, setCategoryId] = useState(initialData?.category_id || '');
     const initialBasePriceRmb = parseProductBasePriceRmb(initialData?.metadata);
+    const initialComparePriceRmb = parseComparePriceRmb(initialData?.metadata);
     const [priceRmb, setPriceRmb] = useState(initialBasePriceRmb != null ? String(initialBasePriceRmb) : '');
     const [price, setPrice] = useState(initialData?.price || '');
     const [buyRmbRate, setBuyRmbRate] = useState<number | null>(null);
     const [buyRateLoading, setBuyRateLoading] = useState(true);
-    const [comparePrice, setComparePrice] = useState(initialData?.compare_at_price || '');
+    const [comparePriceRmb, setComparePriceRmb] = useState(
+        initialComparePriceRmb != null ? String(initialComparePriceRmb) : '',
+    );
     const [sku, setSku] = useState(initialData?.sku || '');
     const [stock, setStock] = useState(initialData?.quantity || '');
     const [moq, setMoq] = useState(initialData?.moq || '1');
@@ -75,16 +80,23 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         if (!(buyRmbRate != null && buyRmbRate > 0)) return;
         const rmb = parseFloat(priceRmb);
         if (!(rmb > 0)) return;
-        const ghs = String(rmbToGhsPrice(rmb, buyRmbRate));
-        setPrice(ghs);
-        setVariantData((prev) => {
-            const next = { ...prev };
-            for (const key of Object.keys(next)) {
-                next[key] = { ...next[key], price: ghs };
-            }
-            return next;
-        });
+        setPrice(String(rmbToGhsPrice(rmb, buyRmbRate)));
     }, [priceRmb, buyRmbRate]);
+
+    const comparePriceGhs = useMemo(() => {
+        if (!(buyRmbRate != null && buyRmbRate > 0)) return 0;
+        const rmb = parseFloat(comparePriceRmb);
+        if (!(rmb > 0)) return 0;
+        return rmbToGhsPrice(rmb, buyRmbRate);
+    }, [comparePriceRmb, buyRmbRate]);
+
+    const previewGhsFromRmb = (rmbValue: string, fallbackRmb = priceRmb) => {
+        if (!(buyRmbRate != null && buyRmbRate > 0)) return 0;
+        const source = rmbValue.trim() || fallbackRmb.trim();
+        const rmb = parseFloat(source);
+        if (!(rmb > 0)) return 0;
+        return rmbToGhsPrice(rmb, buyRmbRate);
+    };
 
     // Auto-generate SKU function
     const generateSku = () => {
@@ -158,17 +170,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     // Build variants from colors × sizes (or just sizes, or just colors)
     const buildVariantKey = (color: string, size: string) => `${color}|||${size}`;
 
-    // Store variant data (price, stock) in a map keyed by "color|||size"
-    const [variantData, setVariantData] = useState<Record<string, { price: string; stock: string; sku: string; id?: string }>>(() => {
-        const data: Record<string, { price: string; stock: string; sku: string; id?: string }> = {};
+    // Store variant data (RMB price, stock) in a map keyed by "color|||size"
+    const [variantData, setVariantData] = useState<Record<string, { priceRmb: string; stock: string; sku: string; id?: string }>>(() => {
+        const data: Record<string, { priceRmb: string; stock: string; sku: string; id?: string }> = {};
         existingVariants.forEach((v: any) => {
             const key = buildVariantKey(v.color || '', v.size || '');
             const stock = v.stock?.toString() || '0';
-            const priceValue = v.price?.toString() || '';
+            const variantRmb = parseVariantBasePriceRmb(v.metadata);
+            const priceRmbValue = variantRmb != null ? String(variantRmb) : '';
             const existing = data[key];
             if (!existing || (parseInt(stock) || 0) >= (parseInt(existing.stock) || 0)) {
                 data[key] = {
-                    price: priceValue || existing?.price || '',
+                    priceRmb: priceRmbValue || existing?.priceRmb || '',
                     stock,
                     sku: v.sku || existing?.sku || '',
                     id: v.id,
@@ -220,7 +233,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
     // Build the flat variants array for saving (used by handleSubmit)
     const variants = variantCombinations.map((combo) => {
-        const d = variantData[combo.key] || { price: price, stock: '0', sku: '' };
+        const d = variantData[combo.key] || { priceRmb: '', stock: '0', sku: '' };
         const hasColors = selectedColors.length > 0;
         const hasSizes = selectedSizes.length > 0;
         let variantName = 'Default';
@@ -232,7 +245,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             name: variantName,
             color: combo.color,
             sku: d.sku,
-            price: d.price || price,
+            priceRmb: d.priceRmb,
             stock: d.stock || '0',
         };
     });
@@ -240,16 +253,16 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const updateVariantField = (key: string, field: string, value: string) => {
         setVariantData(prev => ({
             ...prev,
-            [key]: { ...prev[key] || { price: price, stock: '0', sku: '' }, [field]: value }
+            [key]: { ...prev[key] || { priceRmb: '', stock: '0', sku: '' }, [field]: value }
         }));
     };
 
-    // Bulk set price/stock for all variants
-    const bulkSetField = (field: 'price' | 'stock', value: string) => {
+    // Bulk set RMB price/stock for all variants
+    const bulkSetField = (field: 'priceRmb' | 'stock', value: string) => {
         setVariantData(prev => {
             const updated = { ...prev };
             variantCombinations.forEach(combo => {
-                updated[combo.key] = { ...updated[combo.key] || { price: price, stock: '0', sku: '' }, [field]: value };
+                updated[combo.key] = { ...updated[combo.key] || { priceRmb: '', stock: '0', sku: '' }, [field]: value };
             });
             return updated;
         });
@@ -374,6 +387,17 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             }
 
             const computedGhsPrice = rmbToGhsPrice(rmbValue, buyRmbRate);
+            const compareRmbValue = comparePriceRmb.trim() ? parseFloat(comparePriceRmb) : null;
+            const computedCompareGhs =
+                compareRmbValue != null && compareRmbValue > 0
+                    ? rmbToGhsPrice(compareRmbValue, buyRmbRate)
+                    : null;
+
+            if (compareRmbValue != null && compareRmbValue > 0 && computedCompareGhs != null && computedCompareGhs <= computedGhsPrice) {
+                alert('Compare price in RMB should be higher than the selling price.');
+                setActiveTab('pricing');
+                return;
+            }
 
             // If product has variants, auto-sync main stock = sum of variant stocks
             const hasVariants = variants.length > 0;
@@ -387,7 +411,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 description,
                 category_id: categoryId || null,
                 price: computedGhsPrice,
-                compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
+                compare_at_price: computedCompareGhs,
                 sku: sku || generateSku(), // Auto-generate if empty
                 quantity: hasVariants ? variantStockTotal : (parseInt(stock) || 0),
                 moq: parseInt(moq) || 1,
@@ -403,6 +427,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     import_type: importType || null,
                     import_notes: importNotes.trim() || null,
                     base_price_rmb: rmbValue,
+                    compare_at_price_rmb: compareRmbValue,
                     last_buy_rmb_rate: buyRmbRate,
                 }
             };
@@ -456,22 +481,34 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     const keptVariantIds: string[] = [];
 
                     for (const combo of variantCombinations) {
-                        const d = variantData[combo.key] || { price: price, stock: '0', sku: '' };
+                        const d = variantData[combo.key] || { priceRmb: '', stock: '0', sku: '' };
                         const colorHex = selectedColors.find((c) => c.name === combo.color)?.hex || null;
                         let variantName = 'Default';
                         if (selectedColors.length > 0 && hasSizes) variantName = combo.size;
                         else if (selectedColors.length > 0) variantName = combo.color;
                         else if (hasSizes) variantName = combo.size;
 
+                        const variantRmbRaw = d.priceRmb.trim() || priceRmb;
+                        const variantRmbValue = parseFloat(variantRmbRaw);
+                        if (!(variantRmbValue > 0)) {
+                            alert(`Enter an RMB price for variant ${variantName}.`);
+                            setActiveTab('variants');
+                            throw new Error('variant-rmb-required');
+                        }
+                        const variantGhsPrice = rmbToGhsPrice(variantRmbValue, buyRmbRate);
+
                         const row = {
                             product_id: productId,
                             name: variantName,
                             sku: d.sku || null,
-                            price: computedGhsPrice,
+                            price: variantGhsPrice,
                             quantity: parseInt(d.stock) || 0,
                             option1: hasSizes ? variantName : null,
                             option2: combo.color?.trim() || null,
-                            metadata: colorHex ? { color_hex: colorHex } : {},
+                            metadata: {
+                                ...(colorHex ? { color_hex: colorHex } : {}),
+                                base_price_rmb: variantRmbValue,
+                            },
                         };
 
                         if (isEditMode && d.id) {
@@ -525,6 +562,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             router.push('/admin/products');
 
         } catch (err: any) {
+            if (err?.message === 'variant-rmb-required') return;
             console.error('Error saving product:', err);
             alert(`Error: ${err.message}`);
         } finally {
@@ -700,7 +738,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             <div className="rounded-xl border border-brand-primary/15 bg-brand-primary/5 p-4">
                                 <p className="text-sm font-semibold text-brand-primary">RMB to cedis pricing</p>
                                 <p className="mt-1 text-sm text-slate-600">
-                                    Enter the supplier price in RMB. Customer price is calculated from today&apos;s Buy RMB rate and rounded to the nearest GH¢10.
+                                    Enter all prices in RMB. Customer prices in cedis are calculated from today&apos;s Buy RMB rate and rounded to the nearest GH¢10.
                                 </p>
                                 {buyRmbRate != null && buyRmbRate > 0 ? (
                                     <p className="mt-2 text-xs font-medium text-slate-500">
@@ -760,35 +798,54 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                    Compare at price (GH¢)
-                                </label>
-                                <div className="relative max-w-md">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
-                                    <input
-                                        type="number"
-                                        value={comparePrice}
-                                        onChange={(e) => setComparePrice(e.target.value)}
-                                        className="w-full pl-16 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
-                                        step="10"
-                                        placeholder="Optional"
-                                    />
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                        Compare at price (RMB)
+                                    </label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">¥</span>
+                                        <input
+                                            type="number"
+                                            value={comparePriceRmb}
+                                            onChange={(e) => setComparePriceRmb(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
+                                            step="1"
+                                            min="1"
+                                            placeholder="Optional"
+                                        />
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-2">Optional strike-through price. Enter in RMB.</p>
                                 </div>
-                                <p className="text-sm text-gray-500 mt-2">Optional. Enter manually in cedis for strike-through pricing.</p>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                        Compare at price (GH¢)
+                                    </label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={comparePriceGhs > 0 ? formatGhsAmount(comparePriceGhs) : ''}
+                                            className="w-full pl-16 pr-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-800 font-semibold"
+                                            placeholder="Auto"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="p-4 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
                                 <p className="text-brand-primary font-semibold mb-1">Discount preview</p>
-                                {price && comparePrice && parseFloat(comparePrice) > parseFloat(price) ? (
+                                {price && comparePriceGhs > parseFloat(price) ? (
                                     <p className="text-brand-primary">
-                                        Savings: GH¢{(parseFloat(comparePrice) - parseFloat(price)).toFixed(2)}
+                                        Savings: GH¢{(comparePriceGhs - parseFloat(price)).toFixed(0)}
                                         <span className="ml-2">
-                                            ({(((parseFloat(comparePrice) - parseFloat(price)) / parseFloat(comparePrice)) * 100).toFixed(0)}% off)
+                                            ({(((comparePriceGhs - parseFloat(price)) / comparePriceGhs) * 100).toFixed(0)}% off)
                                         </span>
                                     </p>
                                 ) : (
-                                    <p className="text-brand-primary text-sm">Enter a valid compare price higher than the price to see discount.</p>
+                                    <p className="text-brand-primary text-sm">Enter a compare RMB price higher than the selling RMB price to see discount.</p>
                                 )}
                             </div>
 
@@ -1113,18 +1170,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                         <div>
                                             <h4 className="text-sm font-bold text-gray-900 flex items-center">
                                                 <i className="ri-grid-line mr-2 text-lg text-brand-primary"></i>
-                                                Step 3: Set Price & Stock ({variantCombinations.length} variant{variantCombinations.length > 1 ? 's' : ''})
+                                                Step 3: Set RMB price & stock ({variantCombinations.length} variant{variantCombinations.length > 1 ? 's' : ''})
                                             </h4>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => {
-                                                    const val = prompt('Set price for ALL variants:', price?.toString() || '0');
-                                                    if (val !== null) bulkSetField('price', val);
+                                                    const val = prompt('Set RMB price for ALL variants:', priceRmb || '');
+                                                    if (val !== null) bulkSetField('priceRmb', val);
                                                 }}
                                                 className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
                                             >
-                                                Bulk Set Price
+                                                Bulk set RMB price
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -1148,13 +1205,15 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                     {selectedSizes.length > 0 && (
                                                         <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Size</th>
                                                     )}
-                                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Price (GH¢)</th>
+                                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Price (RMB)</th>
+                                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Customer (GH¢)</th>
                                                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Stock</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {variantCombinations.map((combo) => {
-                                                    const d = variantData[combo.key] || { price: price, stock: '0', sku: '' };
+                                                    const d = variantData[combo.key] || { priceRmb: '', stock: '0', sku: '' };
+                                                    const variantGhs = previewGhsFromRmb(d.priceRmb);
                                                     return (
                                                         <tr key={combo.key} className="border-b border-gray-100 hover:bg-gray-50">
                                                             {selectedColors.length > 0 && (
@@ -1178,12 +1237,16 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                             <td className="py-3 px-4">
                                                                 <input
                                                                     type="number"
-                                                                    value={d.price}
-                                                                    onChange={(e) => updateVariantField(combo.key, 'price', e.target.value)}
+                                                                    value={d.priceRmb}
+                                                                    onChange={(e) => updateVariantField(combo.key, 'priceRmb', e.target.value)}
                                                                     className="w-28 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-brand-accent/25 focus:border-brand-accent"
-                                                                    step="0.01"
-                                                                    placeholder={price?.toString() || '0'}
+                                                                    step="1"
+                                                                    min="1"
+                                                                    placeholder={priceRmb || 'RMB'}
                                                                 />
+                                                            </td>
+                                                            <td className="py-3 px-4 text-sm font-semibold text-brand-primary">
+                                                                {variantGhs > 0 ? `GH¢${formatGhsAmount(variantGhs)}` : '—'}
                                                             </td>
                                                             <td className="py-3 px-4">
                                                                 <input
