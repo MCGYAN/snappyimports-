@@ -57,20 +57,7 @@ async function loadFeaturedProducts(limit: number) {
     console.error('[storefront featured]', error);
     return [];
   }
-  if (data?.length) return data;
-
-  const { data: fallback, error: fallbackError } = await supabase
-    .from('products')
-    .select(PRODUCT_SELECT)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (fallbackError) {
-    console.error('[storefront featured fallback]', fallbackError);
-    return [];
-  }
-  return fallback || [];
+  return data || [];
 }
 
 async function loadShopProducts(query: ShopQuery, categories: StorefrontCategory[]) {
@@ -127,12 +114,13 @@ async function loadShopProducts(query: ShopQuery, categories: StorefrontCategory
 
 export const getStorefrontCategories = unstable_cache(loadCategories, ['storefront-categories'], {
   revalidate: 300,
+  tags: ['storefront-categories'],
 });
 
 export const getFeaturedProducts = unstable_cache(
   async (limit = 4) => loadFeaturedProducts(limit),
   ['storefront-featured'],
-  { revalidate: 180 },
+  { revalidate: 120, tags: ['storefront-featured'] },
 );
 
 export async function getShopCatalog(query: ShopQuery) {
@@ -146,7 +134,7 @@ export async function getShopCatalog(query: ShopQuery) {
     const result = await unstable_cache(
       () => loadShopProducts({ page: 1, sort: 'popular', category: 'all' }, []),
       ['storefront-shop-default'],
-      { revalidate: 120 },
+      { revalidate: 120, tags: ['storefront-shop-default'] },
     )();
     return { categories, ...result };
   }

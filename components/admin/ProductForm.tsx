@@ -558,6 +558,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 }
             }
 
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                await fetch('/api/admin/revalidate-storefront', {
+                    method: 'POST',
+                    headers: session?.access_token
+                        ? { Authorization: `Bearer ${session.access_token}` }
+                        : {},
+                });
+            } catch (revalidateErr) {
+                console.warn('Storefront cache revalidate failed:', revalidateErr);
+            }
+
             alert(isEditMode ? 'Product updated successfully!' : 'Product created successfully!');
             router.push('/admin/products');
 

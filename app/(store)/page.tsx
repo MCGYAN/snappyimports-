@@ -2,7 +2,7 @@ import { pageMetadata } from '@/lib/page-metadata';
 import { getFeaturedProducts, getStorefrontCategories } from '@/lib/storefront-data';
 import HomeClient from './HomeClient';
 
-export const revalidate = 180;
+export const revalidate = 120;
 export const metadata = pageMetadata('home', { path: '/' });
 
 export default async function HomePage() {
