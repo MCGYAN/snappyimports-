@@ -8,6 +8,13 @@ import { IMPORT_TYPE_OPTIONS, IMPORT_TYPE_DESCRIPTIONS, parseProductCommerce, re
 import { getImportProductMode } from '@/lib/snappy-import';
 import { inferVariantSizeName } from '@/lib/product-variants';
 import { uploadAdminImage } from '@/lib/admin-image-upload';
+import {
+    formatGhsAmount,
+    formatRmbAmount,
+    parseProductBasePriceRmb,
+    rmbToGhsPrice,
+} from '@/lib/product-pricing';
+import { formatCorridorBuyRate } from '@/lib/exchange-corridors';
 
 interface ProductFormProps {
     initialData?: any;
@@ -21,7 +28,11 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
     const [productName, setProductName] = useState(initialData?.name || '');
     const [categoryId, setCategoryId] = useState(initialData?.category_id || '');
+    const initialBasePriceRmb = parseProductBasePriceRmb(initialData?.metadata);
+    const [priceRmb, setPriceRmb] = useState(initialBasePriceRmb != null ? String(initialBasePriceRmb) : '');
     const [price, setPrice] = useState(initialData?.price || '');
+    const [buyRmbRate, setBuyRmbRate] = useState<number | null>(null);
+    const [buyRateLoading, setBuyRateLoading] = useState(true);
     const [comparePrice, setComparePrice] = useState(initialData?.compare_at_price || '');
     const [sku, setSku] = useState(initialData?.sku || '');
     const [stock, setStock] = useState(initialData?.quantity || '');
@@ -42,6 +53,38 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [importType, setImportType] = useState(initialData?.metadata?.import_type || '');
     const [importNotes, setImportNotes] = useState(initialData?.metadata?.import_notes || '');
     const [activeTab, setActiveTab] = useState('general');
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch('/api/exchange/rate?country=GH');
+                const data = await res.json();
+                const rate = Number(data.board?.buy_rmb_rate);
+                if (!cancelled && rate > 0) setBuyRmbRate(rate);
+            } finally {
+                if (!cancelled) setBuyRateLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!(buyRmbRate != null && buyRmbRate > 0)) return;
+        const rmb = parseFloat(priceRmb);
+        if (!(rmb > 0)) return;
+        const ghs = String(rmbToGhsPrice(rmb, buyRmbRate));
+        setPrice(ghs);
+        setVariantData((prev) => {
+            const next = { ...prev };
+            for (const key of Object.keys(next)) {
+                next[key] = { ...next[key], price: ghs };
+            }
+            return next;
+        });
+    }, [priceRmb, buyRmbRate]);
 
     // Auto-generate SKU function
     const generateSku = () => {
@@ -318,6 +361,20 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         try {
             setLoading(true);
 
+            const rmbValue = parseFloat(priceRmb);
+            if (!(rmbValue > 0)) {
+                alert('Enter a supplier price in RMB.');
+                setActiveTab('pricing');
+                return;
+            }
+            if (!(buyRmbRate != null && buyRmbRate > 0)) {
+                alert('Buy RMB rate is not available. Set the Ghana rate on the Buy RMB desk first.');
+                setActiveTab('pricing');
+                return;
+            }
+
+            const computedGhsPrice = rmbToGhsPrice(rmbValue, buyRmbRate);
+
             // If product has variants, auto-sync main stock = sum of variant stocks
             const hasVariants = variants.length > 0;
             const variantStockTotal = hasVariants
@@ -329,7 +386,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 slug: urlSlug || productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
                 description,
                 category_id: categoryId || null,
-                price: parseFloat(price) || 0,
+                price: computedGhsPrice,
                 compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
                 sku: sku || generateSku(), // Auto-generate if empty
                 quantity: hasVariants ? variantStockTotal : (parseInt(stock) || 0),
@@ -345,6 +402,8 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     direct_payment: directPaymentEnabled,
                     import_type: importType || null,
                     import_notes: importNotes.trim() || null,
+                    base_price_rmb: rmbValue,
+                    last_buy_rmb_rate: buyRmbRate,
                 }
             };
 
@@ -408,7 +467,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             product_id: productId,
                             name: variantName,
                             sku: d.sku || null,
-                            price: parseFloat(d.price) || parseFloat(price) || 0,
+                            price: computedGhsPrice,
                             quantity: parseInt(d.stock) || 0,
                             option1: hasSizes ? variantName : null,
                             option2: combo.color?.trim() || null,
@@ -638,45 +697,89 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
                     {activeTab === 'pricing' && (
                         <div className="space-y-6 max-w-3xl">
+                            <div className="rounded-xl border border-brand-primary/15 bg-brand-primary/5 p-4">
+                                <p className="text-sm font-semibold text-brand-primary">RMB to cedis pricing</p>
+                                <p className="mt-1 text-sm text-slate-600">
+                                    Enter the supplier price in RMB. Customer price is calculated from today&apos;s Buy RMB rate and rounded to the nearest GH¢10.
+                                </p>
+                                {buyRmbRate != null && buyRmbRate > 0 ? (
+                                    <p className="mt-2 text-xs font-medium text-slate-500">
+                                        Using Buy RMB rate: {formatCorridorBuyRate(buyRmbRate, 'GH', 3)}
+                                    </p>
+                                ) : buyRateLoading ? (
+                                    <p className="mt-2 text-xs text-slate-500">Loading Buy RMB rate…</p>
+                                ) : (
+                                    <p className="mt-2 text-xs font-medium text-amber-700">
+                                        Set the Ghana Buy RMB rate before adding products.
+                                    </p>
+                                )}
+                            </div>
+
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                        Price (GH¢) *
+                                        Supplier price (RMB) *
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">¥</span>
                                         <input
                                             type="number"
-                                            value={price}
-                                            onChange={(e) => setPrice(e.target.value)}
-                                            className="w-full pl-16 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
-                                            step="0.01"
-                                            placeholder="0.00"
+                                            value={priceRmb}
+                                            onChange={(e) => setPriceRmb(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
+                                            step="1"
+                                            min="1"
+                                            placeholder="23580"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                        Compare at Price (GH¢)
+                                        Customer price (GH¢)
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
                                         <input
-                                            type="number"
-                                            value={comparePrice}
-                                            onChange={(e) => setComparePrice(e.target.value)}
-                                            className="w-full pl-16 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
-                                            step="0.01"
-                                            placeholder="0.00"
+                                            type="text"
+                                            readOnly
+                                            value={
+                                                price && parseFloat(price) > 0
+                                                    ? formatGhsAmount(parseFloat(price))
+                                                    : ''
+                                            }
+                                            className="w-full pl-16 pr-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-800 font-semibold"
+                                            placeholder="Auto"
                                         />
                                     </div>
-                                    <p className="text-sm text-gray-500 mt-2">Show original price for comparison</p>
+                                    {priceRmb && price && parseFloat(priceRmb) > 0 && buyRmbRate != null && buyRmbRate > 0 ? (
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            ¥{formatRmbAmount(parseFloat(priceRmb))} ÷ {buyRmbRate} = GH¢{formatGhsAmount(parseFloat(price))}
+                                        </p>
+                                    ) : null}
                                 </div>
                             </div>
 
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                    Compare at price (GH¢)
+                                </label>
+                                <div className="relative max-w-md">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH¢</span>
+                                    <input
+                                        type="number"
+                                        value={comparePrice}
+                                        onChange={(e) => setComparePrice(e.target.value)}
+                                        className="w-full pl-16 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent/25 focus:border-brand-accent"
+                                        step="10"
+                                        placeholder="Optional"
+                                    />
+                                </div>
+                                <p className="text-sm text-gray-500 mt-2">Optional. Enter manually in cedis for strike-through pricing.</p>
+                            </div>
+
                             <div className="p-4 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
-                                <p className="text-brand-primary font-semibold mb-1">Discount Calculation</p>
+                                <p className="text-brand-primary font-semibold mb-1">Discount preview</p>
                                 {price && comparePrice && parseFloat(comparePrice) > parseFloat(price) ? (
                                     <p className="text-brand-primary">
                                         Savings: GH¢{(parseFloat(comparePrice) - parseFloat(price)).toFixed(2)}

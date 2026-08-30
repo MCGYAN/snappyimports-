@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import ShareBuyRmbRate from '@/components/admin/ShareBuyRmbRate';
+import ProductRepriceModal from '@/components/admin/ProductRepriceModal';
 import {
   EXCHANGE_CORRIDORS,
   EXCHANGE_COUNTRY_CODES,
@@ -14,6 +15,7 @@ import {
 } from '@/lib/exchange-corridors';
 import type { BankAccount } from '@/lib/bank-details';
 import { Plus, X } from 'lucide-react';
+import type { ProductRepriceRow } from '@/lib/product-pricing';
 
 type AccountDraft = {
   holder: string;
@@ -70,6 +72,9 @@ export default function AdminExchangePage() {
     is_live: false,
   });
   const [accounts, setAccounts] = useState<AccountDraft[]>([emptyAccount()]);
+  const [repriceOpen, setRepriceOpen] = useState(false);
+  const [repriceChanges, setRepriceChanges] = useState<ProductRepriceRow[]>([]);
+  const [pendingBuyRate, setPendingBuyRate] = useState<number | null>(null);
 
   const meta = EXCHANGE_CORRIDORS[deskCountry];
   const board = boards[deskCountry];
@@ -146,6 +151,8 @@ export default function AdminExchangePage() {
   const saveRate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    const previousBuyRate = board?.buy_rmb_rate ?? null;
+    const nextBuyRate = Number(form.buy_rmb_rate);
     try {
       const headers = await authHeaders();
       const res = await fetch('/api/exchange/rate', {
@@ -153,7 +160,7 @@ export default function AdminExchangePage() {
         headers,
         body: JSON.stringify({
           country: deskCountry,
-          buy_rmb_rate: Number(form.buy_rmb_rate),
+          buy_rmb_rate: nextBuyRate,
           sell_rmb_rate: Number(form.sell_rmb_rate || form.buy_rmb_rate),
           min_amount: Number(form.min_amount),
           max_amount: form.max_amount ? Number(form.max_amount) : null,
@@ -170,6 +177,24 @@ export default function AdminExchangePage() {
       }
       setBoards((prev) => ({ ...prev, [deskCountry]: data.board }));
       applyBoardToForm(data.board);
+
+      if (
+        deskCountry === 'GH' &&
+        nextBuyRate > 0 &&
+        previousBuyRate != null &&
+        Math.abs(previousBuyRate - nextBuyRate) > 0.000001
+      ) {
+        const previewRes = await fetch(
+          `/api/admin/products/rmb-reprice?buy_rmb_rate=${encodeURIComponent(String(nextBuyRate))}`,
+          { headers },
+        );
+        const previewData = await previewRes.json();
+        if (previewRes.ok && Array.isArray(previewData.changes) && previewData.changes.length > 0) {
+          setPendingBuyRate(nextBuyRate);
+          setRepriceChanges(previewData.changes);
+          setRepriceOpen(true);
+        }
+      }
     } finally {
       setSaving(false);
     }
@@ -449,6 +474,18 @@ export default function AdminExchangePage() {
           </ul>
         )}
       </section>
+
+      <ProductRepriceModal
+        open={repriceOpen}
+        buyRmbRate={pendingBuyRate ?? 0}
+        changes={repriceChanges}
+        onClose={() => setRepriceOpen(false)}
+        onApplied={() => {
+          setRepriceChanges([]);
+          setPendingBuyRate(null);
+        }}
+        getAuthHeaders={authHeaders}
+      />
     </div>
   );
 }
