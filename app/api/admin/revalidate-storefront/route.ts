@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   revalidateTag('storefront-shop-default');
   revalidatePath('/');
   revalidatePath('/shop');
+  revalidatePath('/categories');
 
   return NextResponse.json({ success: true, revalidated: true });
 }

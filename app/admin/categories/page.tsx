@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { uploadAdminImage } from '@/lib/admin-image-upload';
+import { revalidateStorefrontFromAdmin } from '@/lib/revalidate-storefront';
 
 export default function AdminCategoriesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -67,6 +68,7 @@ export default function AdminCategoriesPage() {
       await supabase.from('products').update({ category_id: null }).eq('category_id', categoryId);
       const { error } = await supabase.from('categories').delete().eq('id', categoryId);
       if (error) throw error;
+      await revalidateStorefrontFromAdmin();
       setCategories(categories.filter((c) => c.id !== categoryId));
       alert('Category deleted successfully');
     } catch (err: any) {
@@ -124,6 +126,8 @@ export default function AdminCategoriesPage() {
         if (error) throw error;
         alert('Category created');
       }
+
+      await revalidateStorefrontFromAdmin();
 
       setShowAddModal(false);
       setShowEditModal(false);
