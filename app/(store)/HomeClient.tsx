@@ -34,22 +34,12 @@ export default function HomeClient({
 }) {
   usePageTitle('China to Ghana Imports');
   const { getSetting } = useCMS();
-  const sliderRef = useRef<HTMLDivElement>(null);
   const categorySliderRef = useRef<HTMLDivElement>(null);
 
   const waHero = buildWhatsAppHref(getSetting('contact_whatsapp'));
   const waHeroPrefilled = waHero
     ? `${waHero}${waHero.includes('?') ? '&' : '?'}text=${encodeURIComponent('Hi Snappy Import, I want to import from China.')}`
     : '';
-
-  const scrollSlider = (direction: 'left' | 'right') => {
-    if (sliderRef.current) {
-      sliderRef.current.scrollBy({
-        left: direction === 'left' ? -350 : 350,
-        behavior: 'smooth',
-      });
-    }
-  };
 
   const scrollCategorySlider = (direction: 'left' | 'right') => {
     if (categorySliderRef.current) {
@@ -66,7 +56,7 @@ export default function HomeClient({
       ? categories.filter((c: any) => !c.parent_id).slice(0, 8)
       : FALLBACK_CATEGORIES;
 
-  const showCategoryFallback = featuredProducts.length === 0;
+  const hasFeaturedProducts = featuredProducts.length > 0;
 
   const renderProductCard = (product: any) => {
                 const variants = product.product_variants || [];
@@ -275,63 +265,49 @@ export default function HomeClient({
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-brand-accent">Discover</p>
               <h2 className="font-heading text-[1.75rem] font-bold tracking-tight text-brand-primary md:text-[2.25rem] lg:text-[2.5rem]">
-                {showCategoryFallback ? 'Popular imports' : 'Featured products'}
+                Featured products
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 md:mt-3 md:text-base">
-                {showCategoryFallback
-                  ? 'Pick a category and start browsing.'
-                  : 'Hand picked for you. See the price up front. Or ask for a quote.'}
+                Hand picked for you. See the price up front. Or ask for a quote.
               </p>
             </div>
             <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end">
-              {showCategoryFallback ? (
-                <div className="hidden gap-3 md:flex lg:hidden">
-                  <button
-                    type="button"
-                    onClick={() => scrollSlider('left')}
-                    className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
-                    aria-label="Scroll products left"
-                  >
-                    <ChevronLeft className="h-6 w-6" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollSlider('right')}
-                    className="btn-interactive flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-primary shadow-sm hover:border-brand-accent/30"
-                    aria-label="Scroll products right"
-                  >
-                    <ChevronRight className="h-6 w-6" />
-                  </button>
-                </div>
-              ) : null}
               <Link
-                href={showCategoryFallback ? '/categories' : '/shop'}
+                href="/shop"
                 prefetch
                 className="btn-interactive inline-flex min-h-[44px] items-center justify-center rounded-xl border border-brand-primary/15 bg-white px-5 py-2.5 text-sm font-bold text-brand-primary shadow-sm hover:border-brand-accent/40 hover:text-brand-accent"
               >
-                {showCategoryFallback ? 'View all categories' : 'View all products'}
+                View all products
               </Link>
             </div>
           </div>
 
-          {showCategoryFallback ? (
-            <div
-              ref={sliderRef}
-              className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 pt-1 scrollbar-hide sm:mx-0 sm:gap-4 sm:px-0 lg:grid lg:snap-none lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:pb-0 xl:gap-6"
-            >
-              {displayCategories.slice(0, 6).map((cat: any, idx: number) => (
-                <CategoryCard
-                  key={cat.id || cat.slug}
-                  slug={cat.slug}
-                  name={cat.name}
-                  image={cat.image_url || cat.image}
-                  index={idx}
-                />
-              ))}
-            </div>
-          ) : (
+          {hasFeaturedProducts ? (
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-5 xl:gap-6">
               {featuredProducts.map(renderProductCard)}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-6 py-12 text-center">
+              <p className="font-heading text-lg font-bold text-brand-primary">New products coming soon</p>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+                We are adding imports to the shop. Browse categories above or contact us if you already know what you need.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href="/shop"
+                  prefetch
+                  className="btn-interactive inline-flex min-h-[44px] items-center justify-center rounded-xl bg-brand-accent px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-90"
+                >
+                  Browse shop
+                </Link>
+                <Link
+                  href="/contact"
+                  prefetch
+                  className="btn-interactive inline-flex min-h-[44px] items-center justify-center rounded-xl border border-brand-primary/15 bg-white px-5 py-2.5 text-sm font-bold text-brand-primary shadow-sm hover:border-brand-accent/40 hover:text-brand-accent"
+                >
+                  Contact us
+                </Link>
+              </div>
             </div>
           )}
         </div>
