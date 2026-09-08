@@ -68,7 +68,17 @@ export default function Header() {
     { label: 'Categories', href: '/categories' },
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },
-    { label: 'Buy RMB', href: '/exchange' },
+  ];
+  const serviceLinks = [
+    { label: 'Buy RMB', shortLabel: 'RMB', href: '/exchange', primary: false },
+    {
+      label: 'China Warehouse',
+      shortLabel: 'Warehouse',
+      href: user
+        ? '/account?tab=warehouse'
+        : '/auth/login?next=%2Faccount%3Ftab%3Dwarehouse',
+      primary: true,
+    },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -108,7 +118,7 @@ export default function Header() {
                 <StoreLogo priority className="group" />
               </div>
 
-              <div className="mx-4 hidden min-w-0 flex-1 items-center justify-center gap-6 md:mx-6 md:flex md:gap-8">
+              <div className="mx-3 hidden min-w-0 flex-1 items-center justify-center gap-4 md:flex xl:mx-6 xl:gap-7">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -118,6 +128,22 @@ export default function Header() {
                     {link.label}
                   </Link>
                 ))}
+                <div className="flex items-center gap-2">
+                  {serviceLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-bold uppercase tracking-wide transition ${
+                        link.primary
+                          ? 'bg-brand-accent text-white hover:bg-[#e85f12]'
+                          : 'border border-white/25 bg-white/10 text-white hover:bg-white/15'
+                      }`}
+                    >
+                      <span className="xl:hidden">{link.shortLabel}</span>
+                      <span className="hidden xl:inline">{link.label}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-5">
@@ -222,6 +248,18 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   className="mobile-editorial-nav-link"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              {serviceLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`mobile-editorial-nav-link ${
+                    link.primary ? 'font-bold text-brand-accent' : ''
+                  }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}

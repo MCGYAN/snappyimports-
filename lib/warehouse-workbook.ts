@@ -9,6 +9,8 @@ export type WarehouseWorkbookRow = {
   description: string;
   cartons: number | null;
   cbm: number | null;
+  goodsClass: string;
+  customUsdPerCbm: number | null;
   trackingNumber: string;
   vessel: string;
   notes: string;
@@ -202,6 +204,20 @@ export async function parseWarehouseWorkbook(buffer: ArrayBuffer): Promise<Parse
     description: findColumn(headers, ['description', 'itemdescription', 'goods', '商品名']),
     cartons: findColumn(headers, ['ctns', 'cartons', 'quantity', 'qty', '件数']),
     cbm: findColumn(headers, ['cbm', 'volume', '体积']),
+    goodsClass: findColumn(headers, [
+      'goodsclass',
+      'productclass',
+      'shippingclass',
+      'producttype',
+      'normalproduct',
+      '货物类型',
+    ]),
+    customRate: findColumn(headers, [
+      'customusdpercbm',
+      'customrate',
+      'usdpercbm',
+      'ratepercbm',
+    ]),
     tracking: findColumn(headers, [
       'suppliertrackingno',
       'suppliertrackingnumber',
@@ -238,6 +254,8 @@ export async function parseWarehouseWorkbook(buffer: ArrayBuffer): Promise<Parse
       description: textValue(get(source, columns.description)),
       cartons: positiveInteger(get(source, columns.cartons)),
       cbm,
+      goodsClass: textValue(get(source, columns.goodsClass)),
+      customUsdPerCbm: positiveNumber(get(source, columns.customRate)),
       trackingNumber,
       vessel: textValue(get(source, columns.vessel)),
       notes: textValue(get(source, columns.notes)),

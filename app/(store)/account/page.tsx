@@ -109,7 +109,9 @@ function AccountContent() {
         }
       }
       if (!session) {
-        router.push('/auth/login');
+        const query = searchParams.toString();
+        const nextPath = `/account${query ? `?${query}` : ''}`;
+        router.push(`/auth/login?next=${encodeURIComponent(nextPath)}`);
         return;
       }
 
@@ -135,7 +137,7 @@ function AccountContent() {
       }).catch(() => null);
     }
     checkUser();
-  }, [router]);
+  }, [router, searchParams]);
 
   useEffect(() => {
     const section =
@@ -201,11 +203,20 @@ function AccountContent() {
         data: {
           first_name: profileData.firstName,
           last_name: profileData.lastName,
-          phone: profileData.phone // Storing phone in metadata for now
+          full_name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+          phone: profileData.phone,
         }
       });
 
       if (error) throw error;
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+          phone: profileData.phone.trim() || null,
+        })
+        .eq('id', user.id);
+      if (profileError) throw profileError;
       setProfileMessage({ type: 'success', text: 'Profile updated successfully!' });
     } catch (err: any) {
       setProfileMessage({ type: 'error', text: err.message });

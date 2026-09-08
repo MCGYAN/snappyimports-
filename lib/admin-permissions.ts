@@ -6,7 +6,11 @@
 export const ADMIN_MODULES = {
   orders: {
     label: 'Orders',
-    description: 'Orders, packages, shipping, payments, and POS',
+    description: 'Orders, packages, Ghana shipping, payments, and POS',
+  },
+  warehouse: {
+    label: 'China Warehouse',
+    description: 'Warehouse address, incoming packages, shipping marks, and workbook imports',
   },
   exchange: {
     label: 'Buy RMB',
@@ -30,6 +34,7 @@ export const ADMIN_MODULE_KEYS = Object.keys(ADMIN_MODULES) as AdminModule[];
 
 export const EMPTY_STAFF_PERMISSIONS: AdminPermissions = {
   orders: false,
+  warehouse: false,
   exchange: false,
   products: false,
   customers: false,
@@ -39,6 +44,7 @@ const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null 
   { prefix: '/admin/team', module: 'owner' },
   { prefix: '/admin/notifications', module: 'owner' },
   { prefix: '/admin/analytics', module: 'owner' },
+  { prefix: '/admin/packages/warehouse', module: 'warehouse' },
   { prefix: '/admin/deliveries', module: 'orders' },
   { prefix: '/admin/packages', module: 'orders' },
   { prefix: '/admin/shipping', module: 'orders' },

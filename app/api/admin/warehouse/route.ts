@@ -8,7 +8,7 @@ function clean(value: unknown, max: number): string | null {
 }
 
 export async function GET(req: Request) {
-  const auth = await verifyAuth(req, { requireModule: 'orders' });
+  const auth = await verifyAuth(req, { requireModule: 'warehouse' });
   if (!auth.authenticated) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }
@@ -24,14 +24,14 @@ export async function GET(req: Request) {
       supabaseAdmin
         .from('warehouse_import_batches')
         .select(
-          'id, file_name, source_sheet, total_rows, imported_rows, skipped_rows, unmatched_rows, error_rows, status, summary, created_at',
+          'id, file_name, source_sheet, total_rows, imported_rows, updated_rows, skipped_rows, unmatched_rows, error_rows, status, summary, created_at',
         )
         .order('created_at', { ascending: false })
         .limit(10),
       supabaseAdmin
         .from('inbound_packages')
         .select(
-          'id, customer_email, shipping_mark_snapshot, supplier_tracking_number, supplier_name, description, notes, created_at',
+          'id, customer_email, shipping_mark_snapshot, supplier_tracking_number, supplier_name, description, goods_class, notes, created_at',
         )
         .eq('status', 'expected')
         .order('created_at', { ascending: false })
@@ -62,7 +62,7 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const auth = await verifyAuth(req, { requireModule: 'orders' });
+  const auth = await verifyAuth(req, { requireModule: 'warehouse' });
   if (!auth.authenticated || !auth.user?.id) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }
@@ -73,6 +73,8 @@ export async function PUT(req: Request) {
   const phone = clean(body.phone, 60);
   const addressChinese = clean(body.addressChinese, 1_500);
   const addressEnglish = clean(body.addressEnglish, 1_500);
+  const entryNumbers = clean(body.entryNumbers, 300);
+  const trackingWhatsapp = clean(body.trackingWhatsapp, 60);
   const instructions = clean(body.instructions, 1_500);
   const isActive = Boolean(body.isActive);
 
@@ -95,6 +97,8 @@ export async function PUT(req: Request) {
       phone,
       address_chinese: addressChinese,
       address_english: addressEnglish,
+      entry_numbers: entryNumbers,
+      tracking_whatsapp: trackingWhatsapp,
       instructions,
       is_active: isActive,
       updated_at: new Date().toISOString(),

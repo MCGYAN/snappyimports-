@@ -21,13 +21,13 @@ export async function GET(req: Request) {
     await Promise.all([
       supabaseAdmin
         .from('profiles')
-        .select('shipping_mark')
+        .select('shipping_mark, full_name, phone')
         .eq('id', auth.user.id)
         .single(),
       supabaseAdmin
         .from('china_warehouse_settings')
         .select(
-          'warehouse_name, contact_name, phone, address_chinese, address_english, instructions, updated_at',
+          'warehouse_name, contact_name, phone, address_chinese, address_english, entry_numbers, tracking_whatsapp, instructions, updated_at',
         )
         .eq('id', 1)
         .eq('is_active', true)
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
       supabaseAdmin
         .from('inbound_packages')
         .select(
-          'id, supplier_tracking_number, supplier_name, description, cartons, cbm, status, received_at, loaded_at, estimated_arrival_at, vessel, notes, shipping_package_id, created_at',
+          'id, supplier_tracking_number, supplier_name, description, cartons, cbm, goods_class, status, received_at, loaded_at, estimated_arrival_at, vessel, notes, shipping_package_id, created_at',
         )
         .eq('customer_user_id', auth.user.id)
         .neq('status', 'cancelled')
@@ -50,6 +50,12 @@ export async function GET(req: Request) {
   return NextResponse.json({
     success: true,
     shippingMark: profile?.shipping_mark || null,
+    traderName: profile?.full_name || auth.user.user_metadata?.full_name || null,
+    traderPhone:
+      profile?.phone ||
+      auth.user.user_metadata?.phone ||
+      auth.user.phone ||
+      null,
     warehouse: warehouse || null,
     inboundPackages: inbound || [],
   });

@@ -10,6 +10,8 @@ type WarehouseForm = {
   phone: string;
   addressChinese: string;
   addressEnglish: string;
+  entryNumbers: string;
+  trackingWhatsapp: string;
   instructions: string;
   isActive: boolean;
 };
@@ -20,6 +22,8 @@ const EMPTY: WarehouseForm = {
   phone: '',
   addressChinese: '',
   addressEnglish: '',
+  entryNumbers: '18620853884; 18620788554',
+  trackingWhatsapp: '+8618620853884',
   instructions: 'Put your Snappy shipping mark clearly on every carton.',
   isActive: false,
 };
@@ -31,11 +35,14 @@ type Preview = {
     sourceRows: number;
     packageRows: number;
     ready: number;
+    newPackages: number;
+    updates: number;
     unknownMarks: number;
     duplicates: number;
+    invalidClasses: number;
     skipped: number;
     imported?: number;
-    existing?: number;
+    updated?: number;
     errors?: number;
   };
   rows: any[];
@@ -79,6 +86,8 @@ export default function WarehouseFreightDesk() {
         phone: warehouse?.phone || '',
         addressChinese: warehouse?.address_chinese || '',
         addressEnglish: warehouse?.address_english || '',
+        entryNumbers: warehouse?.entry_numbers || EMPTY.entryNumbers,
+        trackingWhatsapp: warehouse?.tracking_whatsapp || EMPTY.trackingWhatsapp,
         instructions: warehouse?.instructions || EMPTY.instructions,
         isActive: Boolean(warehouse?.is_active),
       });
@@ -151,7 +160,7 @@ export default function WarehouseFreightDesk() {
       setPreview(result);
       if (mode === 'apply') {
         setMessage(
-          `${result.summary.imported} packages imported. ${result.summary.existing} existing packages skipped.`,
+          `${result.summary.imported} packages created. ${result.summary.updated} existing packages updated.`,
         );
         await load();
       }
@@ -243,6 +252,24 @@ export default function WarehouseFreightDesk() {
               className="mt-1 min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
             />
           </label>
+          <label className="text-sm font-semibold text-slate-700">
+            Warehouse entry numbers
+            <input
+              value={form.entryNumbers}
+              onChange={(event) => setForm({ ...form, entryNumbers: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
+              placeholder="18620853884; 18620788554"
+            />
+          </label>
+          <label className="text-sm font-semibold text-slate-700">
+            Tracking team WhatsApp
+            <input
+              value={form.trackingWhatsapp}
+              onChange={(event) => setForm({ ...form, trackingWhatsapp: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
+              placeholder="+86..."
+            />
+          </label>
           <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
             Customer instructions
             <textarea
@@ -322,7 +349,8 @@ export default function WarehouseFreightDesk() {
             className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-primary file:px-4 file:py-2.5 file:font-bold file:text-white"
           />
           <p className="mt-2 text-xs text-slate-500">
-            Required columns: shipping mark, tracking number and CBM. Maximum file size is 4 MB.
+            Required columns: shipping mark, tracking number and CBM. Add Goods Class for Normal,
+            Sensitive, Heavy or Bulk. Blank class values default to Normal.
           </p>
         </div>
 
@@ -340,10 +368,10 @@ export default function WarehouseFreightDesk() {
           <div className="mt-6 space-y-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                ['Package rows', preview.summary.packageRows],
-                ['Ready', preview.summary.ready],
+                ['New packages', preview.summary.newPackages],
+                ['Updates', preview.summary.updates],
                 ['Unknown marks', preview.summary.unknownMarks],
-                ['Duplicates', preview.summary.duplicates],
+                ['Class errors', preview.summary.invalidClasses],
               ].map(([label, value]) => (
                 <div key={String(label)} className="rounded-xl bg-slate-50 p-3">
                   <p className="text-xl font-black text-brand-primary">{value}</p>
@@ -353,14 +381,18 @@ export default function WarehouseFreightDesk() {
             </div>
 
             <div className="max-h-96 overflow-auto rounded-xl border border-slate-200">
-              <table className="w-full min-w-[760px] text-left text-sm">
+              <table className="w-full min-w-[1120px] text-left text-sm">
                 <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-3 py-2">Row</th>
                     <th className="px-3 py-2">Shipping mark</th>
                     <th className="px-3 py-2">Tracking</th>
                     <th className="px-3 py-2">Description</th>
+                    <th className="px-3 py-2">Received</th>
+                    <th className="px-3 py-2">Loaded</th>
                     <th className="px-3 py-2">CBM</th>
+                    <th className="px-3 py-2">Class</th>
+                    <th className="px-3 py-2">Rate</th>
                     <th className="px-3 py-2">Match</th>
                   </tr>
                 </thead>
@@ -371,22 +403,38 @@ export default function WarehouseFreightDesk() {
                       <td className="px-3 py-2 font-mono text-xs">{row.shippingMark}</td>
                       <td className="px-3 py-2 font-mono text-xs">{row.trackingNumber}</td>
                       <td className="max-w-52 truncate px-3 py-2">{row.description || 'Package'}</td>
+                      <td className="px-3 py-2 text-xs">
+                        {row.receivedAt ? new Date(row.receivedAt).toLocaleDateString() : 'Missing'}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {row.loadedAt ? new Date(row.loadedAt).toLocaleDateString() : 'Not loaded'}
+                      </td>
                       <td className="px-3 py-2">{Number(row.cbm).toFixed(4)}</td>
+                      <td className="px-3 py-2 capitalize">{row.goodsClass}</td>
+                      <td className="px-3 py-2">
+                        {row.usdPerCbm ? `$${Number(row.usdPerCbm).toFixed(0)} / CBM` : 'Missing'}
+                      </td>
                       <td className="px-3 py-2">
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-bold ${
                             row.match === 'matched'
                               ? 'bg-emerald-50 text-emerald-700'
+                              : row.match === 'update'
+                                ? 'bg-blue-50 text-blue-700'
                               : row.match === 'duplicate'
                                 ? 'bg-amber-50 text-amber-700'
                                 : 'bg-red-50 text-red-700'
                           }`}
                         >
                           {row.match === 'matched'
-                            ? 'Matched'
+                            ? 'New'
+                            : row.match === 'update'
+                              ? 'Update'
                             : row.match === 'duplicate'
                               ? 'Duplicate'
-                              : 'Unknown mark'}
+                              : row.match === 'invalid_class'
+                                ? 'Class error'
+                                : 'Unknown mark'}
                         </span>
                       </td>
                     </tr>
@@ -399,7 +447,8 @@ export default function WarehouseFreightDesk() {
             ) : null}
 
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Only matched rows will be imported. Unknown marks and duplicate rows will be recorded for correction.
+              New and update rows are safe to apply. Unknown marks, duplicate rows and class errors
+              are recorded for correction.
             </div>
 
             <button
@@ -409,7 +458,7 @@ export default function WarehouseFreightDesk() {
               className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-brand-accent px-5 font-bold text-white disabled:opacity-50"
             >
               <CheckCircle2 size={18} />
-              {uploading ? 'Importing…' : `Import ${preview.summary.ready} matched packages`}
+              {uploading ? 'Applying…' : `Apply ${preview.summary.ready} package rows`}
             </button>
           </div>
         ) : null}
@@ -466,7 +515,8 @@ export default function WarehouseFreightDesk() {
                   </p>
                 </div>
                 <p className="text-xs font-semibold text-slate-600">
-                  {batch.imported_rows} imported. {batch.unmatched_rows} unmatched. {batch.error_rows} errors.
+                  {batch.imported_rows} created. {batch.updated_rows || 0} updated.{' '}
+                  {batch.unmatched_rows} unmatched. {batch.error_rows} errors.
                 </p>
               </div>
             ))}

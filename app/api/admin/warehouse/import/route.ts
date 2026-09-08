@@ -12,7 +12,10 @@ const PREVIEW_LIMIT = 250;
 type MatchedRow = WarehouseWorkbookRow & {
   customerUserId: string | null;
   customerEmail: string | null;
-  match: 'matched' | 'unknown_mark' | 'duplicate';
+  goodsClass: 'normal' | 'sensitive' | 'heavy' | 'bulk' | 'custom' | 'invalid';
+  usdPerCbm: number | null;
+  estimatedShippingUsd: number | null;
+  match: 'matched' | 'update' | 'unknown_mark' | 'duplicate' | 'invalid_class';
 };
 
 function normalizedMark(value: string): string {
@@ -21,6 +24,18 @@ function normalizedMark(value: string): string {
 
 function normalizedTracking(value: string): string {
   return value.trim().replace(/\s+/g, '').toLowerCase();
+}
+
+function normalizedGoodsClass(
+  value: string,
+): 'normal' | 'sensitive' | 'heavy' | 'bulk' | 'custom' | 'invalid' {
+  const normalized = value.trim().toLowerCase().replace(/[\s_-]+/g, '');
+  if (!normalized || ['normal', 'normalproduct', 'yes', 'true'].includes(normalized)) return 'normal';
+  if (['sensitive', 'sensitiveproduct', 'restricted'].includes(normalized)) return 'sensitive';
+  if (['heavy', 'heavyproduct'].includes(normalized)) return 'heavy';
+  if (['bulk', 'bulkcargo', 'bulkproduct'].includes(normalized)) return 'bulk';
+  if (normalized === 'custom') return 'custom';
+  return 'invalid';
 }
 
 async function parseRequestFile(req: Request) {
@@ -37,10 +52,21 @@ async function parseRequestFile(req: Request) {
 }
 
 async function matchRows(rows: WarehouseWorkbookRow[]): Promise<MatchedRow[]> {
-  const { data: profiles, error } = await supabaseAdmin
-    .from('profiles')
-    .select('id, email, shipping_mark');
-  if (error) throw new Error('Could not load customer shipping marks.');
+  const [
+    { data: profiles, error: profileError },
+    { data: existingPackages, error: existingError },
+    { data: board, error: boardError },
+  ] = await Promise.all([
+    supabaseAdmin.from('profiles').select('id, email, shipping_mark'),
+    supabaseAdmin
+      .from('inbound_packages')
+      .select('customer_user_id, supplier_tracking_number, shipping_package_id')
+      .limit(10_000),
+    supabaseAdmin.from('shipping_rate_board').select('*').eq('id', 1).single(),
+  ]);
+  if (profileError || existingError || boardError) {
+    throw new Error('Could not load customer marks and shipping rates.');
+  }
 
   const profileByMark = new Map(
     (profiles || [])
@@ -50,27 +76,60 @@ async function matchRows(rows: WarehouseWorkbookRow[]): Promise<MatchedRow[]> {
         { id: profile.id as string, email: (profile.email as string | null) || null },
       ]),
   );
+  const existingKeys = new Set(
+    (existingPackages || []).map(
+      (row: any) =>
+        `${row.customer_user_id}:${normalizedTracking(row.supplier_tracking_number || '')}`,
+    ),
+  );
 
   const seen = new Set<string>();
   return rows.map((row) => {
     const profile = profileByMark.get(normalizedMark(row.shippingMark));
+    const goodsClass = normalizedGoodsClass(row.goodsClass);
     const duplicateKey = `${profile?.id || normalizedMark(row.shippingMark)}:${normalizedTracking(
       row.trackingNumber,
     )}`;
     const duplicate = seen.has(duplicateKey);
     seen.add(duplicateKey);
+    const isUpdate = Boolean(profile && existingKeys.has(duplicateKey));
+    const rate =
+      goodsClass === 'custom'
+        ? row.customUsdPerCbm
+        : goodsClass === 'sensitive'
+          ? Number(board.sensitive_usd_per_cbm)
+          : goodsClass === 'heavy'
+            ? Number(board.heavy_usd_per_cbm)
+            : goodsClass === 'bulk'
+              ? Number(board.bulk_usd_per_cbm)
+              : goodsClass === 'normal'
+                ? Number(board.normal_usd_per_cbm)
+                : null;
+    const invalidClass = goodsClass === 'invalid' || (goodsClass === 'custom' && !rate);
 
     return {
       ...row,
+      goodsClass,
+      usdPerCbm: rate,
+      estimatedShippingUsd:
+        rate && row.cbm ? Number((Number(row.cbm) * Number(rate)).toFixed(2)) : null,
       customerUserId: profile?.id || null,
       customerEmail: profile?.email || null,
-      match: duplicate ? 'duplicate' : profile ? 'matched' : 'unknown_mark',
+      match: duplicate
+        ? 'duplicate'
+        : !profile
+          ? 'unknown_mark'
+          : invalidClass
+            ? 'invalid_class'
+            : isUpdate
+              ? 'update'
+              : 'matched',
     };
   });
 }
 
 export async function POST(req: Request) {
-  const auth = await verifyAuth(req, { requireModule: 'orders' });
+  const auth = await verifyAuth(req, { requireModule: 'warehouse' });
   if (!auth.authenticated || !auth.user?.id) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }
@@ -84,10 +143,12 @@ export async function POST(req: Request) {
     const matchedRows = await matchRows(workbook.rows);
     const readyRows = matchedRows.filter(
       (row): row is MatchedRow & { customerUserId: string } =>
-        row.match === 'matched' && Boolean(row.customerUserId),
+        ['matched', 'update'].includes(row.match) && Boolean(row.customerUserId),
     );
     const unmatchedRows = matchedRows.filter((row) => row.match === 'unknown_mark');
     const duplicateRows = matchedRows.filter((row) => row.match === 'duplicate');
+    const invalidClassRows = matchedRows.filter((row) => row.match === 'invalid_class');
+    const updateRows = matchedRows.filter((row) => row.match === 'update');
 
     const summary = {
       fileName: file.name,
@@ -95,8 +156,11 @@ export async function POST(req: Request) {
       sourceRows: workbook.sourceRows,
       packageRows: workbook.rows.length,
       ready: readyRows.length,
+      newPackages: readyRows.length - updateRows.length,
+      updates: updateRows.length,
       unknownMarks: unmatchedRows.length,
       duplicates: duplicateRows.length,
+      invalidClasses: invalidClassRows.length,
       skipped: workbook.skippedRows,
     };
 
@@ -123,12 +187,13 @@ export async function POST(req: Request) {
         file_name: file.name.slice(0, 255),
         source_sheet: workbook.sheetName.slice(0, 120),
         total_rows: workbook.rows.length,
-        skipped_rows: workbook.skippedRows + duplicateRows.length,
+        skipped_rows: workbook.skippedRows + duplicateRows.length + invalidClassRows.length,
         unmatched_rows: unmatchedRows.length,
         status: 'processing',
         summary: {
           preview: summary,
           unknownMarks: [...new Set(unmatchedRows.map((row) => row.shippingMark))].slice(0, 100),
+          invalidClasses: [...new Set(invalidClassRows.map((row) => row.goodsClass))],
         },
         created_by: auth.user.id,
       })
@@ -145,6 +210,8 @@ export async function POST(req: Request) {
       description: row.description,
       cartons: row.cartons,
       cbm: row.cbm,
+      goodsClass: row.goodsClass,
+      customUsdPerCbm: row.customUsdPerCbm,
       receivedAt: row.receivedAt,
       loadedAt: row.loadedAt,
       estimatedArrivalAt: row.estimatedArrivalAt,
@@ -174,7 +241,7 @@ export async function POST(req: Request) {
     }
 
     const imported = Number(result?.imported) || 0;
-    const existing = Number(result?.existing) || 0;
+    const updated = Number(result?.updated) || 0;
     const errors = Number(result?.errors) || 0;
     const failedRows = Array.isArray(result?.rows)
       ? result.rows.filter((row: any) => !row.ok).slice(0, 100)
@@ -184,14 +251,15 @@ export async function POST(req: Request) {
       .from('warehouse_import_batches')
       .update({
         imported_rows: imported,
+        updated_rows: updated,
         error_rows: errors,
         status:
-          errors > 0 || unmatchedRows.length > 0
+          errors > 0 || unmatchedRows.length > 0 || invalidClassRows.length > 0
             ? 'completed_with_errors'
             : 'completed',
         summary: {
           preview: summary,
-          existing,
+          updated,
           failedRows,
           unknownMarks: [...new Set(unmatchedRows.map((row) => row.shippingMark))].slice(0, 100),
         },
@@ -202,7 +270,7 @@ export async function POST(req: Request) {
       success: true,
       mode: 'apply',
       batchId: batch.id,
-      summary: { ...summary, imported, existing, errors },
+      summary: { ...summary, imported, updated, errors },
       failedRows,
     });
   } catch (error) {

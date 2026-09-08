@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, PackagePlus, RefreshCw, Warehouse } from 'lucide-react';
+import { Check, Copy, MessageCircle, PackagePlus, RefreshCw, Warehouse } from 'lucide-react';
 
 type ChinaWarehouseProps = {
   accessToken: string;
@@ -9,12 +9,16 @@ type ChinaWarehouseProps = {
 
 type WarehouseData = {
   shippingMark: string | null;
+  traderName: string | null;
+  traderPhone: string | null;
   warehouse: {
     warehouse_name: string;
     contact_name: string | null;
     phone: string | null;
     address_chinese: string | null;
     address_english: string | null;
+    entry_numbers: string | null;
+    tracking_whatsapp: string | null;
     instructions: string | null;
   } | null;
   inboundPackages: any[];
@@ -22,6 +26,8 @@ type WarehouseData = {
 
 const EMPTY_DATA: WarehouseData = {
   shippingMark: null,
+  traderName: null,
+  traderPhone: null,
   warehouse: null,
   inboundPackages: [],
 };
@@ -74,15 +80,20 @@ export default function ChinaWarehouse({ accessToken }: ChinaWarehouseProps) {
   };
 
   const fullShippingDetails = [
-    data.warehouse?.warehouse_name,
-    data.warehouse?.contact_name ? `Contact: ${data.warehouse.contact_name}` : '',
-    data.warehouse?.phone ? `Phone: ${data.warehouse.phone}` : '',
-    data.warehouse?.address_chinese ? `Chinese address: ${data.warehouse.address_chinese}` : '',
-    data.warehouse?.address_english ? `English address: ${data.warehouse.address_english}` : '',
-    data.shippingMark ? `Shipping mark: ${data.shippingMark}` : '',
+    data.shippingMark,
+    data.traderPhone ? `Telephone: ${data.traderPhone}` : '',
+    data.warehouse?.address_english,
+    data.warehouse?.entry_numbers
+      ? `Warehouse Entry Number: ${data.warehouse.entry_numbers}`
+      : '',
+    data.shippingMark,
+    data.traderPhone ? `（电话）: ${data.traderPhone}` : '',
+    data.warehouse?.address_chinese,
+    data.warehouse?.entry_numbers ? `入仓号: ${data.warehouse.entry_numbers}` : '',
   ]
     .filter(Boolean)
     .join('\n');
+  const trackingWhatsapp = String(data.warehouse?.tracking_whatsapp || '').replace(/\D/g, '');
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -178,15 +189,25 @@ export default function ChinaWarehouse({ accessToken }: ChinaWarehouseProps) {
               className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand-primary"
             >
               {copied === 'details' ? <Check size={17} /> : <Copy size={17} />}
-              {copied === 'details' ? 'Copied' : 'Copy all'}
+              {copied === 'details' ? 'Copied' : 'Copy shipping label'}
             </button>
           </div>
 
           <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Contact</dt>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Warehouse contact
+              </dt>
               <dd className="mt-1 font-medium text-slate-800">
                 {[data.warehouse.contact_name, data.warehouse.phone].filter(Boolean).join('  ')}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Your telephone
+              </dt>
+              <dd className="mt-1 font-medium text-slate-800">
+                {data.traderPhone || 'Add your telephone in Profile Settings'}
               </dd>
             </div>
             {data.warehouse.address_chinese ? (
@@ -205,6 +226,16 @@ export default function ChinaWarehouse({ accessToken }: ChinaWarehouseProps) {
                 </dd>
               </div>
             ) : null}
+            {data.warehouse.entry_numbers ? (
+              <div className="sm:col-span-2">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Warehouse entry numbers
+                </dt>
+                <dd className="mt-1 font-mono font-semibold text-slate-800">
+                  {data.warehouse.entry_numbers}
+                </dd>
+              </div>
+            ) : null}
             {data.warehouse.instructions ? (
               <div className="sm:col-span-2 rounded-xl bg-orange-50 p-4">
                 <dt className="text-xs font-bold uppercase tracking-wide text-orange-700">Important</dt>
@@ -214,6 +245,40 @@ export default function ChinaWarehouse({ accessToken }: ChinaWarehouseProps) {
               </div>
             ) : null}
           </dl>
+
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-brand-primary">
+              Label for your supplier
+            </p>
+            <div className="mt-3 space-y-4 text-sm leading-relaxed text-slate-800">
+              <div>
+                <p className="font-mono text-base font-black">{data.shippingMark}</p>
+                <p>Telephone: {data.traderPhone || 'Add your telephone in Profile Settings'}</p>
+                {data.warehouse.address_english ? <p>{data.warehouse.address_english}</p> : null}
+                {data.warehouse.entry_numbers ? (
+                  <p>Warehouse Entry Number: {data.warehouse.entry_numbers}</p>
+                ) : null}
+              </div>
+              <div className="border-t border-slate-200 pt-4">
+                <p className="font-mono text-base font-black">{data.shippingMark}</p>
+                <p>（电话）: {data.traderPhone || '请在个人资料中添加电话号码'}</p>
+                {data.warehouse.address_chinese ? <p>{data.warehouse.address_chinese}</p> : null}
+                {data.warehouse.entry_numbers ? <p>入仓号: {data.warehouse.entry_numbers}</p> : null}
+              </div>
+            </div>
+          </div>
+
+          {trackingWhatsapp ? (
+            <a
+              href={`https://wa.me/${trackingWhatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#25D366] px-4 text-sm font-bold text-white"
+            >
+              <MessageCircle size={18} />
+              Ask the China tracking team
+            </a>
+          ) : null}
         </section>
       ) : (
         <section className="rounded-2xl border border-dashed border-slate-300 p-8 text-center">
