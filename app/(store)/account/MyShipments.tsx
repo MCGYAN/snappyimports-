@@ -116,19 +116,27 @@ export default function MyShipments({ data, loading }: MyShipmentsProps) {
               )?.order_items?.orders;
               const email = pkg.customer_email || firstOrder?.email || '';
               const orderNumber = firstOrder?.order_number || '';
+              const isForwardedPackage = !orderNumber;
               return (
                 <Link
                   key={pkg.id}
                   href={
                     pkg.status === 'ready'
                       ? '/account?tab=deliveries'
-                      : `/order/${encodeURIComponent(orderNumber)}/shipping?email=${encodeURIComponent(email)}`
+                      : orderNumber
+                        ? `/order/${encodeURIComponent(orderNumber)}/shipping?email=${encodeURIComponent(email)}`
+                        : '/account?tab=shipments'
                   }
                   className="grid gap-3 p-4 transition hover:bg-slate-50 md:grid-cols-[1.5fr_.7fr_.9fr_.9fr_.6fr] md:items-center"
                 >
                   <div>
                     <p className="font-semibold text-slate-900">{pkg.package_name}</p>
                     <p className="font-mono text-[11px] text-slate-400">{pkg.tracking_id}</p>
+                    {pkg.carrier_reference ? (
+                      <p className="mt-1 font-mono text-[11px] text-slate-500">
+                        China tracking: {pkg.carrier_reference}
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-xs text-slate-600">
                       Inside:{' '}
                       {(pkg.shipping_package_items || [])
@@ -140,8 +148,14 @@ export default function MyShipments({ data, loading }: MyShipmentsProps) {
                                 : ''
                             }`,
                         )
-                        .join(', ') || 'Contents being recorded'}
+                        .join(', ') ||
+                        (isForwardedPackage
+                          ? `${pkg.package_name}${pkg.quantity ? ` × ${pkg.quantity} carton${Number(pkg.quantity) === 1 ? '' : 's'}` : ''}`
+                          : 'Contents being recorded')}
                     </p>
+                    {pkg.vessel ? (
+                      <p className="mt-1 text-xs text-slate-500">Vessel: {pkg.vessel}</p>
+                    ) : null}
                   </div>
                   <div>
                     <span className="mr-2 text-xs text-slate-400 md:hidden">Size</span>

@@ -70,13 +70,15 @@ function packageOrders(pkg: any) {
 }
 
 function packageCustomer(pkg: any) {
-  return (pkg.shipping_package_items || []).find(
+  return (
+    (pkg.shipping_package_items || []).find(
     (entry: any) => entry.order_items?.orders,
-  )?.order_items?.orders;
+    )?.order_items?.orders || { email: pkg.customer_email }
+  );
 }
 
 function contents(pkg: any) {
-  return (pkg.shipping_package_items || [])
+  const linkedContents = (pkg.shipping_package_items || [])
     .map((entry: any) => {
       const item = entry.order_items;
       const orderNumber = item?.orders?.order_number;
@@ -85,6 +87,7 @@ function contents(pkg: any) {
       }`;
     })
     .join(', ');
+  return linkedContents || (pkg.order_id ? '' : pkg.package_name || '');
 }
 
 function itemFreightIncluded(item: any) {

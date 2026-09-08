@@ -16,6 +16,29 @@ export default function ShippingPage() {
       </div>
 
       <div className="store-container store-section">
+        <section className="mb-16 overflow-hidden rounded-3xl border border-brand-primary/10 bg-gradient-to-br from-brand-primary to-[#071529] p-6 text-white sm:p-8">
+          <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-brand-accent">
+                Already buying in China?
+              </p>
+              <h2 className="mt-2 font-heading text-2xl font-bold sm:text-3xl">
+                Send your supplier packages through Snappy
+              </h2>
+              <p className="mt-3 max-w-2xl leading-relaxed text-white/75">
+                Create an account to receive your personal shipping mark and our China warehouse
+                address. Register the supplier tracking number, then follow your shipment to Ghana.
+              </p>
+            </div>
+            <Link
+              href="/account?tab=warehouse"
+              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand-accent px-6 font-bold text-white"
+            >
+              Get my shipping mark
+            </Link>
+          </div>
+        </section>
+
         <div className="mb-16 grid gap-8 md:grid-cols-2">
           <div>
             <h2 className="mb-6 text-3xl font-bold text-gray-900">What happens after you order</h2>

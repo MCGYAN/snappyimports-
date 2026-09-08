@@ -9,6 +9,7 @@ import MyShipments from './MyShipments';
 import FinancialDocuments from './FinancialDocuments';
 import DeliveryRequests from './DeliveryRequests';
 import OrderStatus from './OrderStatus';
+import ChinaWarehouse from './ChinaWarehouse';
 import { supabase } from '@/lib/supabase';
 import { getAuthCookies } from '@/lib/auth-remember';
 
@@ -16,6 +17,7 @@ const ACCOUNT_TABS = [
   'profile',
   'status',
   'orders',
+  'warehouse',
   'shipments',
   'documents',
   'deliveries',
@@ -321,6 +323,7 @@ function AccountContent() {
                     { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile Settings' },
                     { id: 'status', icon: 'ri-map-pin-line', label: 'Order status' },
                     { id: 'orders', icon: 'ri-archive-line', label: 'Past orders' },
+                    { id: 'warehouse', icon: 'ri-building-2-line', label: 'China Warehouse' },
                     { id: 'shipments', icon: 'ri-ship-2-line', label: 'My Shipments' },
                     { id: 'documents', icon: 'ri-file-list-3-line', label: 'Invoices & Receipts' },
                     { id: 'deliveries', icon: 'ri-calendar-check-line', label: 'Deliveries' },
@@ -349,6 +352,7 @@ function AccountContent() {
                   { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile' },
                   { id: 'status', icon: 'ri-map-pin-line', label: 'Status' },
                   { id: 'orders', icon: 'ri-archive-line', label: 'Past' },
+                  { id: 'warehouse', icon: 'ri-building-2-line', label: 'Warehouse' },
                   { id: 'shipments', icon: 'ri-ship-2-line', label: 'Shipments' },
                   { id: 'documents', icon: 'ri-file-list-3-line', label: 'Receipts' },
                   { id: 'deliveries', icon: 'ri-calendar-check-line', label: 'Deliveries' },
@@ -511,6 +515,8 @@ function AccountContent() {
                 )}
 
                 {activeTab === 'orders' && <OrderHistory />}
+
+                {activeTab === 'warehouse' && <ChinaWarehouse accessToken={accessToken} />}
 
                 {activeTab === 'shipments' && (
                   <MyShipments

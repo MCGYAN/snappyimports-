@@ -8,22 +8,26 @@ const PACKAGE_SELECT =
   '*, shipping_package_items(quantity, order_item_id, order_items(id, order_id, product_name, variant_name, orders(order_number, email, shipping_address)))';
 
 async function packageIdsForUser(userId: string) {
-  const { data: orders } = await supabaseAdmin.from('orders').select('id').eq('user_id', userId);
+  const [{ data: ownedPackages }, { data: orders }] = await Promise.all([
+    supabaseAdmin.from('shipping_packages').select('id').eq('customer_user_id', userId),
+    supabaseAdmin.from('orders').select('id').eq('user_id', userId),
+  ]);
+  const directIds = (ownedPackages || []).map((pkg) => pkg.id);
   const orderIds = (orders || []).map((order) => order.id);
-  if (!orderIds.length) return [];
+  if (!orderIds.length) return directIds;
 
   const { data: items } = await supabaseAdmin
     .from('order_items')
     .select('id')
     .in('order_id', orderIds);
   const itemIds = (items || []).map((item) => item.id);
-  if (!itemIds.length) return [];
+  if (!itemIds.length) return directIds;
 
   const { data: links } = await supabaseAdmin
     .from('shipping_package_items')
     .select('package_id')
     .in('order_item_id', itemIds);
-  return [...new Set((links || []).map((link) => link.package_id))];
+  return [...new Set([...directIds, ...(links || []).map((link) => link.package_id)])];
 }
 
 async function orderIdsForPackage(packageId: string) {

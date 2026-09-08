@@ -194,16 +194,28 @@ export async function issueShippingInvoice({
     ).values(),
   ) as any[];
   const primaryOrder = orders[0];
-  if (!primaryOrder) throw new Error('A shipping package must contain at least one order item.');
   const orderNumbers = orders.map((order) => order.order_number).filter(Boolean);
-  const customerEmail = pkg.customer_email || primaryOrder.email || null;
-  const customerUserId = pkg.customer_user_id || primaryOrder.user_id || null;
-  const contents = (packageItems || []).map((entry: any) => ({
-    product_name: entry.order_items?.product_name || 'Order item',
-    variant_name: entry.order_items?.variant_name || null,
-    quantity: Number(entry.quantity) || 1,
-    order_number: entry.order_items?.orders?.order_number || null,
-  }));
+  const customerEmail = pkg.customer_email || primaryOrder?.email || null;
+  const customerUserId = pkg.customer_user_id || primaryOrder?.user_id || null;
+  if (!customerEmail && !customerUserId) {
+    throw new Error('This package is missing its customer.');
+  }
+  const contents = packageItems?.length
+    ? (packageItems || []).map((entry: any) => ({
+        product_name: entry.order_items?.product_name || 'Order item',
+        variant_name: entry.order_items?.variant_name || null,
+        quantity: Number(entry.quantity) || 1,
+        order_number: entry.order_items?.orders?.order_number || null,
+      }))
+    : [
+        {
+          product_name: pkg.package_name || 'Warehouse package',
+          variant_name: null,
+          quantity: Number(pkg.quantity) || 1,
+          order_number: null,
+        },
+      ];
+  const documentReference = orderNumbers.join(', ') || pkg.tracking_id;
 
   // Freight already paid inside the product price (CIF Tema, DDP). Record the
   // arrival rate for the timeline but never raise a zero cedi bill.
@@ -272,7 +284,7 @@ export async function issueShippingInvoice({
       document_type: 'invoice',
       flow: 'shipping',
       entity_id: pkg.id,
-      order_id: primaryOrder.id,
+      order_id: primaryOrder?.id || null,
       shipping_package_id: pkg.id,
       customer_user_id: customerUserId,
       customer_email: customerEmail,
@@ -282,10 +294,10 @@ export async function issueShippingInvoice({
       version,
       due_at: dueAt,
       data: {
-        reference: orderNumbers.join(', '),
+        reference: documentReference,
         order_numbers: orderNumbers,
         customer_name:
-          [primaryOrder.shipping_address?.firstName, primaryOrder.shipping_address?.lastName]
+          [primaryOrder?.shipping_address?.firstName, primaryOrder?.shipping_address?.lastName]
             .filter(Boolean)
             .join(' ') || customerEmail,
         tracking_id: pkg.tracking_id,
@@ -339,9 +351,12 @@ export async function createShippingReceipt(
     ).values(),
   ) as any[];
   const primaryOrder = orders[0];
-  if (!primaryOrder) throw new Error('A shipping package must contain at least one order item.');
   const orderNumbers = orders.map((order) => order.order_number).filter(Boolean);
-  const customerEmail = pkg.customer_email || primaryOrder.email || null;
+  const customerEmail = pkg.customer_email || primaryOrder?.email || null;
+  const documentReference = orderNumbers.join(', ') || pkg.tracking_id;
+  if (!customerEmail && !pkg.customer_user_id) {
+    throw new Error('This package is missing its customer.');
+  }
 
   const { data: receipt, error } = await supabaseAdmin
     .from('financial_documents')
@@ -350,9 +365,9 @@ export async function createShippingReceipt(
       document_type: 'receipt',
       flow: 'shipping',
       entity_id: pkg.id,
-      order_id: primaryOrder.id,
+      order_id: primaryOrder?.id || null,
       shipping_package_id: pkg.id,
-      customer_user_id: pkg.customer_user_id || primaryOrder.user_id || null,
+      customer_user_id: pkg.customer_user_id || primaryOrder?.user_id || null,
       customer_email: customerEmail,
       currency: 'GHS',
       amount: Number(pkg.final_shipping_ghs) || 0,
@@ -362,11 +377,11 @@ export async function createShippingReceipt(
       paid_at: issuedAt,
       data: {
         ...(invoice?.data || {}),
-        reference: invoice?.data?.reference || orderNumbers.join(', '),
+        reference: invoice?.data?.reference || documentReference,
         order_numbers: invoice?.data?.order_numbers || orderNumbers,
         customer_name:
           invoice?.data?.customer_name ||
-          [primaryOrder.shipping_address?.firstName, primaryOrder.shipping_address?.lastName]
+          [primaryOrder?.shipping_address?.firstName, primaryOrder?.shipping_address?.lastName]
             .filter(Boolean)
             .join(' ') ||
           customerEmail,

@@ -151,7 +151,13 @@ export default function AdminLayout({
     {
       title: 'Packages',
       icon: 'ri-archive-drawer-line',
-      path: '/admin/packages'
+      path: '/admin/packages',
+      exact: true
+    },
+    {
+      title: 'China Warehouse',
+      icon: 'ri-building-2-line',
+      path: '/admin/packages/warehouse'
     },
     {
       title: 'Shipping',

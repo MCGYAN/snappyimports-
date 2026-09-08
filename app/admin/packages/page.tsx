@@ -12,12 +12,20 @@ export default function AdminPackagesPage() {
             orders belonging to the same customer.
           </p>
         </div>
-        <Link
-          href="/admin/shipping"
-          className="rounded-xl border border-brand-primary/20 bg-white px-4 py-2.5 text-sm font-bold text-brand-primary"
-        >
-          Open Shipping
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/packages/warehouse"
+            className="rounded-xl bg-brand-accent px-4 py-2.5 text-sm font-bold text-white"
+          >
+            China warehouse
+          </Link>
+          <Link
+            href="/admin/shipping"
+            className="rounded-xl border border-brand-primary/20 bg-white px-4 py-2.5 text-sm font-bold text-brand-primary"
+          >
+            Open Shipping
+          </Link>
+        </div>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-3">
