@@ -103,6 +103,16 @@ export default function Footer() {
 
         <div className="mt-5 flex flex-col gap-1 border-t border-white/10 pt-4 text-[11px] text-white/50 lg:mt-12 lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:pt-6 lg:text-xs">
           <p>&copy; {new Date().getFullYear()} {siteName}</p>
+          <a
+            href="https://wa.me/233554229375"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-1.5 text-white/65 transition-colors hover:text-[#25D366]"
+            aria-label="Contact McGyan Technologies on WhatsApp"
+          >
+            <i className="ri-whatsapp-line text-sm" aria-hidden />
+            Made by McGyan Technologies
+          </a>
           <p className="text-white/55 lg:text-white/60">Secure payment at checkout</p>
         </div>
       </div>
