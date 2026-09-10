@@ -11,6 +11,7 @@ type WarehouseForm = {
   addressChinese: string;
   addressEnglish: string;
   entryNumbers: string;
+  ghanaTrackingPhone: string;
   trackingWhatsapp: string;
   instructions: string;
   isActive: boolean;
@@ -20,11 +21,13 @@ const EMPTY: WarehouseForm = {
   warehouseName: 'Snappy China Warehouse',
   contactName: '',
   phone: '',
-  addressChinese: '',
+  addressChinese: '佛山市里水镇五一村大道2号里德仓1号仓',
   addressEnglish: '',
-  entryNumbers: '18620853884; 18620788554',
-  trackingWhatsapp: '+8618620853884',
-  instructions: 'Put your Snappy shipping mark clearly on every carton.',
+  entryNumbers: '18620853884;18620788554',
+  ghanaTrackingPhone: '',
+  trackingWhatsapp: '',
+  instructions:
+    'Copy the shipping label and send it to your supplier. Put the shipping mark clearly on every carton.',
   isActive: false,
 };
 
@@ -84,10 +87,11 @@ export default function WarehouseFreightDesk() {
         warehouseName: warehouse?.warehouse_name || EMPTY.warehouseName,
         contactName: warehouse?.contact_name || '',
         phone: warehouse?.phone || '',
-        addressChinese: warehouse?.address_chinese || '',
+        addressChinese: warehouse?.address_chinese || EMPTY.addressChinese,
         addressEnglish: warehouse?.address_english || '',
         entryNumbers: warehouse?.entry_numbers || EMPTY.entryNumbers,
-        trackingWhatsapp: warehouse?.tracking_whatsapp || EMPTY.trackingWhatsapp,
+        ghanaTrackingPhone: warehouse?.ghana_tracking_phone || '',
+        trackingWhatsapp: warehouse?.tracking_whatsapp || warehouse?.phone || '',
         instructions: warehouse?.instructions || EMPTY.instructions,
         isActive: Boolean(warehouse?.is_active),
       });
@@ -227,11 +231,20 @@ export default function WarehouseFreightDesk() {
               className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
             />
           </label>
-          <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
-            China phone number
+          <label className="text-sm font-semibold text-slate-700">
+            Ghana tracking phone
             <input
-              value={form.phone}
-              onChange={(event) => setForm({ ...form, phone: event.target.value })}
+              value={form.ghanaTrackingPhone}
+              onChange={(event) => setForm({ ...form, ghanaTrackingPhone: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
+              placeholder="+233 ..."
+            />
+          </label>
+          <label className="text-sm font-semibold text-slate-700">
+            China tracking phone
+            <input
+              value={form.trackingWhatsapp}
+              onChange={(event) => setForm({ ...form, trackingWhatsapp: event.target.value })}
               className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
               placeholder="+86 ..."
             />
@@ -242,33 +255,31 @@ export default function WarehouseFreightDesk() {
               value={form.addressChinese}
               onChange={(event) => setForm({ ...form, addressChinese: event.target.value })}
               className="mt-1 min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
+              placeholder="佛山市里水镇五一村大道2号里德仓1号仓"
             />
+            <span className="mt-1 block text-xs font-normal text-slate-500">
+              Do not include 入仓号 here. Entry numbers are added automatically on the customer label.
+            </span>
           </label>
           <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
-            English address
-            <textarea
-              value={form.addressEnglish}
-              onChange={(event) => setForm({ ...form, addressEnglish: event.target.value })}
-              className="mt-1 min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
-            />
-          </label>
-          <label className="text-sm font-semibold text-slate-700">
             Warehouse entry numbers
             <input
               value={form.entryNumbers}
               onChange={(event) => setForm({ ...form, entryNumbers: event.target.value })}
               className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
-              placeholder="18620853884; 18620788554"
+              placeholder="18620853884;18620788554"
             />
           </label>
-          <label className="text-sm font-semibold text-slate-700">
-            Tracking team WhatsApp
-            <input
-              value={form.trackingWhatsapp}
-              onChange={(event) => setForm({ ...form, trackingWhatsapp: event.target.value })}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
-              placeholder="+86..."
+          <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
+            English address for staff only
+            <textarea
+              value={form.addressEnglish}
+              onChange={(event) => setForm({ ...form, addressEnglish: event.target.value })}
+              className="mt-1 min-h-20 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"
             />
+            <span className="mt-1 block text-xs font-normal text-slate-500">
+              Customers do not see the English address.
+            </span>
           </label>
           <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
             Customer instructions

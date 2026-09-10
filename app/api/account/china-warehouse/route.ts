@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       supabaseAdmin
         .from('china_warehouse_settings')
         .select(
-          'warehouse_name, contact_name, phone, address_chinese, address_english, entry_numbers, tracking_whatsapp, instructions, updated_at',
+          'warehouse_name, contact_name, phone, address_chinese, entry_numbers, ghana_tracking_phone, tracking_whatsapp, instructions, updated_at',
         )
         .eq('id', 1)
         .eq('is_active', true)

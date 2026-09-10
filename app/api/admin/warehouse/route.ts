@@ -74,6 +74,7 @@ export async function PUT(req: Request) {
   const addressChinese = clean(body.addressChinese, 1_500);
   const addressEnglish = clean(body.addressEnglish, 1_500);
   const entryNumbers = clean(body.entryNumbers, 300);
+  const ghanaTrackingPhone = clean(body.ghanaTrackingPhone, 60);
   const trackingWhatsapp = clean(body.trackingWhatsapp, 60);
   const instructions = clean(body.instructions, 1_500);
   const isActive = Boolean(body.isActive);
@@ -81,9 +82,12 @@ export async function PUT(req: Request) {
   if (!warehouseName) {
     return NextResponse.json({ error: 'Warehouse name is required.' }, { status: 400 });
   }
-  if (isActive && (!contactName || !phone || (!addressChinese && !addressEnglish))) {
+  if (isActive && (!addressChinese || !entryNumbers || !ghanaTrackingPhone || !trackingWhatsapp)) {
     return NextResponse.json(
-      { error: 'Add a contact, phone number, and warehouse address before publishing.' },
+      {
+        error:
+          'Before publishing, add the Chinese address, entry numbers, Ghana tracking phone and China tracking phone.',
+      },
       { status: 400 },
     );
   }
@@ -94,10 +98,11 @@ export async function PUT(req: Request) {
       id: 1,
       warehouse_name: warehouseName,
       contact_name: contactName,
-      phone,
+      phone: trackingWhatsapp || phone,
       address_chinese: addressChinese,
       address_english: addressEnglish,
       entry_numbers: entryNumbers,
+      ghana_tracking_phone: ghanaTrackingPhone,
       tracking_whatsapp: trackingWhatsapp,
       instructions,
       is_active: isActive,
