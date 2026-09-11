@@ -128,8 +128,6 @@ export default function HomeClient({
             sizes="100vw"
             className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628]/92 via-[#0B1F3A]/40 to-[#0B1F3A]/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/55 via-transparent to-transparent" />
         </div>
 
         {/* Desktop landscape — no priority so phones do not preload this file */}
@@ -142,8 +140,12 @@ export default function HomeClient({
             sizes="100vw"
             className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/85 via-[#0B1F3A]/45 via-40% to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628]/50 via-transparent to-transparent" />
+        </div>
+
+        {/* Always-on readability overlay. Must not change with resize. */}
+        <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/90 via-[#0B1F3A]/55 via-45% to-[#0B1F3A]/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628]/70 via-transparent to-[#0a1628]/25" />
         </div>
 
         <div className="relative aspect-[4/5] w-full max-h-[90svh] sm:aspect-[5/4] lg:aspect-auto lg:h-[56.25vw] lg:max-h-[100svh]">
