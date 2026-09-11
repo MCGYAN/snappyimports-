@@ -62,20 +62,6 @@ export default function Header() {
     };
   }, []);
 
-  // When the window grows wide enough again, close the compact menu and search drawer.
-  useEffect(() => {
-    const media = window.matchMedia('(min-width: 1280px)');
-    const onChange = () => {
-      if (media.matches) {
-        setIsMobileMenuOpen(false);
-        setIsSearchOpen(false);
-      }
-    };
-    onChange();
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
-  }, []);
-
   const navLinks = [
     { label: 'Home', href: '/' },
     { label: 'Products', href: '/shop' },
@@ -103,7 +89,7 @@ export default function Header() {
     setIsSearchOpen(false);
   };
 
-  const openCompactSearch = () => {
+  const openMobileSearch = () => {
     setIsMobileMenuOpen(false);
     setIsSearchOpen(true);
   };
@@ -113,13 +99,14 @@ export default function Header() {
       <AnnouncementBar />
 
       <header className="sticky top-0 z-50 w-full flex flex-col font-sans pt-[env(safe-area-inset-top,0px)]">
-        <div className="mobile-nav-bar text-white xl:glass-panel-dark xl:shadow-store-lg">
+        <div className="mobile-nav-bar text-white md:glass-panel-dark md:shadow-store-lg">
           <div className="store-container">
-            <div className="flex min-h-[4.25rem] items-center justify-between gap-2 py-2 sm:min-h-[5.5rem] sm:gap-3 sm:py-0 xl:gap-4">
-              <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+            <div className="flex min-h-[4.25rem] items-center justify-between gap-2 py-2 sm:min-h-[5.5rem] sm:gap-3 sm:py-0 lg:gap-4">
+
+              <div className="flex shrink-0 items-center gap-3 sm:gap-4">
                 <button
                   type="button"
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 xl:hidden"
+                  className="md:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70"
                   onClick={() => {
                     setIsSearchOpen(false);
                     setIsMobileMenuOpen(true);
@@ -128,94 +115,88 @@ export default function Header() {
                 >
                   <Menu className="h-6 w-6" strokeWidth={1.75} />
                 </button>
-                <StoreLogo priority className="group max-w-[9.5rem] sm:max-w-none" />
+                <StoreLogo priority className="group" />
               </div>
 
-              <div className="mx-2 hidden min-w-0 flex-1 items-center justify-center gap-3 overflow-hidden xl:flex 2xl:mx-4 2xl:gap-6">
+              <div className="mx-1 hidden min-w-0 flex-1 items-center justify-center gap-2 md:flex lg:mx-2 lg:gap-3 xl:mx-4 xl:gap-5 2xl:gap-6">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="relative shrink-0 py-2 text-xs font-bold uppercase tracking-wider text-white/80 transition-all after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-0 after:bg-brand-accent after:transition-all hover:text-white hover:after:w-full 2xl:text-sm"
+                    className="relative shrink-0 whitespace-nowrap py-2 text-[11px] font-bold uppercase tracking-wide text-white/80 transition-all after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-0 after:bg-brand-accent after:transition-all hover:text-white hover:after:w-full lg:text-xs lg:tracking-wider xl:text-sm"
                   >
                     {link.label}
                   </Link>
                 ))}
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1.5 lg:gap-2">
                   {serviceLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
-                      className={`inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-bold uppercase tracking-wide transition ${
+                      className={`inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-2.5 text-[10px] font-bold uppercase tracking-wide transition lg:h-9 lg:px-3 lg:text-xs ${
                         link.primary
                           ? 'bg-brand-accent text-white hover:bg-[#e85f12]'
                           : 'border border-white/25 bg-white/10 text-white hover:bg-white/15'
                       }`}
                     >
-                      <span className="2xl:hidden">{link.shortLabel}</span>
-                      <span className="hidden 2xl:inline">{link.label}</span>
+                      <span className="xl:hidden">{link.shortLabel}</span>
+                      <span className="hidden xl:inline">{link.label}</span>
                     </Link>
                   ))}
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-                <div className="relative hidden w-full max-w-[12rem] 2xl:block 2xl:max-w-[18rem]">
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 lg:gap-4">
+                <div className="relative hidden w-28 shrink-0 md:block lg:w-40 xl:w-52 2xl:w-64">
                   <form onSubmit={handleSearchSubmit} className="relative">
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search products..."
-                      className="w-full rounded-full border border-white/15 bg-white/10 py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/70 focus:bg-white/15 focus:outline-none focus:ring-1 focus:ring-white/30 transition-colors shadow-inner"
+                      className="w-full rounded-full border border-white/15 bg-white/10 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/70 focus:bg-white/15 focus:outline-none focus:ring-1 focus:ring-white/30 transition-colors shadow-inner lg:pl-10 lg:pr-4 lg:text-sm"
                     />
-                    <Search
-                      className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60"
-                      strokeWidth={2}
-                    />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60 pointer-events-none lg:left-3.5" strokeWidth={2} />
                   </form>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => (isSearchOpen ? setIsSearchOpen(false) : openCompactSearch())}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 2xl:hidden"
+                  onClick={() => (isSearchOpen ? setIsSearchOpen(false) : openMobileSearch())}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 md:hidden"
                   aria-label={isSearchOpen ? 'Close search' : 'Open search'}
                   aria-expanded={isSearchOpen}
                 >
                   {isSearchOpen ? (
-                    <X className="h-5 w-5" strokeWidth={1.75} />
+                    <X className="w-5 h-5" strokeWidth={1.75} />
                   ) : (
-                    <Search className="h-5 w-5" strokeWidth={1.75} />
+                    <Search className="w-5 h-5" strokeWidth={1.75} />
                   )}
                 </button>
 
                 <Link
-                  href={user ? '/account' : '/auth/login'}
-                  className="hidden items-center gap-2 text-white transition-colors hover:text-brand-accent group sm:flex"
+                  href={user ? "/account" : "/auth/login"}
+                  className="hidden sm:flex shrink-0 items-center gap-2 text-white hover:text-brand-accent transition-colors group"
                   aria-label="Account"
                 >
-                  <User className="h-5 w-5 transition-transform group-hover:scale-110" strokeWidth={1.75} />
-                  <span className="hidden text-sm font-medium 2xl:inline">Account</span>
+                  <User className="w-5 h-5 group-hover:scale-110 transition-transform" strokeWidth={1.75} />
+                  <span className="font-medium text-sm hidden xl:inline">Account</span>
                 </Link>
 
-                <div className="relative">
+                <div className="relative shrink-0">
                   <button
                     type="button"
-                    className="group relative flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 sm:w-auto sm:gap-2 sm:px-1"
+                    className="group relative flex h-10 w-10 shrink-0 items-center justify-center text-white active:opacity-70 sm:w-auto sm:gap-2 sm:px-2"
                     onClick={() => setIsCartOpen(!isCartOpen)}
                     aria-label="Cart"
                   >
-                    <ShoppingCart
-                      className="h-5 w-5 transition-transform group-hover:scale-110"
-                      strokeWidth={1.75}
-                    />
+                    <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" strokeWidth={1.75} />
                     {cartCount > 0 && (
                       <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-accent text-[10px] font-bold text-white shadow-sm sm:-right-1 sm:-top-1">
                         {cartCount}
                       </span>
                     )}
-                    <span className="hidden text-sm font-medium 2xl:inline">Basket</span>
+                    <span className="hidden font-medium text-sm xl:inline">Basket</span>
                   </button>
                   <MiniCart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
                 </div>
@@ -223,7 +204,7 @@ export default function Header() {
             </div>
 
             {isSearchOpen && (
-              <div className="border-t border-white/10 px-4 pb-3 pt-3 2xl:hidden">
+              <div className="border-t border-white/10 px-4 pb-3 pt-3 md:hidden">
                 <form onSubmit={handleSearchSubmit} className="relative flex items-center">
                   <input
                     type="search"
@@ -234,7 +215,7 @@ export default function Header() {
                     className="w-full rounded-full border border-white/15 bg-white/10 py-3 pl-11 pr-4 text-base text-white placeholder:text-white/60 focus:bg-white/15 focus:outline-none focus:ring-1 focus:ring-white/30 shadow-inner"
                     autoFocus
                   />
-                  <Search className="pointer-events-none absolute left-4 h-5 w-5 text-white/60" />
+                  <Search className="absolute left-4 h-5 w-5 text-white/60 pointer-events-none" />
                 </form>
               </div>
             )}
@@ -243,7 +224,7 @@ export default function Header() {
       </header>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] xl:hidden">
+        <div className="fixed inset-0 z-[100] md:hidden">
           <div
             className="absolute inset-0 bg-brand-primary/40"
             onClick={() => setIsMobileMenuOpen(false)}
@@ -257,7 +238,7 @@ export default function Header() {
                 className="inline-flex h-10 w-10 items-center justify-center text-white active:opacity-70"
                 aria-label="Close menu"
               >
-                <X className="h-6 w-6" strokeWidth={1.75} />
+                <X className="w-6 h-6" strokeWidth={1.75} />
               </button>
             </div>
 
