@@ -18,6 +18,7 @@ export async function GET(req: Request) {
     { data: batches, error: batchError },
     { data: expectedPackages, error: expectedError },
     { data: customers, error: customerError },
+    { data: board, error: boardError },
   ] =
     await Promise.all([
       supabaseAdmin.from('china_warehouse_settings').select('*').eq('id', 1).single(),
@@ -42,12 +43,17 @@ export async function GET(req: Request) {
         .eq('role', 'customer')
         .order('created_at', { ascending: false })
         .limit(500),
+      supabaseAdmin
+        .from('shipping_rate_board')
+        .select('default_transit_days')
+        .eq('id', 1)
+        .maybeSingle(),
     ]);
 
-  if (warehouseError || batchError || expectedError || customerError) {
+  if (warehouseError || batchError || expectedError || customerError || boardError) {
     console.error(
       '[admin warehouse]',
-      warehouseError || batchError || expectedError || customerError,
+      warehouseError || batchError || expectedError || customerError || boardError,
     );
     return NextResponse.json({ error: 'Could not load warehouse setup.' }, { status: 500 });
   }
@@ -58,6 +64,7 @@ export async function GET(req: Request) {
     batches: batches || [],
     expectedPackages: expectedPackages || [],
     customers: customers || [],
+    defaultTransitDays: board?.default_transit_days ?? 45,
   });
 }
 

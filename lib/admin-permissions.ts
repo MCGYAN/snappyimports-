@@ -59,6 +59,11 @@ const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null 
   { prefix: '/admin/reviews', module: 'customers' },
 ];
 
+/** Paths staff can open if they have any of these modules. */
+const PATH_ANY_MODULE_RULES: { prefix: string; modules: AdminModule[] }[] = [
+  { prefix: '/admin/packages', modules: ['orders', 'warehouse'] },
+];
+
 export function normalizeAdminPermissions(raw: unknown): AdminPermissions {
   const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const out: AdminPermissions = { ...EMPTY_STAFF_PERMISSIONS };
@@ -110,6 +115,17 @@ export function canAccessAdminPath(
 ): boolean {
   if (!canAccessAdminDashboard(role)) return false;
   if (isOwnerRole(role)) return true;
+
+  const path = pathname.split('?')[0].replace(/\/$/, '') || '/admin';
+  for (const rule of PATH_ANY_MODULE_RULES) {
+    if (path === rule.prefix || path.startsWith(`${rule.prefix}/`)) {
+      // Warehouse-only staff still use /admin/packages/warehouse via warehouse module.
+      if (path.startsWith('/admin/packages/warehouse')) {
+        return hasAdminModule(role, permissions, 'warehouse');
+      }
+      return rule.modules.some((module) => hasAdminModule(role, permissions, module));
+    }
+  }
 
   const required = requiredModuleForPath(pathname);
   if (required === null) return true;

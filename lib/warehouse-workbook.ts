@@ -99,9 +99,14 @@ function dateValue(value: unknown): string | null {
 
 function findColumn(headers: string[], aliases: string[]): number {
   const normalizedAliases = aliases.map(normalizeHeader);
+  const exact = headers.findIndex((header) =>
+    normalizedAliases.some((alias) => String(header || '') === alias),
+  );
+  if (exact >= 0) return exact;
+  // Avoid short aliases like "class" matching unrelated headers via substring.
   return headers.findIndex((header) =>
     normalizedAliases.some(
-      (alias) => String(header || '') === alias || String(header || '').includes(alias),
+      (alias) => alias.length >= 5 && String(header || '').includes(alias),
     ),
   );
 }
@@ -211,6 +216,7 @@ export async function parseWarehouseWorkbook(buffer: ArrayBuffer): Promise<Parse
       'producttype',
       'normalproduct',
       '货物类型',
+      'class',
     ]),
     customRate: findColumn(headers, [
       'customusdpercbm',

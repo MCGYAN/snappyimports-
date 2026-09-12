@@ -15,7 +15,14 @@ type MatchedRow = WarehouseWorkbookRow & {
   goodsClass: 'normal' | 'sensitive' | 'heavy' | 'bulk' | 'custom' | 'invalid';
   usdPerCbm: number | null;
   estimatedShippingUsd: number | null;
-  match: 'matched' | 'update' | 'unknown_mark' | 'duplicate' | 'invalid_class';
+  existingLoadedAt: string | null;
+  match:
+    | 'matched'
+    | 'update'
+    | 'already_loaded'
+    | 'unknown_mark'
+    | 'duplicate'
+    | 'invalid_class';
 };
 
 function normalizedMark(value: string): string {
@@ -24,6 +31,13 @@ function normalizedMark(value: string): string {
 
 function normalizedTracking(value: string): string {
   return value.trim().replace(/\s+/g, '').toLowerCase();
+}
+
+function dayKey(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
 }
 
 function normalizedGoodsClass(
@@ -42,16 +56,24 @@ async function parseRequestFile(req: Request) {
   const form = await req.formData();
   const file = form.get('file');
   const mode = String(form.get('mode') || 'preview');
+  const transitRaw = Number(form.get('transitDays'));
+  const transitDays =
+    Number.isFinite(transitRaw) && transitRaw >= 1 && transitRaw <= 180
+      ? Math.round(transitRaw)
+      : null;
   if (!(file instanceof File)) throw new Error('Choose an Excel workbook.');
   if (!/\.xlsx$/i.test(file.name)) throw new Error('Upload an .xlsx workbook.');
   if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
     throw new Error('Workbook must be smaller than 4 MB.');
   }
   const workbook = await parseWarehouseWorkbook(await file.arrayBuffer());
-  return { file, mode, workbook };
+  return { file, mode, workbook, transitDays };
 }
 
-async function matchRows(rows: WarehouseWorkbookRow[]): Promise<MatchedRow[]> {
+async function matchRows(rows: WarehouseWorkbookRow[]): Promise<{
+  matchedRows: MatchedRow[];
+  defaultTransitDays: number;
+}> {
   const [
     { data: profiles, error: profileError },
     { data: existingPackages, error: existingError },
@@ -60,7 +82,7 @@ async function matchRows(rows: WarehouseWorkbookRow[]): Promise<MatchedRow[]> {
     supabaseAdmin.from('profiles').select('id, email, shipping_mark'),
     supabaseAdmin
       .from('inbound_packages')
-      .select('customer_user_id, supplier_tracking_number, shipping_package_id')
+      .select('customer_user_id, supplier_tracking_number, shipping_package_id, loaded_at')
       .limit(10_000),
     supabaseAdmin.from('shipping_rate_board').select('*').eq('id', 1).single(),
   ]);
@@ -76,15 +98,18 @@ async function matchRows(rows: WarehouseWorkbookRow[]): Promise<MatchedRow[]> {
         { id: profile.id as string, email: (profile.email as string | null) || null },
       ]),
   );
-  const existingKeys = new Set(
-    (existingPackages || []).map(
-      (row: any) =>
-        `${row.customer_user_id}:${normalizedTracking(row.supplier_tracking_number || '')}`,
-    ),
+  const existingByKey = new Map(
+    (existingPackages || []).map((row: any) => [
+      `${row.customer_user_id}:${normalizedTracking(row.supplier_tracking_number || '')}`,
+      {
+        shippingPackageId: row.shipping_package_id as string | null,
+        loadedAt: (row.loaded_at as string | null) || null,
+      },
+    ]),
   );
 
   const seen = new Set<string>();
-  return rows.map((row) => {
+  const matchedRows = rows.map((row) => {
     const profile = profileByMark.get(normalizedMark(row.shippingMark));
     const goodsClass = normalizedGoodsClass(row.goodsClass);
     const duplicateKey = `${profile?.id || normalizedMark(row.shippingMark)}:${normalizedTracking(
@@ -92,7 +117,13 @@ async function matchRows(rows: WarehouseWorkbookRow[]): Promise<MatchedRow[]> {
     )}`;
     const duplicate = seen.has(duplicateKey);
     seen.add(duplicateKey);
-    const isUpdate = Boolean(profile && existingKeys.has(duplicateKey));
+    const existing = profile ? existingByKey.get(duplicateKey) : undefined;
+    const isUpdate = Boolean(existing);
+    const alreadyLoaded =
+      isUpdate &&
+      Boolean(existing?.loadedAt) &&
+      Boolean(row.loadedAt) &&
+      dayKey(existing?.loadedAt) === dayKey(row.loadedAt);
     const rate =
       goodsClass === 'custom'
         ? row.customUsdPerCbm
@@ -115,17 +146,25 @@ async function matchRows(rows: WarehouseWorkbookRow[]): Promise<MatchedRow[]> {
         rate && row.cbm ? Number((Number(row.cbm) * Number(rate)).toFixed(2)) : null,
       customerUserId: profile?.id || null,
       customerEmail: profile?.email || null,
+      existingLoadedAt: existing?.loadedAt || null,
       match: duplicate
         ? 'duplicate'
         : !profile
           ? 'unknown_mark'
           : invalidClass
             ? 'invalid_class'
-            : isUpdate
-              ? 'update'
-              : 'matched',
-    };
+            : alreadyLoaded
+              ? 'already_loaded'
+              : isUpdate
+                ? 'update'
+                : 'matched',
+    } satisfies MatchedRow;
   });
+
+  return {
+    matchedRows,
+    defaultTransitDays: Number(board.default_transit_days) || 45,
+  };
 }
 
 export async function POST(req: Request) {
@@ -139,16 +178,17 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { file, mode, workbook } = await parseRequestFile(req);
-    const matchedRows = await matchRows(workbook.rows);
+    const { file, mode, workbook, transitDays } = await parseRequestFile(req);
+    const { matchedRows, defaultTransitDays } = await matchRows(workbook.rows);
     const readyRows = matchedRows.filter(
       (row): row is MatchedRow & { customerUserId: string } =>
-        ['matched', 'update'].includes(row.match) && Boolean(row.customerUserId),
+        ['matched', 'update', 'already_loaded'].includes(row.match) && Boolean(row.customerUserId),
     );
     const unmatchedRows = matchedRows.filter((row) => row.match === 'unknown_mark');
     const duplicateRows = matchedRows.filter((row) => row.match === 'duplicate');
     const invalidClassRows = matchedRows.filter((row) => row.match === 'invalid_class');
     const updateRows = matchedRows.filter((row) => row.match === 'update');
+    const alreadyLoadedRows = matchedRows.filter((row) => row.match === 'already_loaded');
 
     const summary = {
       fileName: file.name,
@@ -156,12 +196,14 @@ export async function POST(req: Request) {
       sourceRows: workbook.sourceRows,
       packageRows: workbook.rows.length,
       ready: readyRows.length,
-      newPackages: readyRows.length - updateRows.length,
+      newPackages: matchedRows.filter((row) => row.match === 'matched').length,
       updates: updateRows.length,
+      alreadyLoaded: alreadyLoadedRows.length,
       unknownMarks: unmatchedRows.length,
       duplicates: duplicateRows.length,
       invalidClasses: invalidClassRows.length,
       skipped: workbook.skippedRows,
+      transitDays: transitDays || defaultTransitDays,
     };
 
     if (mode !== 'apply') {
@@ -171,6 +213,7 @@ export async function POST(req: Request) {
         summary,
         rows: matchedRows.slice(0, PREVIEW_LIMIT),
         previewLimited: matchedRows.length > PREVIEW_LIMIT,
+        defaultTransitDays,
       });
     }
 
@@ -225,6 +268,7 @@ export async function POST(req: Request) {
         p_rows: rpcRows,
         p_batch_id: batch.id,
         p_created_by: auth.user.id,
+        p_transit_days: transitDays || defaultTransitDays,
       },
     );
 
