@@ -1,10 +1,14 @@
 /**
  * Storefront & admin logos — served from `public/images/`.
  * `SITE_LOGO_PATH` — orange and white mark on transparent (navy header/footer).
- * `SITE_LOGO_LIGHT_BG_PATH` — orange and navy mark (light admin sidebar, login, invoices).
+ * `SITE_LOGO_LIGHT_BG_PATH` — orange and navy mark (light admin sidebar, login).
+ * `SITE_INVOICE_LOGO_PATH` — transparent official mark for invoices (stylized S + i).
+ * `SITE_INVOICE_WATERMARK_PATH` — soft baked mark for PDF watermark layers.
  */
 export const SITE_LOGO_PATH = '/images/snappy-imports-global-logo.png' as const;
 export const SITE_LOGO_LIGHT_BG_PATH = '/images/snappy-imports-global-logo-light-bg.png' as const;
+export const SITE_INVOICE_LOGO_PATH = '/images/snappy-invoice-logo.png' as const;
+export const SITE_INVOICE_WATERMARK_PATH = '/images/snappy-invoice-watermark.png' as const;
 export const ADMIN_LOGO_ICON_PATH = '/images/admin-logo.png' as const;
 export const SITE_LOGO_SIZE = { width: 1380, height: 665 } as const;
 

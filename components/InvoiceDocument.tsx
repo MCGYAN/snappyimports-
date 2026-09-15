@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import InvoicePaymentFooter from '@/components/InvoicePaymentFooter';
+import InvoiceWatermark from '@/components/InvoiceWatermark';
 import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
-import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
+import { SITE_INVOICE_LOGO_PATH } from '@/lib/brand';
 import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import {
@@ -161,14 +162,15 @@ export default function InvoiceDocument({ order }: Props) {
   return (
     <div id="invoice-print" className="bg-white text-slate-900">
       {/* ─── On-screen invoice: same official structure, plus copy buttons ─── */}
-      <div className={`invoice-screen text-[13px] leading-snug text-black sm:text-[11px]`}>
+      <div className={`invoice-screen relative text-[13px] leading-snug text-black sm:text-[11px]`}>
+        <InvoiceWatermark />
         {/* Header band */}
-        <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="relative z-[1] flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <img
-              src={SITE_LOGO_LIGHT_BG_PATH}
+              src={SITE_INVOICE_LOGO_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-16 w-auto object-contain sm:h-24"
+              className="h-28 w-auto max-w-[10rem] object-contain object-left sm:h-32 sm:max-w-[11rem]"
             />
             <div>
               <p className="text-base font-bold sm:text-sm">{SNAPPY_INVOICE_ISSUER.brand}</p>
@@ -272,12 +274,13 @@ export default function InvoiceDocument({ order }: Props) {
         data-invoice-mode={pdfMode}
         {...(isSinglePage ? { 'data-invoice-a4': '' } : {})}
       >
-        <div className={isSinglePage ? invoiceBodyClass : undefined}>
+        <InvoiceWatermark />
+        <div className={isSinglePage ? invoiceBodyClass : 'relative z-[1]'}>
         {/* Header band: logo + INVOICE on one row, issuer packed beside it */}
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
             <img
-              src={SITE_LOGO_LIGHT_BG_PATH}
+              src={SITE_INVOICE_LOGO_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
               className={invoiceLogoClass}
             />

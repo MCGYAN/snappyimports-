@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
+import { SITE_INVOICE_LOGO_PATH } from '@/lib/brand';
 import {
   signDocumentPdfAccess,
   verifyDocumentPdfAccess,
@@ -15,7 +15,7 @@ let cachedLogo: ArrayBuffer | null | undefined;
 async function loadInvoiceLogo(origin: string): Promise<ArrayBuffer | null> {
   if (cachedLogo !== undefined) return cachedLogo;
   try {
-    const logoResponse = await fetch(new URL(SITE_LOGO_LIGHT_BG_PATH, origin), {
+    const logoResponse = await fetch(new URL(SITE_INVOICE_LOGO_PATH, origin), {
       cache: 'force-cache',
     });
     cachedLogo = logoResponse.ok ? await logoResponse.arrayBuffer() : null;

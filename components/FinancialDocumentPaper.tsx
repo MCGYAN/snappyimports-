@@ -1,13 +1,14 @@
 'use client';
 
 import InvoicePaymentFooter from '@/components/InvoicePaymentFooter';
+import InvoiceWatermark from '@/components/InvoiceWatermark';
 import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
 import {
   EXCHANGE_CORRIDORS,
   formatCorridorBuyRate,
   parseExchangeCountryCode,
 } from '@/lib/exchange-corridors';
-import { SITE_LOGO_LIGHT_BG_PATH } from '@/lib/brand';
+import { SITE_INVOICE_LOGO_PATH } from '@/lib/brand';
 import {
   invoiceAddressClass,
   invoiceBodyClass,
@@ -189,7 +190,7 @@ function Paper({
     : 'text-[13px] leading-snug text-black sm:text-[11px]';
   const logoSize = isOfficial
     ? invoiceLogoClass
-    : 'h-16 w-auto object-contain sm:h-24';
+    : 'h-28 w-auto max-w-[10rem] object-contain object-left sm:h-32 sm:max-w-[11rem]';
   const titleSize = isOfficial
     ? invoiceTitleClass
     : 'text-[1.65rem] font-bold tracking-wide sm:text-2xl';
@@ -252,7 +253,7 @@ function Paper({
 
   return (
     <div
-      className={`${base} bg-white leading-snug text-black ${
+      className={`${base} relative bg-white leading-snug text-black ${
         isOfficial
           ? isSinglePage
             ? invoiceOfficialPageClass
@@ -262,11 +263,12 @@ function Paper({
       {...(isOfficial ? { 'data-invoice-mode': pdfMode } : {})}
       {...(isOfficial && isSinglePage ? { 'data-invoice-a4': '' } : {})}
     >
-      <div className={isOfficial && isSinglePage ? invoiceBodyClass : undefined}>
+      <InvoiceWatermark />
+      <div className={isOfficial && isSinglePage ? invoiceBodyClass : 'relative z-[1]'}>
       <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <img
-            src={SITE_LOGO_LIGHT_BG_PATH}
+            src={SITE_INVOICE_LOGO_PATH}
             alt={SNAPPY_INVOICE_ISSUER.brand}
             className={logoSize}
           />

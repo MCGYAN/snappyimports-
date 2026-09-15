@@ -28,20 +28,28 @@ export const invoiceTitleClass = 'text-2xl font-bold tracking-wide';
 export const invoiceTableHeaderClass = 'text-[10px]';
 export const invoiceVariantClass = 'text-[10px] text-slate-600';
 export const invoiceTotalAmountClass = 'text-sm font-bold';
-export const invoiceLogoClass = 'h-24 w-auto object-contain';
+/** Header logo: readable on A4 without crowding the issuer block. */
+export const invoiceLogoClass = 'h-32 w-auto max-w-[11rem] object-contain object-left';
+/** Footer bank-row logo. */
+export const invoiceFooterLogoClass = 'h-14 w-auto max-w-full object-contain';
+
+export const invoiceWatermarkClass =
+  'pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden';
+export const invoiceWatermarkImageClass =
+  'h-[52%] w-auto max-w-[72%] object-contain opacity-[0.07]';
 
 export const invoiceOfficialPageClass = 'relative box-border h-[1043px] overflow-hidden';
 
 export const invoiceOfficialMultiPageClass = 'relative box-border';
 
-export const invoiceBodyClass = 'pb-[168px]';
+export const invoiceBodyClass = 'relative z-[1] pb-[168px]';
 
 /** Pinned to the page bottom during single-page PDF capture. */
 export const invoicePaymentFooterClass =
-  'absolute inset-x-0 bottom-3 bg-white px-0 pt-4 pb-3 leading-normal';
+  'absolute inset-x-0 bottom-3 z-[1] bg-white/95 px-0 pt-4 pb-3 leading-normal';
 
 /** Flows after totals on the last page of a multi-page PDF. */
-export const invoicePaymentFooterMultiClass = 'mt-8 bg-white pt-4 pb-3 leading-normal';
+export const invoicePaymentFooterMultiClass = 'relative z-[1] mt-8 bg-white/95 pt-4 pb-3 leading-normal';
 
 export const INVOICE_A4_ATTR = 'data-invoice-a4';
 export const INVOICE_MODE_ATTR = 'data-invoice-mode';

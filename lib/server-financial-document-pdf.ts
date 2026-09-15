@@ -46,18 +46,45 @@ function amount(value: number) {
 /** Shrink logo so mobile share sheets do not choke on multi-MB invoice PDFs. */
 async function preparePdfLogo(
   logo?: ArrayBuffer | null,
+  width = 520,
 ): Promise<{ dataUrl: string; format: 'JPEG' } | null> {
   if (!logo || logo.byteLength === 0) return null;
   try {
     const jpeg = await sharp(Buffer.from(logo))
       .rotate()
-      .resize({ width: 360, withoutEnlargement: true })
+      .resize({ width, withoutEnlargement: true })
       .flatten({ background: { r: 255, g: 255, b: 255 } })
-      .jpeg({ quality: 70, mozjpeg: true })
+      .jpeg({ quality: 78, mozjpeg: true })
       .toBuffer();
     return {
       dataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
       format: 'JPEG',
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function preparePdfWatermark(
+  logo?: ArrayBuffer | null,
+): Promise<{ dataUrl: string; format: 'PNG' } | null> {
+  if (!logo || logo.byteLength === 0) return null;
+  try {
+    const { data, info } = await sharp(Buffer.from(logo))
+      .rotate()
+      .resize({ width: 900, withoutEnlargement: true })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    for (let i = 0; i < data.length; i += 4) {
+      data[i + 3] = Math.round(data[i + 3] * 0.07);
+    }
+
+    const png = await sharp(data, { raw: info }).png().toBuffer();
+    return {
+      dataUrl: `data:image/png;base64,${png.toString('base64')}`,
+      format: 'PNG',
     };
   } catch {
     return null;
@@ -153,6 +180,26 @@ export async function generateFinancialDocumentPdf(
   const left = 15;
   const right = pageWidth - 15;
   const preparedLogo = await preparePdfLogo(logo);
+  const preparedWatermark = await preparePdfWatermark(logo);
+
+  if (preparedWatermark) {
+    try {
+      const markW = 110;
+      const markH = markW * (474 / 993);
+      pdf.addImage(
+        preparedWatermark.dataUrl,
+        preparedWatermark.format,
+        (pageWidth - markW) / 2,
+        95,
+        markW,
+        markH,
+        `${PDF_LOGO_ALIAS}-watermark`,
+        'FAST',
+      );
+    } catch {
+      // Watermark is decorative only.
+    }
+  }
 
   if (preparedLogo) {
     try {
@@ -160,9 +207,9 @@ export async function generateFinancialDocumentPdf(
         preparedLogo.dataUrl,
         preparedLogo.format,
         left,
-        10,
-        28,
-        19,
+        8,
+        40,
+        27,
         PDF_LOGO_ALIAS,
         'FAST',
       );
@@ -174,33 +221,33 @@ export async function generateFinancialDocumentPdf(
   pdf.setTextColor(11, 31, 58);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(13);
-  text(pdf, SNAPPY_INVOICE_ISSUER.brand, 49, 16);
+  text(pdf, SNAPPY_INVOICE_ISSUER.brand, 58, 15);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
-  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', '), 49, 20.5);
-  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', '), 49, 24);
+  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(0, 2).join(', '), 58, 19.5);
+  text(pdf, SNAPPY_INVOICE_ISSUER.addressLines.slice(2).join(', '), 58, 23);
   text(
     pdf,
     `${SNAPPY_INVOICE_ISSUER.contactName}, ${SNAPPY_INVOICE_ISSUER.phones.join(' / ')}`,
-    49,
-    27.5,
+    58,
+    26.5,
   );
-  text(pdf, SNAPPY_INVOICE_ISSUER.email, 49, 31);
+  text(pdf, SNAPPY_INVOICE_ISSUER.email, 58, 30);
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(20);
-  text(pdf, receipt ? 'RECEIPT' : 'INVOICE', right, 18, { align: 'right' });
+  text(pdf, receipt ? 'RECEIPT' : 'INVOICE', right, 17, { align: 'right' });
   pdf.setFontSize(8);
   text(
     pdf,
     receipt ? 'PAID IN FULL' : 'PAYMENT REQUESTED',
     right,
-    23.5,
+    22.5,
     { align: 'right' },
   );
   pdf.setDrawColor(11, 31, 58);
   pdf.setLineWidth(0.5);
-  pdf.line(left, 36, right, 36);
+  pdf.line(left, 38, right, 38);
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(9);
@@ -322,7 +369,7 @@ export async function generateFinancialDocumentPdf(
     }
 
     const boxTop = paymentStartY + (document.flow === 'shipping' ? 16 : 10);
-    const boxHeight = 22;
+    const boxHeight = 28;
     const boxWidth = right - left;
     const columns = SNAPPY_BANK_ACCOUNTS.length + 1;
     const colWidth = boxWidth / columns;
@@ -359,8 +406,8 @@ export async function generateFinancialDocumentPdf(
     if (preparedLogo) {
       try {
         const logoColLeft = left + colWidth * SNAPPY_BANK_ACCOUNTS.length;
-        const logoW = Math.min(20, colWidth - 3);
-        const logoH = logoW * (19 / 28);
+        const logoW = Math.min(28, colWidth - 2);
+        const logoH = logoW * (474 / 993);
         // Use the prepared JPEG again (tiny). Alias reuse fails in some jsPDF builds
         // and left this footer cell blank on mobile downloads.
         pdf.addImage(
