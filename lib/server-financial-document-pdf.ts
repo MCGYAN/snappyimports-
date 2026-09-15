@@ -66,25 +66,16 @@ async function preparePdfLogo(
 }
 
 async function preparePdfWatermark(
-  logo?: ArrayBuffer | null,
-): Promise<{ dataUrl: string; format: 'PNG' } | null> {
-  if (!logo || logo.byteLength === 0) return null;
+  watermark?: ArrayBuffer | null,
+): Promise<{ dataUrl: string; format: 'JPEG' } | null> {
+  if (!watermark || watermark.byteLength === 0) return null;
   try {
-    const { data, info } = await sharp(Buffer.from(logo))
-      .rotate()
-      .resize({ width: 900, withoutEnlargement: true })
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    for (let i = 0; i < data.length; i += 4) {
-      data[i + 3] = Math.round(data[i + 3] * 0.03);
-    }
-
-    const png = await sharp(data, { raw: info }).png().toBuffer();
+    const jpeg = await sharp(Buffer.from(watermark))
+      .jpeg()
+      .toBuffer();
     return {
-      dataUrl: `data:image/png;base64,${png.toString('base64')}`,
-      format: 'PNG',
+      dataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
+      format: 'JPEG',
     };
   } catch {
     return null;
@@ -166,6 +157,7 @@ function text(
 export async function generateFinancialDocumentPdf(
   document: FinancialDocument,
   logo?: ArrayBuffer | null,
+  watermark?: ArrayBuffer | null,
 ): Promise<ArrayBuffer> {
   const pdf = new jsPDF({
     orientation: 'portrait',
@@ -180,12 +172,12 @@ export async function generateFinancialDocumentPdf(
   const left = 15;
   const right = pageWidth - 15;
   const preparedLogo = await preparePdfLogo(logo);
-  const preparedWatermark = await preparePdfWatermark(logo);
+  const preparedWatermark = await preparePdfWatermark(watermark);
 
   if (preparedWatermark) {
     try {
-      const markW = 110;
-      const markH = markW * (474 / 993);
+      const markW = 120;
+      const markH = markW * (330 / 305);
       pdf.addImage(
         preparedWatermark.dataUrl,
         preparedWatermark.format,

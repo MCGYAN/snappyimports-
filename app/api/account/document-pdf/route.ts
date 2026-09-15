@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { SITE_INVOICE_LOGO_PATH } from '@/lib/brand';
+import { SITE_INVOICE_LOGO_PATH, SITE_INVOICE_WATERMARK_PATH } from '@/lib/brand';
 import {
   signDocumentPdfAccess,
   verifyDocumentPdfAccess,
@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 export const runtime = 'nodejs';
 
 let cachedLogo: ArrayBuffer | null | undefined;
+let cachedWatermark: ArrayBuffer | null | undefined;
 
 async function loadInvoiceLogo(origin: string): Promise<ArrayBuffer | null> {
   if (cachedLogo !== undefined) return cachedLogo;
@@ -23,6 +24,19 @@ async function loadInvoiceLogo(origin: string): Promise<ArrayBuffer | null> {
     cachedLogo = null;
   }
   return cachedLogo;
+}
+
+async function loadInvoiceWatermark(origin: string): Promise<ArrayBuffer | null> {
+  if (cachedWatermark !== undefined) return cachedWatermark;
+  try {
+    const wmResponse = await fetch(new URL(SITE_INVOICE_WATERMARK_PATH, origin), {
+      cache: 'force-cache',
+    });
+    cachedWatermark = wmResponse.ok ? await wmResponse.arrayBuffer() : null;
+  } catch {
+    cachedWatermark = null;
+  }
+  return cachedWatermark;
 }
 
 async function loadOwnedDocument(opts: {
@@ -140,9 +154,10 @@ export async function GET(req: Request) {
   }
 
   const logo = await loadInvoiceLogo(url.origin);
+  const watermark = await loadInvoiceWatermark(url.origin);
 
   try {
-    const pdf = await generateFinancialDocumentPdf(document as any, logo);
+    const pdf = await generateFinancialDocumentPdf(document as any, logo, watermark);
     const filename = `${String(document.document_number).replace(/[^\w.-]+/g, '_')}.pdf`;
     // inline so Chrome/Safari display the PDF instead of a blank download tab.
     const asDownload = url.searchParams.get('download') === '1';

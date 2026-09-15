@@ -36,7 +36,7 @@ export const invoiceFooterLogoClass = 'h-14 w-auto max-w-full object-contain';
 export const invoiceWatermarkClass =
   'pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden';
 export const invoiceWatermarkImageClass =
-  'h-[52%] w-auto max-w-[72%] object-contain opacity-[0.03]';
+  'h-[52%] w-auto max-w-[72%] object-contain opacity-100 mix-blend-multiply';
 
 export const invoiceOfficialPageClass = 'relative box-border h-[1043px] overflow-hidden';
 
