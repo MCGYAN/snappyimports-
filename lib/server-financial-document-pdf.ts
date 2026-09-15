@@ -78,7 +78,7 @@ async function preparePdfWatermark(
       .toBuffer({ resolveWithObject: true });
 
     for (let i = 0; i < data.length; i += 4) {
-      data[i + 3] = Math.round(data[i + 3] * 0.07);
+      data[i + 3] = Math.round(data[i + 3] * 0.03);
     }
 
     const png = await sharp(data, { raw: info }).png().toBuffer();
