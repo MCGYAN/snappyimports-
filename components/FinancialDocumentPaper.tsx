@@ -32,7 +32,7 @@ export type FinancialDocumentRecord = {
   id: string;
   document_number: string;
   document_type: 'invoice' | 'receipt';
-  flow: 'shop' | 'rmb' | 'shipping';
+  flow: 'shop' | 'rmb' | 'shipping' | 'manual';
   currency: string;
   amount: number;
   status: string;
@@ -60,6 +60,7 @@ const SERVICE_LABELS: Record<FinancialDocumentRecord['flow'], string> = {
   shop: 'Product order',
   rmb: 'Buy RMB',
   shipping: 'Shipping to Ghana',
+  manual: 'Invoice',
 };
 
 function formatAmount(value: number) {
@@ -84,7 +85,11 @@ function variantLabel(item: any) {
 function buildLines(document: FinancialDocumentRecord): Line[] {
   const data = document.data || {};
 
-  if (document.flow === 'shop' && Array.isArray(data.items) && data.items.length > 0) {
+  if (
+    (document.flow === 'shop' || document.flow === 'manual') &&
+    Array.isArray(data.items) &&
+    data.items.length > 0
+  ) {
     return data.items.map((item: any) => {
       const label = variantLabel(item);
       const quantity = Number(item.quantity) || 1;
@@ -297,6 +302,7 @@ function Paper({
           <p className="font-bold uppercase tracking-wide">Bill to</p>
           <p className="mt-0.5 font-semibold">{data.customer_name || 'Customer'}</p>
           {document.customer_email ? <p>{document.customer_email}</p> : null}
+          {data.customer_phone ? <p>{String(data.customer_phone)}</p> : null}
         </div>
         <table className="w-full border-collapse self-start">
           <tbody>

@@ -14,6 +14,7 @@ const FLOW_LABELS: Record<string, string> = {
   shop: 'Product order',
   rmb: 'Buy RMB',
   shipping: 'Shipping to Ghana',
+  manual: 'Invoice',
 };
 
 function isMobilePdfDevice() {

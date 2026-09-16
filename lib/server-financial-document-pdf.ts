@@ -5,7 +5,7 @@ import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from './bank-details';
 type FinancialDocument = {
   document_number: string;
   document_type: 'invoice' | 'receipt';
-  flow: 'shop' | 'rmb' | 'shipping';
+  flow: 'shop' | 'rmb' | 'shipping' | 'manual';
   currency: string;
   amount: number;
   status: string;
@@ -28,6 +28,7 @@ const SERVICE_LABELS: Record<FinancialDocument['flow'], string> = {
   shop: 'Product order',
   rmb: 'Buy RMB',
   shipping: 'Shipping to Ghana',
+  manual: 'Invoice',
 };
 
 const PDF_LOGO_ALIAS = 'snappy-logo';
@@ -103,7 +104,11 @@ async function preparePdfWatermark(
 
 function linesFor(document: FinancialDocument): PdfLine[] {
   const data = document.data || {};
-  if (document.flow === 'shop' && Array.isArray(data.items) && data.items.length) {
+  if (
+    (document.flow === 'shop' || document.flow === 'manual') &&
+    Array.isArray(data.items) &&
+    data.items.length
+  ) {
     return data.items.map((item: any) => {
       const quantity = Number(item.quantity) || 1;
       const total = Number(item.total_price) || 0;
@@ -129,6 +134,18 @@ function linesFor(document: FinancialDocument): PdfLine[] {
       {
         description: 'Buy RMB',
         detail,
+        quantity: 1,
+        unitPrice: Number(document.amount),
+        amount: Number(document.amount),
+      },
+    ];
+  }
+
+  if (document.flow === 'manual') {
+    return [
+      {
+        description: 'Invoice',
+        detail: '',
         quantity: 1,
         unitPrice: Number(document.amount),
         amount: Number(document.amount),
@@ -284,6 +301,9 @@ export async function generateFinancialDocumentPdf(
   text(pdf, data.customer_name || 'Customer', left, 49);
   pdf.setFont('helvetica', 'normal');
   text(pdf, document.customer_email || '', left, 53.5);
+  if (data.customer_phone) {
+    text(pdf, String(data.customer_phone), left, 58);
+  }
 
   const metaX = 125;
   const valueX = right;

@@ -1,6 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-export type FinancialFlow = 'shop' | 'rmb' | 'shipping';
+export type FinancialFlow = 'shop' | 'rmb' | 'shipping' | 'manual';
+
+export type ManualInvoiceItemInput = {
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  detail?: string | null;
+};
 
 function reference(prefix: string) {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -56,6 +63,7 @@ async function queueReceiptEmail({
     shop: 'product order',
     rmb: 'Buy RMB order',
     shipping: 'shipping payment',
+    manual: 'invoice',
   };
   await supabaseAdmin.from('notification_outbox').upsert(
     {
@@ -400,4 +408,97 @@ export async function createShippingReceipt(
   }
   await queueReceiptEmail({ flow: 'shipping', entityId: pkg.id, receipt, delayMinutes });
   return receipt;
+}
+
+export async function createManualInvoice({
+  customerName,
+  customerEmail,
+  customerPhone,
+  currency = 'GHS',
+  dueAt,
+  notes,
+  items,
+  createdBy,
+}: {
+  customerName: string;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  currency?: string;
+  dueAt?: string | null;
+  notes?: string | null;
+  items: ManualInvoiceItemInput[];
+  createdBy?: string | null;
+}) {
+  const name = String(customerName || '').trim();
+  if (!name) throw new Error('Customer name is required.');
+
+  const cleanedItems = (items || [])
+    .map((item) => {
+      const productName = String(item.product_name || '').trim();
+      const quantity = Math.max(1, Number(item.quantity) || 1);
+      const unitPrice = Math.max(0, Number(item.unit_price) || 0);
+      const detail = String(item.detail || '').trim();
+      return {
+        product_name: productName,
+        quantity,
+        unit_price: unitPrice,
+        total_price: Number((quantity * unitPrice).toFixed(2)),
+        variant_name: detail || null,
+        metadata: detail ? { note: detail } : {},
+      };
+    })
+    .filter((item) => item.product_name);
+
+  if (!cleanedItems.length) throw new Error('Add at least one line item.');
+
+  const amount = Number(
+    cleanedItems.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0).toFixed(2),
+  );
+  const email = String(customerEmail || '').trim().toLowerCase() || null;
+  const phone = String(customerPhone || '').trim() || null;
+  const entityId = crypto.randomUUID();
+  const documentNumber = reference('INV-MAN');
+  const issuedAt = new Date().toISOString();
+
+  let customerUserId: string | null = null;
+  if (email) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .ilike('email', email)
+      .limit(1)
+      .maybeSingle();
+    customerUserId = profile?.id || null;
+  }
+
+  const { data: invoice, error } = await supabaseAdmin
+    .from('financial_documents')
+    .insert({
+      document_number: documentNumber,
+      document_type: 'invoice',
+      flow: 'manual',
+      entity_id: entityId,
+      customer_user_id: customerUserId,
+      customer_email: email,
+      currency: currency || 'GHS',
+      amount,
+      status: 'active',
+      version: 1,
+      issued_at: issuedAt,
+      due_at: dueAt || null,
+      data: {
+        reference: documentNumber,
+        customer_name: name,
+        customer_phone: phone,
+        notes: String(notes || '').trim() || null,
+        payment_method: 'invoice',
+        items: cleanedItems,
+      },
+      created_by: createdBy || null,
+    })
+    .select()
+    .single();
+
+  if (error || !invoice) throw error || new Error('Could not create invoice.');
+  return invoice;
 }

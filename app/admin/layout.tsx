@@ -160,6 +160,11 @@ export default function AdminLayout({
       path: '/admin/shipping'
     },
     {
+      title: 'Invoices',
+      icon: 'ri-file-list-3-line',
+      path: '/admin/invoices'
+    },
+    {
       title: 'Delivery Requests',
       icon: 'ri-calendar-check-line',
       path: '/admin/deliveries'
