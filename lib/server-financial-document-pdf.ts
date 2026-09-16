@@ -70,9 +70,26 @@ async function preparePdfWatermark(
 ): Promise<{ dataUrl: string; format: 'JPEG' } | null> {
   if (!watermark || watermark.byteLength === 0) return null;
   try {
-    const jpeg = await sharp(Buffer.from(watermark))
-      .jpeg()
+    const { data, info } = await sharp(Buffer.from(watermark)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    
+    for (let i = 0; i < data.length; i += 4) {
+      data[i + 3] = Math.round(data[i + 3] * 0.04);
+    }
+    
+    const translucentPng = await sharp(data, { raw: info }).png().toBuffer();
+    
+    const jpeg = await sharp({
+      create: {
+        width: info.width,
+        height: info.height,
+        channels: 3,
+        background: { r: 255, g: 255, b: 255 }
+      }
+    })
+      .composite([{ input: translucentPng }])
+      .jpeg({ quality: 90 })
       .toBuffer();
+
     return {
       dataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
       format: 'JPEG',
@@ -195,13 +212,15 @@ export async function generateFinancialDocumentPdf(
 
   if (preparedLogo) {
     try {
+      const logoW = 42;
+      const logoH = logoW * (474 / 993);
       pdf.addImage(
         preparedLogo.dataUrl,
         preparedLogo.format,
         left,
-        8,
-        40,
-        27,
+        8 + (27 - logoH) / 2, // vertically center in the 27mm available height
+        logoW,
+        logoH,
         PDF_LOGO_ALIAS,
         'FAST',
       );

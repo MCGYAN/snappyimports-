@@ -8,7 +8,7 @@
 export const SITE_LOGO_PATH = '/images/snappy-imports-global-logo.png' as const;
 export const SITE_LOGO_LIGHT_BG_PATH = '/images/snappy-imports-global-logo-light-bg.png' as const;
 export const SITE_INVOICE_LOGO_PATH = '/images/snappy-invoice-logo.png' as const;
-export const SITE_INVOICE_WATERMARK_PATH = '/images/snappy-invoice-watermark-v2.jpg' as const;
+export const SITE_INVOICE_WATERMARK_PATH = '/images/snappy-icon-only.png' as const;
 export const ADMIN_LOGO_ICON_PATH = '/images/admin-logo.png' as const;
 export const SITE_LOGO_SIZE = { width: 1380, height: 665 } as const;
 
