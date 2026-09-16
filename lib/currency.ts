@@ -17,7 +17,9 @@ export function formatStoreMoney(
           ? 'TZS '
           : code === 'USD'
             ? '$'
-            : `${code} `;
+            : code === 'RMB' || code === 'CNY'
+              ? '¥'
+              : `${code} `;
   return `${symbol}${Number(amount || 0).toLocaleString('en-GH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

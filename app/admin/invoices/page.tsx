@@ -292,6 +292,7 @@ export default function AdminInvoicesPage() {
               >
                 <option value="GHS">GHS</option>
                 <option value="USD">USD</option>
+                <option value="RMB">RMB</option>
               </select>
             </label>
             <label className="block text-sm sm:col-span-2">
