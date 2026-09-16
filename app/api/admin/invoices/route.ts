@@ -5,8 +5,46 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
 
+type CreatorMap = Record<string, { fullName: string | null; email: string | null }>;
+
+async function loadCreators(ids: string[]): Promise<CreatorMap> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (!unique.length) return {};
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('id, full_name, email')
+    .in('id', unique);
+  const map: CreatorMap = {};
+  for (const row of data || []) {
+    map[row.id] = {
+      fullName: String(row.full_name || '').trim() || null,
+      email: String(row.email || '').trim().toLowerCase() || null,
+    };
+  }
+  return map;
+}
+
+function withCreatedBy(row: any, creators: CreatorMap) {
+  const snapshotName = String(row?.data?.created_by_name || '').trim() || null;
+  const snapshotEmail = String(row?.data?.created_by_email || '').trim().toLowerCase() || null;
+  const live = row?.created_by ? creators[row.created_by] : null;
+  const fullName = live?.fullName || snapshotName;
+  const email = live?.email || snapshotEmail;
+  return {
+    ...row,
+    createdBy: row?.created_by
+      ? {
+          id: row.created_by,
+          fullName,
+          email,
+          label: fullName || email || 'Team member',
+        }
+      : null,
+  };
+}
+
 export async function GET(req: Request) {
-  const auth = await verifyAuth(req, { requireModule: 'orders' });
+  const auth = await verifyAuth(req, { requireModule: 'invoices' });
   if (!auth.authenticated) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }
@@ -17,7 +55,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabaseAdmin
     .from('financial_documents')
     .select(
-      'id, document_number, document_type, flow, currency, amount, status, issued_at, due_at, paid_at, customer_email, data, created_at',
+      'id, document_number, document_type, flow, currency, amount, status, issued_at, due_at, paid_at, customer_email, data, created_at, created_by',
     )
     .eq('flow', 'manual')
     .eq('document_type', 'invoice')
@@ -29,11 +67,14 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message || 'Could not load invoices.' }, { status: 500 });
   }
 
-  return NextResponse.json({ invoices: data || [] });
+  const creators = await loadCreators((data || []).map((row: any) => row.created_by).filter(Boolean));
+  return NextResponse.json({
+    invoices: (data || []).map((row) => withCreatedBy(row, creators)),
+  });
 }
 
 export async function POST(req: Request) {
-  const auth = await verifyAuth(req, { requireModule: 'orders' });
+  const auth = await verifyAuth(req, { requireModule: 'invoices' });
   if (!auth.authenticated || !auth.user?.id) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }
@@ -74,7 +115,8 @@ export async function POST(req: Request) {
       items,
       createdBy: auth.user.id,
     });
-    return NextResponse.json({ invoice });
+    const creators = await loadCreators([auth.user.id]);
+    return NextResponse.json({ invoice: withCreatedBy(invoice, creators) });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Could not create invoice.' },

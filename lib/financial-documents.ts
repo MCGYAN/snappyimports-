@@ -471,6 +471,18 @@ export async function createManualInvoice({
     customerUserId = profile?.id || null;
   }
 
+  let createdByName: string | null = null;
+  let createdByEmail: string | null = null;
+  if (createdBy) {
+    const { data: creator } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', createdBy)
+      .maybeSingle();
+    createdByName = String(creator?.full_name || '').trim() || null;
+    createdByEmail = String(creator?.email || '').trim().toLowerCase() || null;
+  }
+
   const { data: invoice, error } = await supabaseAdmin
     .from('financial_documents')
     .insert({
@@ -493,6 +505,8 @@ export async function createManualInvoice({
         notes: String(notes || '').trim() || null,
         payment_method: 'invoice',
         items: cleanedItems,
+        created_by_name: createdByName,
+        created_by_email: createdByEmail,
       },
       created_by: createdBy || null,
     })

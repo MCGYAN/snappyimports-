@@ -39,7 +39,7 @@ export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await verifyAuth(req, { requireModule: 'orders' });
+  const auth = await verifyAuth(req, { requireModule: 'invoices' });
   if (!auth.authenticated) {
     return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
   }

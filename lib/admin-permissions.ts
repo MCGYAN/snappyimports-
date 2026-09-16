@@ -8,6 +8,10 @@ export const ADMIN_MODULES = {
     label: 'Orders',
     description: 'Orders, packages, Ghana shipping, payments, and POS',
   },
+  invoices: {
+    label: 'Invoices',
+    description: 'Create and download manual customer invoices. History cannot be deleted',
+  },
   warehouse: {
     label: 'China Warehouse',
     description: 'Warehouse address, incoming packages, shipping marks, and workbook imports',
@@ -34,6 +38,7 @@ export const ADMIN_MODULE_KEYS = Object.keys(ADMIN_MODULES) as AdminModule[];
 
 export const EMPTY_STAFF_PERMISSIONS: AdminPermissions = {
   orders: false,
+  invoices: false,
   warehouse: false,
   exchange: false,
   products: false,
@@ -45,7 +50,7 @@ const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null 
   { prefix: '/admin/notifications', module: 'owner' },
   { prefix: '/admin/analytics', module: 'owner' },
   { prefix: '/admin/packages/warehouse', module: 'warehouse' },
-  { prefix: '/admin/invoices', module: 'orders' },
+  { prefix: '/admin/invoices', module: 'invoices' },
   { prefix: '/admin/deliveries', module: 'orders' },
   { prefix: '/admin/packages', module: 'orders' },
   { prefix: '/admin/shipping', module: 'orders' },
