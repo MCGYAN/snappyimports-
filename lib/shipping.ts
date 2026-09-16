@@ -20,6 +20,25 @@ export const SHIPPING_CLASS_LABELS: Record<ShippingGoodsClass, string> = {
   custom: 'Custom rate',
 };
 
+/** Short label for table cells under CBM (same role as Estimate under Shipping). */
+export const SHIPPING_CLASS_SHORT_LABELS: Record<ShippingGoodsClass, string> = {
+  normal: 'Normal',
+  sensitive: 'Sensitive',
+  heavy: 'Heavy',
+  bulk: 'Bulk',
+  custom: 'Custom',
+};
+
+export function shippingClassShortLabel(value?: string | null) {
+  if (!value) return null;
+  if ((SHIPPING_GOODS_CLASSES as readonly string[]).includes(value)) {
+    return SHIPPING_CLASS_SHORT_LABELS[value as ShippingGoodsClass];
+  }
+  const cleaned = String(value).trim();
+  if (!cleaned) return null;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+}
+
 export const SHIPPING_STATUS_LABELS: Record<ShippingPackageStatus, string> = {
   received: 'Received at warehouse',
   loaded: 'Loaded',

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import {
   formatGhs,
   formatUsd,
+  shippingClassShortLabel,
   SHIPPING_STATUS_LABELS,
   type ShippingPackageStatus,
 } from '@/lib/shipping';
@@ -90,7 +91,14 @@ export default function OrderShippingDesk({ order }: { order: any }) {
               Inside: {packageContents(pkg) || 'No contents recorded'}
             </p>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
-              <span>{Number(pkg.cbm).toFixed(3)} CBM</span>
+              <span>
+                <span className="block font-semibold text-slate-700">
+                  {Number(pkg.cbm).toFixed(3)} CBM
+                </span>
+                {shippingClassShortLabel(pkg.goods_class) ? (
+                  <span className="text-slate-400">{shippingClassShortLabel(pkg.goods_class)}</span>
+                ) : null}
+              </span>
               <span>
                 {pkg.freight_included
                   ? 'Freight included'

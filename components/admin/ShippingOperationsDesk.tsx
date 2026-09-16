@@ -10,6 +10,7 @@ import {
   previousPackageStatus,
   rateForClass,
   shippingPaymentDeskLabel,
+  shippingClassShortLabel,
   SHIPPING_CLASS_LABELS,
   SHIPPING_GOODS_CLASSES,
   SHIPPING_STATUS_LABELS,
@@ -1032,7 +1033,14 @@ export default function ShippingOperationsDesk({
                           {contents(pkg) || 'No items recorded'}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                          <span className="font-semibold">CBM {Number(pkg.cbm).toFixed(3)}</span>
+                          <span>
+                            <span className="font-semibold">CBM {Number(pkg.cbm).toFixed(3)}</span>
+                            {shippingClassShortLabel(pkg.goods_class) ? (
+                              <span className="mt-0.5 block text-xs font-normal text-slate-400">
+                                {shippingClassShortLabel(pkg.goods_class)}
+                              </span>
+                            ) : null}
+                          </span>
                           <span className="font-semibold text-brand-primary">
                             {pkg.freight_included
                               ? 'Freight included'
@@ -1158,13 +1166,25 @@ export default function ShippingOperationsDesk({
                           {packageOrders(pkg).join(', ')}
                         </p>
                       </td>
-                      <td className="p-3 font-semibold">{Number(pkg.cbm).toFixed(3)}</td>
-                      <td className="p-3 font-semibold text-brand-primary">
-                        {pkg.freight_included
-                          ? 'Included'
-                          : pkg.final_shipping_ghs != null
-                            ? formatGhs(pkg.final_shipping_ghs)
-                            : formatUsd(pkg.estimated_shipping_usd)}
+                      <td className="p-3">
+                        <p className="font-semibold">{Number(pkg.cbm).toFixed(3)}</p>
+                        {shippingClassShortLabel(pkg.goods_class) ? (
+                          <p className="text-xs text-slate-400">
+                            {shippingClassShortLabel(pkg.goods_class)}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="p-3">
+                        <p className="font-semibold text-brand-primary">
+                          {pkg.freight_included
+                            ? 'Included'
+                            : pkg.final_shipping_ghs != null
+                              ? formatGhs(pkg.final_shipping_ghs)
+                              : formatUsd(pkg.estimated_shipping_usd)}
+                        </p>
+                        {!pkg.freight_included && pkg.final_shipping_ghs == null ? (
+                          <p className="text-xs text-slate-400">Estimate</p>
+                        ) : null}
                       </td>
                       <td className="p-3">
                         {(() => {

@@ -6,6 +6,7 @@ import {
   daysUntil,
   formatGhs,
   formatUsd,
+  shippingClassShortLabel,
   SHIPPING_STATUS_LABELS,
   type ShippingPackageStatus,
 } from '@/lib/shipping';
@@ -160,6 +161,11 @@ export default function MyShipments({ data, loading }: MyShipmentsProps) {
                   <div>
                     <span className="mr-2 text-xs text-slate-400 md:hidden">Size</span>
                     <strong>{Number(pkg.cbm).toFixed(3)}</strong>
+                    {shippingClassShortLabel(pkg.goods_class) ? (
+                      <span className="block text-xs text-slate-400">
+                        {shippingClassShortLabel(pkg.goods_class)}
+                      </span>
+                    ) : null}
                   </div>
                   <div>
                     <span className="mr-2 text-xs text-slate-400 md:hidden">Shipping</span>

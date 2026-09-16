@@ -55,7 +55,7 @@ export async function GET(req: Request) {
         ? supabaseAdmin
             .from('shipping_packages')
             .select(
-              'id, package_name, tracking_id, carrier_reference, quantity, status, cbm, freight_included, final_shipping_ghs, estimated_shipping_usd, final_usd_to_ghs, warehouse_received_at, loaded_at, estimated_arrival_at, vessel, customer_email, shipping_payment_status, shipping_package_items(quantity, order_item_id, order_items(id, order_id, product_name, orders(id, order_number, email)))',
+              'id, package_name, tracking_id, carrier_reference, quantity, status, cbm, goods_class, freight_included, final_shipping_ghs, estimated_shipping_usd, final_usd_to_ghs, warehouse_received_at, loaded_at, estimated_arrival_at, vessel, customer_email, shipping_payment_status, shipping_package_items(quantity, order_item_id, order_items(id, order_id, product_name, orders(id, order_number, email)))',
             )
             .or(customerOwnerFilter)
             .order('created_at', { ascending: false })
