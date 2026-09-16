@@ -11,19 +11,15 @@ import {
 import { SITE_INVOICE_LOGO_PATH } from '@/lib/brand';
 import {
   invoiceAddressClass,
-  invoiceBodyClass,
   invoiceCompanyNameClass,
   invoiceLogoClass,
   invoiceOfficialMultiPageClass,
-  invoiceOfficialPageClass,
-  invoicePaymentFooterClass,
   invoicePaymentFooterMultiClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
   invoiceTypographyClass,
   invoiceVariantClass,
-  resolveInvoicePdfMode,
 } from '@/lib/invoice-layout';
 import { formatMoney } from '@/lib/payment-routing';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
@@ -208,19 +204,11 @@ function Paper({
   const detailClass = isOfficial
     ? invoiceVariantClass
     : 'text-[12px] text-slate-600 sm:text-[10px]';
-  const pdfMode = isOfficial ? resolveInvoicePdfMode(lines.length) : 'single';
-  const isSinglePage = pdfMode === 'single';
-
-  const receiptFooterClass = isOfficial
-    ? isSinglePage
-      ? invoicePaymentFooterClass
-      : invoicePaymentFooterMultiClass
-    : 'mt-3 pt-2 leading-normal';
 
   const footer = isReceipt ? (
     <div
       {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
-      className={receiptFooterClass}
+      className={isOfficial ? invoicePaymentFooterMultiClass : 'mt-3 pt-2 leading-normal'}
     >
       <p className="font-bold uppercase tracking-wide">Payment received</p>
       <p className="mt-1">
@@ -236,8 +224,7 @@ function Paper({
   ) : isOfficial ? (
     <InvoicePaymentFooter
       accounts={SNAPPY_BANK_ACCOUNTS}
-      pdfMode={pdfMode}
-      pinned
+      pdfMode="multi"
       note={
         document.flow === 'shipping'
           ? 'This cedi amount is held until the due date because the dollar rate changes. After the due date, request a fresh bill from your account page.'
@@ -259,17 +246,12 @@ function Paper({
   return (
     <div
       className={`${base} relative bg-white leading-snug text-black ${
-        isOfficial
-          ? isSinglePage
-            ? invoiceOfficialPageClass
-            : invoiceOfficialMultiPageClass
-          : ''
+        isOfficial ? invoiceOfficialMultiPageClass : ''
       }`}
-      {...(isOfficial ? { 'data-invoice-mode': pdfMode } : {})}
-      {...(isOfficial && isSinglePage ? { 'data-invoice-a4': '' } : {})}
+      {...(isOfficial ? { 'data-invoice-mode': 'multi' } : {})}
     >
       <InvoiceWatermark />
-      <div className={isOfficial && isSinglePage ? invoiceBodyClass : 'relative z-[1]'}>
+      <div className="relative z-[1]">
       <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <img

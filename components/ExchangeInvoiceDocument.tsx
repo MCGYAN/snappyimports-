@@ -16,17 +16,14 @@ import {
 } from '@/lib/exchange-corridors';
 import {
   invoiceAddressClass,
-  invoiceBodyClass,
   invoiceCompanyNameClass,
   invoiceLogoClass,
   invoiceOfficialMultiPageClass,
-  invoiceOfficialPageClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
   invoiceTypographyClass,
   invoiceVariantClass,
-  resolveInvoicePdfMode,
 } from '@/lib/invoice-layout';
 
 type Props = {
@@ -102,8 +99,6 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
     { country_code: country, pay_accounts: [] },
     exchange.metadata?.pay_accounts,
   );
-  const pdfMode = resolveInvoicePdfMode(1);
-  const isSinglePage = pdfMode === 'single';
 
   return (
     <div id="exchange-invoice-print" className="bg-white text-slate-900">
@@ -235,14 +230,11 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
       </div>
 
       <div
-        className={`invoice-official hidden ${invoiceTypographyClass} ${
-          isSinglePage ? invoiceOfficialPageClass : invoiceOfficialMultiPageClass
-        }`}
-        data-invoice-mode={pdfMode}
-        {...(isSinglePage ? { 'data-invoice-a4': '' } : {})}
+        className={`invoice-official hidden ${invoiceTypographyClass} ${invoiceOfficialMultiPageClass}`}
+        data-invoice-mode="multi"
       >
         <InvoiceWatermark />
-        <div className={isSinglePage ? invoiceBodyClass : 'relative z-[1]'}>
+        <div className="relative z-[1]">
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
             <img
@@ -360,8 +352,7 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
           accounts={accounts}
           title={`Payment details (${meta.name}):`}
           note={`Pay only these ${meta.name} accounts for this Buy RMB invoice.`}
-          pdfMode={pdfMode}
-          pinned
+          pdfMode="multi"
         />
       </div>
 

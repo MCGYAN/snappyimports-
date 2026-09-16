@@ -375,8 +375,14 @@ export async function generateFinancialDocumentPdf(
   text(pdf, summaryLabel, 125, y);
   text(pdf, amount(document.amount), right, y, { align: 'right' });
 
+  // Place payment details directly under the total (no large empty gap at page bottom).
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const paymentStartY = pageHeight - 52;
+  const paymentBlockHeight = receipt ? 28 : document.flow === 'shipping' ? 50 : 44;
+  let paymentStartY = y + 12;
+  if (paymentStartY + paymentBlockHeight > pageHeight - 12) {
+    pdf.addPage();
+    paymentStartY = 20;
+  }
 
   if (receipt) {
     pdf.setFontSize(9);

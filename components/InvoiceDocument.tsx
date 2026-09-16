@@ -10,17 +10,14 @@ import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import {
   invoiceAddressClass,
-  invoiceBodyClass,
   invoiceCompanyNameClass,
   invoiceLogoClass,
   invoiceOfficialMultiPageClass,
-  invoiceOfficialPageClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
   invoiceTypographyClass,
   invoiceVariantClass,
-  resolveInvoicePdfMode,
 } from '@/lib/invoice-layout';
 import { cleanVariantDisplayLabel } from '@/lib/product-variants';
 
@@ -156,8 +153,6 @@ export default function InvoiceDocument({ order }: Props) {
   );
   const paymentLabel =
     order.payment_method === 'invoice' ? 'Bank Transfer' : order.payment_method || '—';
-  const pdfMode = resolveInvoicePdfMode(items.length);
-  const isSinglePage = pdfMode === 'single';
 
   return (
     <div id="invoice-print" className="bg-white text-slate-900">
@@ -266,16 +261,13 @@ export default function InvoiceDocument({ order }: Props) {
         <InvoicePaymentFooter accounts={SNAPPY_BANK_ACCOUNTS} withCopy />
       </div>
 
-      {/* ─── Official PDF / print layout (fixed A4 structure, no buttons) ─── */}
+      {/* ─── Official PDF / print layout (payment follows totals, no bottom gap) ─── */}
       <div
-        className={`invoice-official hidden ${invoiceTypographyClass} ${
-          isSinglePage ? invoiceOfficialPageClass : invoiceOfficialMultiPageClass
-        }`}
-        data-invoice-mode={pdfMode}
-        {...(isSinglePage ? { 'data-invoice-a4': '' } : {})}
+        className={`invoice-official hidden ${invoiceTypographyClass} ${invoiceOfficialMultiPageClass}`}
+        data-invoice-mode="multi"
       >
         <InvoiceWatermark />
-        <div className={isSinglePage ? invoiceBodyClass : 'relative z-[1]'}>
+        <div className="relative z-[1]">
         {/* Header band: logo + INVOICE on one row, issuer packed beside it */}
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
@@ -379,8 +371,7 @@ export default function InvoiceDocument({ order }: Props) {
 
         <InvoicePaymentFooter
           accounts={SNAPPY_BANK_ACCOUNTS}
-          pdfMode={pdfMode}
-          pinned
+          pdfMode="multi"
         />
       </div>
 
