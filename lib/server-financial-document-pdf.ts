@@ -47,18 +47,20 @@ function amount(value: number) {
 async function preparePdfLogo(
   logo?: ArrayBuffer | null,
   width = 520,
-): Promise<{ dataUrl: string; format: 'JPEG' } | null> {
+): Promise<{ dataUrl: string; format: 'JPEG'; width: number; height: number } | null> {
   if (!logo || logo.byteLength === 0) return null;
   try {
-    const jpeg = await sharp(Buffer.from(logo))
+    const { data, info } = await sharp(Buffer.from(logo))
       .rotate()
       .resize({ width, withoutEnlargement: true })
       .flatten({ background: { r: 255, g: 255, b: 255 } })
       .jpeg({ quality: 78, mozjpeg: true })
-      .toBuffer();
+      .toBuffer({ resolveWithObject: true });
     return {
-      dataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
+      dataUrl: `data:image/jpeg;base64,${data.toString('base64')}`,
       format: 'JPEG',
+      width: info.width,
+      height: info.height,
     };
   } catch {
     return null;
@@ -212,8 +214,23 @@ export async function generateFinancialDocumentPdf(
 
   if (preparedLogo) {
     try {
-      const logoW = 42;
-      const logoH = logoW * (474 / 993);
+      // Bounding box for the header logo: max width 42mm, max height 27mm.
+      const boxW = 42;
+      const boxH = 27;
+      const imgRatio = preparedLogo.height / preparedLogo.width;
+      const boxRatio = boxH / boxW;
+
+      let logoW, logoH;
+      if (imgRatio > boxRatio) {
+        // Image is taller than the bounding box
+        logoH = boxH;
+        logoW = logoH / imgRatio;
+      } else {
+        // Image is wider than the bounding box
+        logoW = boxW;
+        logoH = logoW * imgRatio;
+      }
+
       pdf.addImage(
         preparedLogo.dataUrl,
         preparedLogo.format,
