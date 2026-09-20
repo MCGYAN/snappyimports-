@@ -167,7 +167,7 @@ export default function InvoiceDocument({ order }: Props) {
             <img
               src={SITE_INVOICE_LOGO_PATH}
               alt={SNAPPY_INVOICE_ISSUER.brand}
-              className="h-28 w-auto max-w-[10rem] object-contain object-left sm:h-32 sm:max-w-[11rem]"
+              className={invoiceLogoClass}
             />
             <div>
               <p className="text-base font-bold sm:text-sm">{SNAPPY_INVOICE_ISSUER.brand}</p>

@@ -190,9 +190,7 @@ function Paper({
   const base = isOfficial
     ? invoiceTypographyClass
     : 'text-[13px] leading-snug text-black sm:text-[11px]';
-  const logoSize = isOfficial
-    ? invoiceLogoClass
-    : 'h-28 w-auto max-w-[10rem] object-contain object-left sm:h-32 sm:max-w-[11rem]';
+  const logoSize = invoiceLogoClass;
   const titleSize = isOfficial
     ? invoiceTitleClass
     : 'text-[1.65rem] font-bold tracking-wide sm:text-2xl';

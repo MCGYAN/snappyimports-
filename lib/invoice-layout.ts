@@ -28,10 +28,12 @@ export const invoiceTitleClass = 'text-2xl font-bold tracking-wide';
 export const invoiceTableHeaderClass = 'text-[10px]';
 export const invoiceVariantClass = 'text-[10px] text-slate-600';
 export const invoiceTotalAmountClass = 'text-sm font-bold';
-/** Header logo: readable on A4 without crowding the issuer block. */
-export const invoiceLogoClass = 'h-32 w-auto max-w-[11rem] object-contain object-left';
+/** Header logo: keep native aspect (wide mark). Never pair fixed height with a tighter max-width. */
+export const invoiceLogoClass =
+  'h-auto w-auto max-h-[7.5rem] max-w-[11rem] object-contain object-left';
 /** Footer bank-row logo. */
-export const invoiceFooterLogoClass = 'h-14 w-auto max-w-full object-contain';
+export const invoiceFooterLogoClass =
+  'h-auto w-auto max-h-14 max-w-full object-contain';
 
 export const invoiceWatermarkClass =
   'pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden';

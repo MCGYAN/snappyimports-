@@ -231,28 +231,22 @@ export async function generateFinancialDocumentPdf(
 
   if (preparedLogo) {
     try {
-      // Bounding box for the header logo: max width 42mm, max height 27mm.
-      const boxW = 42;
-      const boxH = 27;
+      // Fit inside header slot while keeping the logo's real aspect ratio.
+      const boxW = 40;
+      const boxH = 22;
       const imgRatio = preparedLogo.height / preparedLogo.width;
-      const boxRatio = boxH / boxW;
-
-      let logoW, logoH;
-      if (imgRatio > boxRatio) {
-        // Image is taller than the bounding box
+      let logoW = boxW;
+      let logoH = logoW * imgRatio;
+      if (logoH > boxH) {
         logoH = boxH;
         logoW = logoH / imgRatio;
-      } else {
-        // Image is wider than the bounding box
-        logoW = boxW;
-        logoH = logoW * imgRatio;
       }
 
       pdf.addImage(
         preparedLogo.dataUrl,
         preparedLogo.format,
         left,
-        8 + (27 - logoH) / 2, // vertically center in the 27mm available height
+        8 + (boxH - logoH) / 2,
         logoW,
         logoH,
         PDF_LOGO_ALIAS,

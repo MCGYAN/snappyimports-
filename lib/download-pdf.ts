@@ -46,6 +46,27 @@ async function waitForImages(root: HTMLElement): Promise<void> {
           }),
     ),
   );
+
+  // Keep logo aspect ratio in the PDF capture (html2canvas can stretch fixed-height imgs).
+  images.forEach((img) => {
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    if (!(nw > 0 && nh > 0)) return;
+    const maxW = Math.max(img.clientWidth || 0, 1);
+    const maxH = Math.max(img.clientHeight || 0, 1);
+    const ratio = nw / nh;
+    let width = maxW;
+    let height = width / ratio;
+    if (height > maxH) {
+      height = maxH;
+      width = height * ratio;
+    }
+    img.style.width = `${Math.round(width)}px`;
+    img.style.height = `${Math.round(height)}px`;
+    img.style.maxWidth = `${Math.round(width)}px`;
+    img.style.maxHeight = `${Math.round(height)}px`;
+    img.style.objectFit = 'contain';
+  });
 }
 
 /**
