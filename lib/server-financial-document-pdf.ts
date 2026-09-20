@@ -327,7 +327,9 @@ export async function generateFinancialDocumentPdf(
   const unitX = 151;
   const totalX = right;
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const paymentReserve = receipt ? 32 : document.flow === 'shipping' ? 52 : 44;
+  // Reserve enough room for title + holder + bank box, pinned to the page bottom.
+  const paymentBlockHeight = receipt ? 28 : document.flow === 'shipping' ? 46 : 40;
+  const paymentReserve = paymentBlockHeight + 10;
 
   const tableHeader = () => {
     pdf.setFont('helvetica', 'bold');
@@ -416,8 +418,8 @@ export async function generateFinancialDocumentPdf(
       pdf.setTextColor(0, 0, 0);
     }
 
-    const boxTop = paymentStartY + (document.flow === 'shipping' ? 16 : 10);
-    const boxHeight = 28;
+    const boxTop = paymentStartY + (document.flow === 'shipping' ? 15 : 9);
+    const boxHeight = 22;
     const boxWidth = right - left;
     const columns = SNAPPY_BANK_ACCOUNTS.length + 1;
     const colWidth = boxWidth / columns;
@@ -431,7 +433,7 @@ export async function generateFinancialDocumentPdf(
       pdf.line(x, boxTop, x, boxTop + boxHeight);
     }
 
-    pdf.setFontSize(7.5);
+    pdf.setFontSize(7);
     SNAPPY_BANK_ACCOUNTS.forEach((account, index) => {
       const x = left + colWidth * index + 2;
       const title =
@@ -444,25 +446,26 @@ export async function generateFinancialDocumentPdf(
             : account.bank;
       pdf.setFont('helvetica', 'bold');
       const titleLines = pdf.splitTextToSize(title, colWidth - 4);
-      pdf.text(titleLines, x, boxTop + 5);
+      // Keep bank text near the bottom of each cell (less empty space above).
+      const textBlockH = titleLines.length * 3.2 + 4;
+      const textTop = boxTop + boxHeight - textBlockH - 2;
+      pdf.text(titleLines, x, textTop + 3);
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      text(pdf, account.accountNumber, x, boxTop + 5 + titleLines.length * 3.4);
       pdf.setFontSize(7.5);
+      text(pdf, account.accountNumber, x, textTop + 3 + titleLines.length * 3.2);
+      pdf.setFontSize(7);
     });
 
     if (preparedLogo) {
       try {
         const logoColLeft = left + colWidth * SNAPPY_BANK_ACCOUNTS.length;
-        const logoW = Math.min(28, colWidth - 2);
+        const logoW = Math.min(26, colWidth - 2);
         const logoH = logoW * (474 / 993);
-        // Use the prepared JPEG again (tiny). Alias reuse fails in some jsPDF builds
-        // and left this footer cell blank on mobile downloads.
         pdf.addImage(
           preparedLogo.dataUrl,
           preparedLogo.format,
           logoColLeft + (colWidth - logoW) / 2,
-          boxTop + (boxHeight - logoH) / 2,
+          boxTop + boxHeight - logoH - 2,
           logoW,
           logoH,
           `${PDF_LOGO_ALIAS}-footer`,

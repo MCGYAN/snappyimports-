@@ -402,7 +402,7 @@ export default function AdminInvoicesPage() {
           </div>
           <div className="overflow-auto rounded-2xl border border-slate-200 bg-slate-100 p-3 shadow-store-card">
             <div className="mx-auto max-w-[794px] origin-top scale-[0.85] sm:scale-100">
-              <FinancialDocumentPaper document={displayDoc} />
+              <FinancialDocumentPaper document={displayDoc} mode="official" />
             </div>
           </div>
         </section>

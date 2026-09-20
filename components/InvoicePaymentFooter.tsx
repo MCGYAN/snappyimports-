@@ -93,14 +93,14 @@ export default function InvoicePaymentFooter({
         {accounts.map((account) => (
           <div
             key={`${account.bank}-${account.accountNumber}`}
-            className="flex min-h-[68px] flex-col justify-center border-r border-black/20 px-1.5 py-2 sm:px-2.5"
+            className="flex flex-col justify-end border-r border-black/20 px-1.5 py-2 sm:px-2.5"
           >
             <p className="font-semibold">{accountColumnTitle(account)}</p>
-            <p className="mt-1 font-bold tabular-nums tracking-wide">{account.accountNumber}</p>
+            <p className="mt-0.5 font-bold tabular-nums tracking-wide">{account.accountNumber}</p>
             {withCopy ? <InlineCopy value={account.accountNumber} /> : null}
           </div>
         ))}
-        <div className="flex min-h-[68px] items-center justify-center bg-transparent px-2 py-2">
+        <div className="flex items-end justify-center bg-transparent px-2 py-2">
           <img
             src={SITE_INVOICE_LOGO_PATH}
             alt={SNAPPY_INVOICE_ISSUER.brand}

@@ -391,9 +391,28 @@ function Paper({
 
 export default function FinancialDocumentPaper({
   document,
+  mode = 'both',
 }: {
   document: FinancialDocumentRecord;
+  /** Admin generator preview can show the official pinned layout only. */
+  mode?: 'both' | 'screen' | 'official';
 }) {
+  if (mode === 'official') {
+    return (
+      <div id="financial-document-print" className="bg-white text-slate-900">
+        <Paper document={document} variant="official" />
+      </div>
+    );
+  }
+
+  if (mode === 'screen') {
+    return (
+      <div id="financial-document-print" className="bg-white text-slate-900">
+        <Paper document={document} variant="screen" />
+      </div>
+    );
+  }
+
   return (
     <div id="financial-document-print" className="bg-white text-slate-900">
       <div className="document-screen">
