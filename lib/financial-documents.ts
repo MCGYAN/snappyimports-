@@ -9,10 +9,14 @@ export type ManualInvoiceItemInput = {
   detail?: string | null;
 };
 
-function reference(prefix: string) {
-  const stamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).slice(2, 7).toUpperCase();
-  return `${prefix}-${stamp}-${random}`;
+async function nextDocumentNumber(prefix: string) {
+  const { data, error } = await supabaseAdmin.rpc('next_financial_document_number', {
+    p_prefix: prefix,
+  });
+  if (error || !data) {
+    throw error || new Error(`Could not allocate document number for ${prefix}.`);
+  }
+  return String(data);
 }
 
 async function existingReceipt(flow: FinancialFlow, entityId: string) {
@@ -106,7 +110,7 @@ export async function createShopReceipt(order: any, createdBy?: string | null, d
   const { data: receipt, error } = await supabaseAdmin
     .from('financial_documents')
     .insert({
-      document_number: reference('RCT-ORD'),
+      document_number: await nextDocumentNumber('RCT-ORD'),
       document_type: 'receipt',
       flow: 'shop',
       entity_id: order.id,
@@ -145,7 +149,7 @@ export async function createRmbReceipt(exchange: any, createdBy?: string | null,
   const { data: receipt, error } = await supabaseAdmin
     .from('financial_documents')
     .insert({
-      document_number: reference('RCT-RMB'),
+      document_number: await nextDocumentNumber('RCT-RMB'),
       document_type: 'receipt',
       flow: 'rmb',
       entity_id: exchange.id,
@@ -288,7 +292,7 @@ export async function issueShippingInvoice({
   const { data: invoice, error } = await supabaseAdmin
     .from('financial_documents')
     .insert({
-      document_number: reference('INV-SHP'),
+      document_number: await nextDocumentNumber('INV-SHP'),
       document_type: 'invoice',
       flow: 'shipping',
       entity_id: pkg.id,
@@ -369,7 +373,7 @@ export async function createShippingReceipt(
   const { data: receipt, error } = await supabaseAdmin
     .from('financial_documents')
     .insert({
-      document_number: reference('RCT-SHP'),
+      document_number: await nextDocumentNumber('RCT-SHP'),
       document_type: 'receipt',
       flow: 'shipping',
       entity_id: pkg.id,
@@ -457,7 +461,7 @@ export async function createManualInvoice({
   const email = String(customerEmail || '').trim().toLowerCase() || null;
   const phone = String(customerPhone || '').trim() || null;
   const entityId = crypto.randomUUID();
-  const documentNumber = reference('INV-MAN');
+  const documentNumber = await nextDocumentNumber('INV-MAN');
   const issuedAt = new Date().toISOString();
 
   let customerUserId: string | null = null;
