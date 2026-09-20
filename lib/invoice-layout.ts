@@ -38,18 +38,20 @@ export const invoiceWatermarkClass =
 export const invoiceWatermarkImageClass =
   'h-[52%] w-auto max-w-[72%] object-contain';
 
-export const invoiceOfficialPageClass = 'relative box-border h-[1043px] overflow-hidden';
+export const invoiceOfficialPageClass = 'relative box-border min-h-[1043px] h-[1043px] overflow-hidden';
 
-export const invoiceOfficialMultiPageClass = 'relative box-border';
+export const invoiceOfficialMultiPageClass =
+  'relative box-border min-h-[1043px]';
 
 export const invoiceBodyClass = 'relative z-[1] pb-[168px]';
 
-/** Pinned to the page bottom during single-page PDF capture. */
+/** Pinned to the page bottom for every official invoice / PDF capture. */
 export const invoicePaymentFooterClass =
   'absolute inset-x-0 bottom-3 z-[1] bg-white/95 px-0 pt-4 pb-3 leading-normal';
 
-/** Flows after totals on the last page of a multi-page PDF. */
-export const invoicePaymentFooterMultiClass = 'relative z-[1] mt-8 bg-white/95 pt-4 pb-3 leading-normal';
+/** Last-page footer still pinned to the bottom of the page area. */
+export const invoicePaymentFooterMultiClass =
+  'absolute inset-x-0 bottom-3 z-[1] bg-white/95 px-0 pt-4 pb-3 leading-normal';
 
 export const INVOICE_A4_ATTR = 'data-invoice-a4';
 export const INVOICE_MODE_ATTR = 'data-invoice-mode';

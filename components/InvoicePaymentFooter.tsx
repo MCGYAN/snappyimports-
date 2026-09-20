@@ -67,12 +67,12 @@ export default function InvoicePaymentFooter({
 }: InvoicePaymentFooterProps) {
   const accountHolder = holder || accounts[0]?.holder || SNAPPY_INVOICE_ISSUER.legalName;
 
-  const wrapperClass = withCopy
-    ? 'pt-2 leading-normal'
-    : pinned
-      ? pdfMode === 'multi'
-        ? invoicePaymentFooterMultiClass
-        : invoicePaymentFooterClass
+  const wrapperClass = pinned
+    ? pdfMode === 'multi'
+      ? invoicePaymentFooterMultiClass
+      : invoicePaymentFooterClass
+    : withCopy
+      ? 'pt-2 leading-normal'
       : pdfMode === 'multi'
         ? invoicePaymentFooterMultiClass
         : 'mt-3 pt-2 leading-normal';

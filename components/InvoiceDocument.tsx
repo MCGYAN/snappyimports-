@@ -10,9 +10,10 @@ import { formatMoney } from '@/lib/payment-routing';
 import { resolvePaymentReference } from '@/lib/payment-reference';
 import {
   invoiceAddressClass,
+  invoiceBodyClass,
   invoiceCompanyNameClass,
   invoiceLogoClass,
-  invoiceOfficialMultiPageClass,
+  invoiceOfficialPageClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
@@ -157,10 +158,11 @@ export default function InvoiceDocument({ order }: Props) {
   return (
     <div id="invoice-print" className="bg-white text-slate-900">
       {/* ─── On-screen invoice: same official structure, plus copy buttons ─── */}
-      <div className={`invoice-screen relative text-[13px] leading-snug text-black sm:text-[11px]`}>
+      <div className="invoice-screen relative min-h-[1043px] text-[13px] leading-snug text-black sm:text-[11px]">
         <InvoiceWatermark />
         {/* Header band */}
-        <div className="relative z-[1] flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="relative z-[1] pb-[168px]">
+        <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <img
               src={SITE_INVOICE_LOGO_PATH}
@@ -258,16 +260,18 @@ export default function InvoiceDocument({ order }: Props) {
         </table>
 
         <InvoiceTotalsTable order={order} currency={currency} paymentLabel={paymentLabel} />
-        <InvoicePaymentFooter accounts={SNAPPY_BANK_ACCOUNTS} withCopy />
+        </div>
+        <InvoicePaymentFooter accounts={SNAPPY_BANK_ACCOUNTS} withCopy pinned pdfMode="single" />
       </div>
 
-      {/* ─── Official PDF / print layout (payment follows totals, no bottom gap) ─── */}
+      {/* ─── Official PDF / print layout (payment footer pinned to page bottom) ─── */}
       <div
-        className={`invoice-official hidden ${invoiceTypographyClass} ${invoiceOfficialMultiPageClass}`}
-        data-invoice-mode="multi"
+        className={`invoice-official hidden ${invoiceTypographyClass} ${invoiceOfficialPageClass}`}
+        data-invoice-mode="single"
+        data-invoice-a4=""
       >
         <InvoiceWatermark />
-        <div className="relative z-[1]">
+        <div className={invoiceBodyClass}>
         {/* Header band: logo + INVOICE on one row, issuer packed beside it */}
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
@@ -371,7 +375,8 @@ export default function InvoiceDocument({ order }: Props) {
 
         <InvoicePaymentFooter
           accounts={SNAPPY_BANK_ACCOUNTS}
-          pdfMode="multi"
+          pdfMode="single"
+          pinned
         />
       </div>
 

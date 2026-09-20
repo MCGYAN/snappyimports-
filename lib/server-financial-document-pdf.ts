@@ -332,6 +332,8 @@ export async function generateFinancialDocumentPdf(
   const quantityX = 118;
   const unitX = 151;
   const totalX = right;
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const paymentReserve = receipt ? 32 : document.flow === 'shipping' ? 52 : 44;
 
   const tableHeader = () => {
     pdf.setFont('helvetica', 'bold');
@@ -349,7 +351,7 @@ export async function generateFinancialDocumentPdf(
   for (const line of linesFor(document)) {
     const detailLines = line.detail ? pdf.splitTextToSize(line.detail, 88) : [];
     const rowHeight = Math.max(9, 7 + detailLines.length * 3.8);
-    if (y + rowHeight > 245) {
+    if (y + rowHeight > pageHeight - paymentReserve - 15) {
       pdf.addPage();
       y = 20;
       tableHeader();
@@ -375,13 +377,11 @@ export async function generateFinancialDocumentPdf(
   text(pdf, summaryLabel, 125, y);
   text(pdf, amount(document.amount), right, y, { align: 'right' });
 
-  // Place payment details directly under the total (no large empty gap at page bottom).
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const paymentBlockHeight = receipt ? 28 : document.flow === 'shipping' ? 50 : 44;
-  let paymentStartY = y + 12;
-  if (paymentStartY + paymentBlockHeight > pageHeight - 12) {
+  // Always pin payment details to the bottom of the current A4 page.
+  let paymentStartY = pageHeight - paymentReserve;
+  if (y + 8 > paymentStartY) {
     pdf.addPage();
-    paymentStartY = 20;
+    paymentStartY = pageHeight - paymentReserve;
   }
 
   if (receipt) {

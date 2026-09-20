@@ -11,10 +11,11 @@ import {
 import { SITE_INVOICE_LOGO_PATH } from '@/lib/brand';
 import {
   invoiceAddressClass,
+  invoiceBodyClass,
   invoiceCompanyNameClass,
   invoiceLogoClass,
-  invoiceOfficialMultiPageClass,
-  invoicePaymentFooterMultiClass,
+  invoiceOfficialPageClass,
+  invoicePaymentFooterClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
@@ -208,7 +209,7 @@ function Paper({
   const footer = isReceipt ? (
     <div
       {...(isOfficial ? { 'data-invoice-footer': '' } : {})}
-      className={isOfficial ? invoicePaymentFooterMultiClass : 'mt-3 pt-2 leading-normal'}
+      className={isOfficial ? invoicePaymentFooterClass : 'mt-3 pt-2 leading-normal'}
     >
       <p className="font-bold uppercase tracking-wide">Payment received</p>
       <p className="mt-1">
@@ -224,7 +225,8 @@ function Paper({
   ) : isOfficial ? (
     <InvoicePaymentFooter
       accounts={SNAPPY_BANK_ACCOUNTS}
-      pdfMode="multi"
+      pdfMode="single"
+      pinned
       note={
         document.flow === 'shipping'
           ? 'This cedi amount is held until the due date because the dollar rate changes. After the due date, request a fresh bill from your account page.'
@@ -235,6 +237,8 @@ function Paper({
     <InvoicePaymentFooter
       accounts={SNAPPY_BANK_ACCOUNTS}
       withCopy
+      pinned={!isOfficial}
+      pdfMode="single"
       note={
         document.flow === 'shipping'
           ? 'This cedi amount is held until the due date because the dollar rate changes. After the due date, request a fresh bill from your account page.'
@@ -246,12 +250,12 @@ function Paper({
   return (
     <div
       className={`${base} relative bg-white leading-snug text-black ${
-        isOfficial ? invoiceOfficialMultiPageClass : ''
+        isOfficial ? invoiceOfficialPageClass : 'relative min-h-[1043px]'
       }`}
-      {...(isOfficial ? { 'data-invoice-mode': 'multi' } : {})}
+      {...(isOfficial ? { 'data-invoice-mode': 'single', 'data-invoice-a4': '' } : {})}
     >
       <InvoiceWatermark />
-      <div className="relative z-[1]">
+      <div className={isOfficial ? invoiceBodyClass : 'relative z-[1] pb-[168px]'}>
       <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <img

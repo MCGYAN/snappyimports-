@@ -16,9 +16,10 @@ import {
 } from '@/lib/exchange-corridors';
 import {
   invoiceAddressClass,
+  invoiceBodyClass,
   invoiceCompanyNameClass,
   invoiceLogoClass,
-  invoiceOfficialMultiPageClass,
+  invoiceOfficialPageClass,
   invoiceTableHeaderClass,
   invoiceTitleClass,
   invoiceTotalAmountClass,
@@ -102,9 +103,10 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
 
   return (
     <div id="exchange-invoice-print" className="bg-white text-slate-900">
-      <div className={`invoice-screen relative ${invoiceTypographyClass}`}>
+      <div className={`invoice-screen relative min-h-[1043px] ${invoiceTypographyClass}`}>
         <InvoiceWatermark />
-        <div className="relative z-[1] flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="relative z-[1] pb-[168px]">
+        <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <img
               src={SITE_INVOICE_LOGO_PATH}
@@ -220,21 +222,25 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
             </tbody>
           </table>
         </div>
+        </div>
 
         <InvoicePaymentFooter
           accounts={accounts}
           title={`Payment details (${meta.name}):`}
           note={`Pay only these ${meta.name} accounts for this Buy RMB invoice.`}
           withCopy
+          pinned
+          pdfMode="single"
         />
       </div>
 
       <div
-        className={`invoice-official hidden ${invoiceTypographyClass} ${invoiceOfficialMultiPageClass}`}
-        data-invoice-mode="multi"
+        className={`invoice-official hidden ${invoiceTypographyClass} ${invoiceOfficialPageClass}`}
+        data-invoice-mode="single"
+        data-invoice-a4=""
       >
         <InvoiceWatermark />
-        <div className="relative z-[1]">
+        <div className={invoiceBodyClass}>
         <div className="flex items-start justify-between gap-6 border-b border-black pb-3">
           <div className="flex items-start gap-4">
             <img
@@ -352,7 +358,8 @@ export default function ExchangeInvoiceDocument({ exchange }: Props) {
           accounts={accounts}
           title={`Payment details (${meta.name}):`}
           note={`Pay only these ${meta.name} accounts for this Buy RMB invoice.`}
-          pdfMode="multi"
+          pdfMode="single"
+          pinned
         />
       </div>
 
