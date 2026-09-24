@@ -192,10 +192,18 @@ export default function AnalyticsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Advanced Analytics</h1>
-            <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">Detailed insights and performance metrics</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Shop Analytics</h1>
+            <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">
+              Website order revenue and product performance. For warehouse packages, open Shipping Analytics.
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <Link
+              href="/admin/analytics/shipping"
+              className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap text-center"
+            >
+              Shipping Analytics
+            </Link>
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}

@@ -48,6 +48,8 @@ export const EMPTY_STAFF_PERMISSIONS: AdminPermissions = {
 const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null }[] = [
   { prefix: '/admin/team', module: 'owner' },
   { prefix: '/admin/notifications', module: 'owner' },
+  // More specific than /admin/analytics (owner). Orders + warehouse staff can open it.
+  { prefix: '/admin/analytics/shipping', module: 'orders' },
   { prefix: '/admin/analytics', module: 'owner' },
   { prefix: '/admin/packages/warehouse', module: 'warehouse' },
   { prefix: '/admin/invoices', module: 'invoices' },
@@ -68,6 +70,7 @@ const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null 
 /** Paths staff can open if they have any of these modules. */
 const PATH_ANY_MODULE_RULES: { prefix: string; modules: AdminModule[] }[] = [
   { prefix: '/admin/packages', modules: ['orders', 'warehouse'] },
+  { prefix: '/admin/analytics/shipping', modules: ['orders', 'warehouse'] },
 ];
 
 export function normalizeAdminPermissions(raw: unknown): AdminPermissions {

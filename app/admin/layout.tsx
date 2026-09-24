@@ -210,6 +210,11 @@ export default function AdminLayout({
       path: '/admin/analytics'
     },
     {
+      title: 'Shipping Analytics',
+      icon: 'ri-ship-line',
+      path: '/admin/analytics/shipping'
+    },
+    {
       title: 'Customer Insights',
       icon: 'ri-user-search-line',
       path: '/admin/customer-insights'
