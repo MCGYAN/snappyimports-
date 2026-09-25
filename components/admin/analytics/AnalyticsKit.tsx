@@ -29,7 +29,7 @@ export function formatMoney(amount: number | null | undefined, currency = 'GHS')
   }
 }
 
-async function authHeaders() {
+export async function authHeaders() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -99,10 +99,15 @@ function AnalyticsTabs() {
 export function AnalyticsShell({
   title,
   description,
+  eyebrow = 'Analytics',
+  aside,
   children,
 }: {
   title: string;
   description: string;
+  eyebrow?: string;
+  /** Replaces the analytics tabs on the right of the header. */
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -110,11 +115,11 @@ export function AnalyticsShell({
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-accent">Analytics</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-accent">{eyebrow}</p>
             <h1 className="mt-1 text-2xl font-bold text-slate-900 md:text-3xl">{title}</h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-500">{description}</p>
           </div>
-          <AnalyticsTabs />
+          {aside === undefined ? <AnalyticsTabs /> : aside}
         </header>
         {children}
       </div>
