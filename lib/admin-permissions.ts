@@ -45,11 +45,19 @@ export const EMPTY_STAFF_PERMISSIONS: AdminPermissions = {
   customers: false,
 };
 
+/** Analytics tabs in display order. The sidebar opens the first one the user can access. */
+export const ANALYTICS_PATHS = [
+  '/admin/analytics',
+  '/admin/analytics/rmb',
+  '/admin/analytics/shipping',
+] as const;
+
 const PATH_MODULE_RULES: { prefix: string; module: AdminModule | 'owner' | null }[] = [
   { prefix: '/admin/team', module: 'owner' },
   { prefix: '/admin/notifications', module: 'owner' },
   // More specific than /admin/analytics (owner). Orders + warehouse staff can open it.
   { prefix: '/admin/analytics/shipping', module: 'orders' },
+  { prefix: '/admin/analytics/rmb', module: 'exchange' },
   { prefix: '/admin/analytics', module: 'owner' },
   { prefix: '/admin/packages/warehouse', module: 'warehouse' },
   { prefix: '/admin/invoices', module: 'invoices' },

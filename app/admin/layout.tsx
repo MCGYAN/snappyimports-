@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { SITE_LOGO_LIGHT_BG_PATH, SITE_LOGO_SIZE } from '@/lib/brand';
 import AdminNotificationBell from '@/components/admin/AdminNotificationBell';
 import {
+  ANALYTICS_PATHS,
   canAccessAdminDashboard,
   canAccessAdminPath,
   isOwnerRole,
@@ -207,12 +208,10 @@ export default function AdminLayout({
     {
       title: 'Analytics',
       icon: 'ri-bar-chart-line',
-      path: '/admin/analytics'
-    },
-    {
-      title: 'Shipping Analytics',
-      icon: 'ri-ship-line',
-      path: '/admin/analytics/shipping'
+      path:
+        ANALYTICS_PATHS.find((path) => canAccessAdminPath(userRole, permissions, path)) ||
+        '/admin/analytics',
+      activePrefix: '/admin/analytics'
     },
     {
       title: 'Customer Insights',
@@ -291,7 +290,9 @@ export default function AdminLayout({
 
           <nav className="space-y-1">
             {visibleMenuItems.map((item) => {
-              const isActive = item.exact ? pathname === item.path : pathname.startsWith(item.path);
+              const isActive = item.exact
+                ? pathname === item.path
+                : pathname.startsWith(item.activePrefix || item.path);
               return (
                 <Link
                   key={item.path}
