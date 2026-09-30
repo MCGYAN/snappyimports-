@@ -330,6 +330,8 @@ export async function generateFinancialDocumentPdf(
   // Reserve enough room for title + holder + bank box, pinned to the page bottom.
   const paymentBlockHeight = receipt ? 28 : document.flow === 'shipping' ? 46 : 40;
   const paymentReserve = paymentBlockHeight + 10;
+  // Payment details only sit on the last page, so earlier pages fill to this line.
+  const rowsBottom = pageHeight - 15;
 
   const tableHeader = () => {
     pdf.setFont('helvetica', 'bold');
@@ -347,7 +349,7 @@ export async function generateFinancialDocumentPdf(
   for (const line of linesFor(document)) {
     const detailLines = line.detail ? pdf.splitTextToSize(line.detail, 88) : [];
     const rowHeight = Math.max(9, 7 + detailLines.length * 3.8);
-    if (y + rowHeight > pageHeight - paymentReserve - 15) {
+    if (y + rowHeight > rowsBottom) {
       pdf.addPage();
       y = 20;
       tableHeader();
@@ -366,19 +368,18 @@ export async function generateFinancialDocumentPdf(
   }
 
   y += 7;
+  // Total and payment details stay together, pinned to the bottom of the last page.
+  const paymentStartY = pageHeight - paymentReserve;
+  if (y + 8 > paymentStartY) {
+    pdf.addPage();
+    y = 20;
+  }
   const summaryLabel = receipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`;
   pdf.setDrawColor(0);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   text(pdf, summaryLabel, 125, y);
   text(pdf, amount(document.amount), right, y, { align: 'right' });
-
-  // Always pin payment details to the bottom of the current A4 page.
-  let paymentStartY = pageHeight - paymentReserve;
-  if (y + 8 > paymentStartY) {
-    pdf.addPage();
-    paymentStartY = pageHeight - paymentReserve;
-  }
 
   if (receipt) {
     pdf.setFontSize(9);
