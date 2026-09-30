@@ -10,6 +10,7 @@ import {
   EXCHANGE_CORRIDORS,
   EXCHANGE_COUNTRY_CODES,
   formatCorridorBuyRate,
+  buyRateDigits,
   formatLocalMoney,
   quoteLocalToRmb,
   type CorridorRateBoard,
@@ -194,7 +195,11 @@ export default function ExchangePage() {
           ) : ready.ok ? (
             <>
               <p className="text-xl font-bold">
-                {formatCorridorBuyRate(Number(board?.buy_rmb_rate), country)}
+                {formatCorridorBuyRate(
+                  Number(board?.buy_rmb_rate),
+                  country,
+                  buyRateDigits(Number(board?.buy_rmb_rate)),
+                )}
               </p>
               <p className="text-xs text-white/60">
                 {board?.valid_until

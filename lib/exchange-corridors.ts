@@ -174,6 +174,15 @@ export function formatCorridorBuyRate(
   return `1 ${unit} = ${n.toFixed(digits)} RMB`;
 }
 
+/** Decimals needed to show a rate exactly as set (0.544 stays 0.544), between 2 and 6. */
+export function buyRateDigits(rmbPerLocal: number): number {
+  const n = Math.abs(Number(rmbPerLocal) || 0);
+  for (let digits = 2; digits < 6; digits += 1) {
+    if (Math.abs(Number(n.toFixed(digits)) - n) < 1e-9) return digits;
+  }
+  return 6;
+}
+
 /** Customer pays local currency to get RMB — rate is RMB per 1 local unit. */
 export function quoteLocalToRmb(
   localAmount: number,
