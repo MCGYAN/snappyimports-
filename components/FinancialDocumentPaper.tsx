@@ -1,5 +1,6 @@
 'use client';
 
+import { useLayoutEffect, useRef, useState } from 'react';
 import InvoicePaymentFooter from '@/components/InvoicePaymentFooter';
 import InvoiceWatermark from '@/components/InvoiceWatermark';
 import { SNAPPY_BANK_ACCOUNTS, SNAPPY_INVOICE_ISSUER } from '@/lib/bank-details';
@@ -10,6 +11,8 @@ import {
 } from '@/lib/exchange-corridors';
 import { SITE_INVOICE_LOGO_PATH } from '@/lib/brand';
 import {
+  INVOICE_FOOTER_BOTTOM_PX,
+  INVOICE_PAGE_HEIGHT_PX,
   invoiceAddressClass,
   invoiceBodyClass,
   invoiceCompanyNameClass,
@@ -168,16 +171,37 @@ function buildLines(document: FinancialDocumentRecord): Line[] {
   ];
 }
 
+/** One A4 sheet of a paged preview. */
+type PaperSegment = {
+  lines: Line[];
+  letterhead: boolean;
+  totals: boolean;
+  footer: boolean;
+};
+
+/** Top gap above the repeated table header on continuation sheets. */
+const CONTINUATION_TOP_PX = 24;
+/** Bottom margin for sheets that do not carry the payment footer. */
+const SHEET_BOTTOM_MARGIN_PX = 24;
+
 function Paper({
   document,
   variant,
+  segment,
+  fluid = false,
 }: {
   document: FinancialDocumentRecord;
   variant: 'screen' | 'official';
+  segment?: PaperSegment;
+  /** Grow with content instead of a fixed A4 box (used to measure rows). */
+  fluid?: boolean;
 }) {
   const isReceipt = document.document_type === 'receipt';
   const data = document.data || {};
-  const lines = buildLines(document);
+  const lines = segment?.lines ?? buildLines(document);
+  const showLetterhead = segment?.letterhead ?? true;
+  const showTotals = segment?.totals ?? true;
+  const showFooter = segment?.footer ?? true;
   const currency = document.currency || 'GHS';
   const title = isReceipt ? 'RECEIPT' : 'INVOICE';
   const expired =
@@ -248,12 +272,22 @@ function Paper({
   return (
     <div
       className={`${base} relative bg-white leading-snug text-black ${
-        isOfficial ? invoiceOfficialPageClass : 'relative min-h-[1043px]'
+        fluid ? 'box-border' : isOfficial ? invoiceOfficialPageClass : 'relative min-h-[1043px]'
       }`}
-      {...(isOfficial ? { 'data-invoice-mode': 'single', 'data-invoice-a4': '' } : {})}
+      {...(isOfficial && !fluid ? { 'data-invoice-mode': 'single', 'data-invoice-a4': '' } : {})}
     >
       <InvoiceWatermark />
-      <div className={isOfficial ? invoiceBodyClass : 'relative z-[1] pb-[168px]'}>
+      <div
+        className={
+          !showFooter
+            ? 'relative z-[1]'
+            : isOfficial
+              ? invoiceBodyClass
+              : 'relative z-[1] pb-[168px]'
+        }
+      >
+      {showLetterhead ? (
+      <>
       <div className="flex flex-col gap-3 border-b border-black pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <img
@@ -325,9 +359,15 @@ function Paper({
           </tbody>
         </table>
       </div>
+      </>
+      ) : null}
 
-      <table className="mt-4 w-full border-collapse">
-        <thead>
+      {lines.length > 0 || showLetterhead ? (
+      <table
+        className="w-full border-collapse"
+        style={{ marginTop: showLetterhead ? 16 : CONTINUATION_TOP_PX }}
+      >
+        <thead data-measure="thead">
           <tr className={`border-b-2 border-black text-left ${tableHeadClass}`}>
             <th className="py-1.5 pr-2 font-bold uppercase">Description</th>
             <th className="py-1.5 text-center font-bold uppercase">Qty</th>
@@ -337,7 +377,7 @@ function Paper({
         </thead>
         <tbody>
           {lines.map((line, index) => (
-            <tr key={`${line.description}-${index}`} className="align-top">
+            <tr key={`${line.description}-${index}`} data-measure="row" className="align-top">
               <td className="py-1.5 pr-2">
                 <span className="font-medium">{line.description}</span>
                 {line.detail ? (
@@ -353,8 +393,14 @@ function Paper({
           ))}
         </tbody>
       </table>
+      ) : null}
 
-      <div className="mt-3 flex justify-end">
+      {showTotals ? (
+      <div
+        data-measure="totals"
+        className="flex justify-end"
+        style={{ marginTop: lines.length > 0 || showLetterhead ? 12 : CONTINUATION_TOP_PX }}
+      >
         <div className="w-full max-w-[18rem] space-y-0.5 text-right">
           {data.payment_method ? (
             <div className="flex items-start justify-end gap-3">
@@ -382,9 +428,123 @@ function Paper({
           </div>
         </div>
       </div>
+      ) : null}
       </div>
 
-      {footer}
+      {showFooter ? footer : null}
+    </div>
+  );
+}
+
+type Measurements = {
+  headBottom: number;
+  theadHeight: number;
+  rows: number[];
+  totalsHeight: number;
+  footerHeight: number;
+};
+
+function offsetWithin(element: HTMLElement, root: HTMLElement): number {
+  let top = 0;
+  let node: HTMLElement | null = element;
+  while (node && node !== root) {
+    top += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return top;
+}
+
+function measurePaper(root: HTMLElement): Measurements | null {
+  const thead = root.querySelector<HTMLElement>('[data-measure="thead"]');
+  const totals = root.querySelector<HTMLElement>('[data-measure="totals"]');
+  const footer = root.querySelector<HTMLElement>('[data-invoice-footer]');
+  if (!thead || !totals || !footer) return null;
+  const rows = Array.from(root.querySelectorAll<HTMLElement>('[data-measure="row"]')).map(
+    (row) => row.offsetHeight,
+  );
+  return {
+    headBottom: offsetWithin(thead, root) + thead.offsetHeight,
+    theadHeight: thead.offsetHeight,
+    rows,
+    totalsHeight: totals.offsetHeight + 12,
+    footerHeight: footer.offsetHeight,
+  };
+}
+
+/** Same rules as the server PDF: rows fill each sheet, total and payment details share the last one. */
+function paginate(lines: Line[], m: Measurements): PaperSegment[] {
+  const pageHeight = INVOICE_PAGE_HEIGHT_PX;
+  const rowsBottom = pageHeight - SHEET_BOTTOM_MARGIN_PX;
+  const footerTop = pageHeight - INVOICE_FOOTER_BOTTOM_PX - m.footerHeight - 8;
+
+  const ranges: Array<[number, number]> = [];
+  let start = 0;
+  let y = m.headBottom;
+  m.rows.forEach((height, index) => {
+    if (index > start && y + height > rowsBottom) {
+      ranges.push([start, index]);
+      start = index;
+      y = CONTINUATION_TOP_PX + m.theadHeight;
+    }
+    y += height;
+  });
+  ranges.push([start, m.rows.length]);
+
+  const segments: PaperSegment[] = ranges.map(([from, to], index) => ({
+    lines: lines.slice(from, to),
+    letterhead: index === 0,
+    totals: false,
+    footer: false,
+  }));
+
+  const last = segments[segments.length - 1];
+  if (y + m.totalsHeight <= footerTop) {
+    last.totals = true;
+    last.footer = true;
+  } else {
+    segments.push({ lines: [], letterhead: false, totals: true, footer: true });
+  }
+  return segments;
+}
+
+function PagedPaper({ document }: { document: FinancialDocumentRecord }) {
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [segments, setSegments] = useState<PaperSegment[] | null>(null);
+
+  useLayoutEffect(() => {
+    const root = measureRef.current?.firstElementChild as HTMLElement | null;
+    if (!root) return;
+    const lines = buildLines(document);
+    const update = () => {
+      const m = measurePaper(root);
+      setSegments(m ? paginate(lines, m) : null);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [document]);
+
+  return (
+    <div className="relative">
+      <div
+        ref={measureRef}
+        aria-hidden
+        className="pointer-events-none invisible absolute inset-x-0 top-0 -z-10"
+      >
+        <Paper document={document} variant="official" fluid />
+      </div>
+      {segments ? (
+        <div className="space-y-4">
+          {segments.map((segment, index) => (
+            <div key={index} className="shadow-sm">
+              <Paper document={document} variant="official" segment={segment} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Paper document={document} variant="official" />
+      )}
     </div>
   );
 }
@@ -394,9 +554,17 @@ export default function FinancialDocumentPaper({
   mode = 'both',
 }: {
   document: FinancialDocumentRecord;
-  /** Admin generator preview can show the official pinned layout only. */
-  mode?: 'both' | 'screen' | 'official';
+  /** Admin generator preview can show the official pinned layout only, or split into A4 sheets. */
+  mode?: 'both' | 'screen' | 'official' | 'paged';
 }) {
+  if (mode === 'paged') {
+    return (
+      <div id="financial-document-print" className="text-slate-900">
+        <PagedPaper document={document} />
+      </div>
+    );
+  }
+
   if (mode === 'official') {
     return (
       <div id="financial-document-print" className="bg-white text-slate-900">
