@@ -210,7 +210,8 @@ export async function generateFinancialDocumentPdf(
   const preparedLogo = await preparePdfLogo(logo);
   const preparedWatermark = await preparePdfWatermark(watermark);
 
-  if (preparedWatermark) {
+  const drawWatermark = () => {
+    if (!preparedWatermark) return;
     try {
       const markW = 120;
       const markH = markW * (330 / 305);
@@ -227,7 +228,13 @@ export async function generateFinancialDocumentPdf(
     } catch {
       // Watermark is decorative only.
     }
-  }
+  };
+  // Draw first on every page so it sits behind the text.
+  const addPage = () => {
+    pdf.addPage();
+    drawWatermark();
+  };
+  drawWatermark();
 
   if (preparedLogo) {
     try {
@@ -350,7 +357,7 @@ export async function generateFinancialDocumentPdf(
     const detailLines = line.detail ? pdf.splitTextToSize(line.detail, 88) : [];
     const rowHeight = Math.max(9, 7 + detailLines.length * 3.8);
     if (y + rowHeight > rowsBottom) {
-      pdf.addPage();
+      addPage();
       y = 20;
       tableHeader();
     }
@@ -371,7 +378,7 @@ export async function generateFinancialDocumentPdf(
   // Total and payment details stay together, pinned to the bottom of the last page.
   const paymentStartY = pageHeight - paymentReserve;
   if (y + 8 > paymentStartY) {
-    pdf.addPage();
+    addPage();
     y = 20;
   }
   const summaryLabel = receipt ? `TOTAL PAID (${currency})` : `TOTAL DUE (${currency})`;
